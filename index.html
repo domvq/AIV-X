@@ -247,6 +247,9 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 .send.stop{background:var(--accent)}
 .rec{color:var(--danger)!important;animation:pulse 1.2s infinite}
 @keyframes pulse{50%{opacity:.4}}
+.cbtn,.toolpill,.modelsel,.send{flex:none;white-space:nowrap}
+#workspace.split .cbtn.build .lbl,#workspace.split #modelName,#workspace.split #micBtn{display:none}
+#workspace.split .cbtn.build{padding:0 10px}
 .disclaimer{text-align:center;font-size:12px;color:var(--muted);padding-top:8px}
 
 /* menus */
@@ -283,6 +286,37 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 .slide li{margin:6px 0}
 .slide-nav{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
 .slide-notes{max-width:680px;width:100%;font-size:13px;color:var(--text2);border:1px dashed var(--line2);border-radius:10px;padding:10px 12px}
+/* ---- app + copilot ---- */
+#workspace{position:relative}
+#appPane{flex:1;min-width:0;position:relative;background:var(--bg2)}
+#appPane iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff}
+#appLoading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
+.appctl{display:flex;align-items:center;gap:2px;margin-left:4px}
+.copbtn{border:1px solid var(--line2)}
+.copbtn.on{background:var(--accent);color:var(--accentText);border-color:var(--accent)}
+.cop-head{display:none;align-items:center;gap:6px;padding:6px 6px 6px 14px;border-bottom:1px solid var(--line);font-size:13px;color:var(--text2);flex:none}
+#workspace.appmode .cop-head{display:flex}
+.copLink{font-size:12px;color:var(--muted);margin-left:6px;display:inline-flex;align-items:center;gap:5px}
+.copLink.on::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok)}
+#workspace.appmode #chatcol{flex:none;width:420px;border-left:1px solid var(--line);background:var(--bg)}
+#workspace.appmode.cop-hidden #chatcol{display:none}
+#workspace.appmode .thread{padding:8px 14px 20px}
+#workspace.appmode .composer-wrap{padding:0 10px 10px}
+#workspace.appmode .empty h1{font-size:21px}
+#workspace.appmode #chatcol.centered{justify-content:flex-start;padding-bottom:0}
+#workspace.appmode #chatcol.centered #scroll{margin-top:auto}
+#workspace.appmode #chatcol.centered #belowStarters{margin-bottom:auto;padding-bottom:6vh}
+#workspace.appmode #modelName,#workspace.appmode .cbtn.build .lbl{display:none}
+#workspace.appmode .cbtn.build{padding:0 10px}
+#workspace.appmode #canvas{position:absolute;top:0;bottom:0;left:0;right:420px;width:auto;z-index:6;box-shadow:var(--shadow)}
+#workspace.appmode.cop-hidden #canvas{right:0}
+#copFab{position:fixed;right:16px;bottom:16px;z-index:70;display:flex;align-items:center;gap:8px;height:48px;padding:0 18px;border-radius:999px;background:var(--accent);color:var(--accentText);font-weight:600;letter-spacing:.06em;box-shadow:var(--shadow)}
+@media(max-width:820px){
+  #workspace.appmode #chatcol{position:fixed;inset:0;width:auto;z-index:65;border-left:0}
+  #workspace.appmode #canvas{right:0}
+  .appctl .lbl{display:none}
+  #copFab{bottom:84px;height:44px;padding:0 16px}
+}
 @media(max-width:1000px){#canvas{position:absolute;inset:0;width:100%;z-index:40}}
 
 /* modal */
@@ -334,9 +368,6 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 .buildopt.on{border-color:var(--glow);background:rgba(59,130,246,.06)}
 @media(max-width:560px){.buildopts{grid-template-columns:repeat(2,1fr)}}
 
-#appframe{position:fixed;inset:0;z-index:160;background:var(--bg);display:flex;flex-direction:column}
-#appframe .bar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
-#appframe iframe{flex:1;border:0;width:100%}
 #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:170;display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
 #lightbox img{max-width:100%;max-height:100%;border-radius:12px}
 
@@ -441,6 +472,11 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
     <div class="topbar">
       <button class="iconbtn" id="sideOpen" title="Open sidebar"><span data-i="sidebar"></span></button>
       <button class="modechip" id="modeChip"><span id="modeName"></span><span data-i="chev"></span></button>
+      <div class="appctl hidden" id="appCtl">
+        <button class="cbtn copbtn" id="copilotBtn" title="Show or hide AIV X"><span data-i="sidebar"></span><span class="lbl">AIV X copilot</span></button>
+        <a class="iconbtn" id="appNewTab" target="_blank" rel="noopener" title="Open app in a new tab"><span data-i="expand"></span></a>
+        <button class="iconbtn" id="appClose" title="Close app"><span data-i="x"></span></button>
+      </div>
       <div class="sp"></div>
       <button class="upbtn hide-m" id="upBtn"><span data-i="gift"></span>Get AIV Pro</button>
       <button class="iconbtn" id="shareBtn" title="Export chat"><span data-i="share"></span></button>
@@ -448,7 +484,12 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
     </div>
 
     <div id="workspace">
+      <section id="appPane" class="hidden">
+        <div id="appLoading">Loading app…</div>
+        <iframe id="appIframe" title="AI Verse app" allow="microphone; camera; clipboard-read; clipboard-write; geolocation; fullscreen; autoplay"></iframe>
+      </section>
       <div id="chatcol">
+        <div class="cop-head"><span>Copilot for <b id="copApp"></b></span><span class="copLink" id="copLink"></span><span style="flex:1"></span><button class="iconbtn" id="copNew" title="New copilot chat"><span data-i="edit"></span></button><button class="iconbtn" id="copHide" title="Hide copilot"><span data-i="x"></span></button></div>
         <div id="scroll"><div class="thread" id="thread"></div></div>
         <div class="composer-wrap">
           <div class="composer" id="composer">
@@ -456,7 +497,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
             <textarea id="input" rows="1" placeholder="Ask AIV X"></textarea>
             <div class="crow">
               <button class="cbtn" id="plusBtn" title="Add files and more"><span data-i="plus"></span></button>
-              <button class="cbtn build" id="buildBtn" title="Build an app, tool, or AI"><span data-i="hammer"></span>Build</button>
+              <button class="cbtn build" id="buildBtn" title="Build your own AI assistant"><span data-i="hammer"></span><span class="lbl">Build</span></button>
               <span id="toolSlot"></span>
               <div class="sp"></div>
               <button class="modelsel" id="modelBtn"><span id="modelName">Auto</span><span data-i="chev"></span></button>
@@ -481,15 +522,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
   </main>
 </div>
 
-<div id="appframe" class="hidden">
-  <div class="bar">
-    <button class="btn sm" id="appBack">← Back to AIV X</button>
-    <div style="font-weight:500" id="appTitle"></div>
-    <div style="flex:1"></div>
-    <a class="btn sm" id="appNewTab" target="_blank" rel="noopener">Open in new tab</a>
-  </div>
-  <iframe id="appIframe" title="AI Verse app"></iframe>
-</div>
+<button id="copFab" class="hidden" title="Open AIV X copilot">AIV X</button>
 <div id="lightbox" class="hidden"><img alt=""></div>
 <input type="file" id="fileInput" multiple hidden>
 <input type="file" id="camInput" accept="image/*" capture="environment" hidden>
@@ -520,7 +553,7 @@ const FREE_DAILY_LIMIT = 20;
 const UPGRADE_URL = "https://aiverse.it.com/#api";
 
 // 4b) Where your AI Verse apps live (AIV X opens them from your main site)
-const APP_BASE = "https://aiverse.it.com/";
+const APP_BASE = "https://aiverse.it.com/apps/";
 
 // 4) Your AI Verse apps (paths relative to where aivx.html is hosted)
 const APPS = [
@@ -562,7 +595,8 @@ const TOOLS = {
   slides:   { name:"Presentation",  desc:"Create slide decks", place:"What is the presentation about?" },
   code:     { name:"Code",          desc:"Write, explain, and run code", place:"What should I code?" },
   link:     { name:"Read a link",   desc:"Summarize or ask about a web page", place:"Paste a link, then your question" },
-  build:    { name:"Build",         desc:"Build any app, tool, game, or AI", place:"Describe what to build" },
+  app:      { name:"Create an app", desc:"Apps, tools, games, and websites", place:"Describe the app, tool, game, or site" },
+  build:    { name:"Build",         desc:"Build your own AI assistant", place:"Describe the AI assistant you want" },
 };
 
 /* =====================================================================
@@ -703,9 +737,30 @@ const Store = {
     if(DEMO){ LSX.set("aivx_l_" + this.uid, LSX.get("aivx_l_" + this.uid, []).filter(x => x.id !== id)); return; }
     await fb.firestore().collection("users").doc(this.uid).collection("library").doc(id).delete();
   },
+  // ---- AI Verse app data (synced with the apps through aiv-connect.js) ----
+  async getAppData(app){
+    if(DEMO) return LSX.get("aivx_app_" + this.uid + "_" + app, null);
+    const ref = fb.firestore().collection("users").doc(this.uid).collection("apps").doc(app);
+    const m = await ref.get();
+    if(!m.exists) return null;
+    const meta = m.data(), parts = [];
+    for(let i = 0; i < (meta.n || 0); i++) parts.push(ref.collection("chunks").doc(String(i)).get());
+    const cs = await Promise.all(parts);
+    return { at:meta.at || 0, data:cs.map(c => c.exists ? c.data().s : "").join("") };
+  },
+  async setAppData(app, at, data){
+    data = String(data || "");
+    if(DEMO){ LSX.set("aivx_app_" + this.uid + "_" + app, { at, data }); return; }
+    const CH = 300000, n = Math.max(1, Math.ceil(data.length / CH));
+    const ref = fb.firestore().collection("users").doc(this.uid).collection("apps").doc(app);
+    await Promise.all(Array.from({ length:n }, (_, i) => ref.collection("chunks").doc(String(i)).set({ s:data.slice(i * CH, (i + 1) * CH) })));
+    await ref.set({ at, n, size:data.length, app });
+  },
   async wipe(){
     if(DEMO){ ["aivx_u_","aivx_c_","aivx_l_"].forEach(p => LSX.del(p + this.uid)); return; }
     const u = fb.firestore().collection("users").doc(this.uid);
+    const apps = await u.collection("apps").get();
+    for(const d of apps.docs){ const ch = await d.ref.collection("chunks").get(); for(const c of ch.docs) await c.ref.delete(); await d.ref.delete(); }
     for(const sub of ["chats","library"]){
       const q = await u.collection(sub).get();
       for(const d of q.docs) await d.ref.delete();
@@ -886,7 +941,7 @@ function defaultProfile(u){
     email: u.email || "", phone: u.phone || "", provider: u.provider || "",
     createdAt: Date.now(),
     settings: { memoryOn:true, learnOn:true, chatHistoryOn:true, aboutMe:"", style:"", theme:"system", voice:"" },
-    memories: [], usage: { date:today(), count:0 }, proKey:"", projects:[]
+    memories: [], aiBuilds: 0, usage: { date:today(), count:0 }, proKey:"", projects:[]
   };
 }
 let profileErrShown = false;
@@ -959,11 +1014,19 @@ How you respond:
 - Answer directly first, then add detail only if it helps. Match length to the question.
 - Use Markdown: short headings for long answers, bullet points, numbered steps, tables for comparisons, and fenced code blocks with a language tag.
 - Be honest about uncertainty. Never invent facts, quotes, links, or sources. You don't have live internet access unless search results are included in this conversation; say so if asked about very recent events and suggest turning on Web search.
-- You can read photos and files the user attaches, create images (Create image), search the web, run deep research, write documents, spreadsheets, and presentations, and build apps with the Build button.
+- You can read photos and files the user attaches, create images (Create image), search the web, run deep research, write documents, spreadsheets, and presentations, create apps, tools, games, and websites (Create an app, in the + menu), and build custom AI assistants with the Build button.
 - For medical, legal, or financial questions, give clear, useful general information and suggest a professional when it really matters. For emergencies, tell them to call local emergency services.
 - Never help with weapons, malware, or harming people.
 - Keep a clean, simple style: don't use emojis unless the user asks for them.`;
   if(app.persona) p += "\n\nMODE: " + app.persona;
+  if(S.openApp){
+    const oa = appById(S.openApp);
+    p += `\n\nSCREEN: The user has the ${oa.name} app (${oa.desc}) open full-screen right next to you, and you are their copilot while they use it. ` +
+      (Link.ready && Link.app === oa.id
+        ? "You can see its current screen and saved data (APP ON SCREEN, below) and you can operate it with actions. Answer questions about their data directly from it."
+        : "You can't see inside it right now, so when they ask how to do something there, give short, specific steps.") +
+      " When they want something made — a plan, a draft, a list, numbers — make it. Keep answers compact; you're in a narrow side panel.";
+  }
   const proj = S.chat && S.chat.project && (S.profile.projects || []).find(x => x.id === S.chat.project);
   if(proj && proj.instructions) p += `\n\nPROJECT "${proj.name}" INSTRUCTIONS:\n${proj.instructions}`;
   if(st.aboutMe) p += "\n\nWHAT THE USER WANTS YOU TO KNOW ABOUT THEM:\n" + st.aboutMe;
@@ -1002,6 +1065,7 @@ function historyFor(chat, upTo){
     }
     let t = m.content || "";
     if(m.artifact) t += `\n[Created ${m.artifact.kind}: ${m.artifact.title}]`;
+    if(m.actionsLog && m.actionsLog.length) t += "\n[Did in the app: " + m.actionsLog.slice(-8).join("; ") + "]";
     if(m.images && m.images.length) t += "\n[Generated an image]";
     return { role:"assistant", content:t.slice(0, 12000) };
   });
@@ -1062,10 +1126,10 @@ function renderEmpty(){
   const app = appById(S.mode);
   const name = (S.profile.name || "").split(" ")[0];
   const proj = S.chat && S.chat.project && (S.profile.projects || []).find(x => x.id === S.chat.project);
-  const h = app.id === "aivx" ? (name ? `What's on your mind today, ${esc(name)}?` : "What's on your mind today?") : esc(app.name);
+  const h = S.openApp ? `How can I help with ${esc(app.name)}?` : app.id === "aivx" ? (name ? `What's on your mind today, ${esc(name)}?` : "What's on your mind today?") : esc(app.name);
   $("chatcol").classList.add("centered");
   $("thread").innerHTML = `<div class="empty"><h1>${h}</h1>
-    <div class="modeline">${proj ? "Project · " + esc(proj.name) : app.id === "aivx" ? "Chat, search, create, and build — all in one place." : esc(app.desc) + (app.url ? ` · <a href="#" data-openapp="${app.id}">Open full app</a>` : "")}</div>
+    <div class="modeline">${proj ? "Project · " + esc(proj.name) : S.openApp ? "I'm right here while you use the app." : app.id === "aivx" ? "Chat, search, create, and build — all in one place." : esc(app.desc) + (app.url ? ` · <a href="#" data-openapp="${app.id}">Open full app</a>` : "")}</div>
     </div>`;
   const bs = $("belowStarters"); bs.classList.remove("hidden");
   bs.innerHTML = app.starters.map(s => `<button class="starter">${esc(s)}</button>`).join("");
@@ -1082,7 +1146,7 @@ function attHTML(a){
   const ext = (a.name.split(".").pop() || "FILE").slice(0,4).toUpperCase();
   return `<div class="att"><div class="fi">${esc(ext)}</div><div class="nm" title="${esc(a.name)}">${esc(a.name)}</div></div>`;
 }
-const KIND_EMO = { build:"APP", doc:"DOC", sheet:"SHEET", slides:"SLIDES", image:"IMG" };
+const KIND_EMO = { assistant:"AI", build:"APP", doc:"DOC", sheet:"SHEET", slides:"SLIDES", image:"IMG" };
 function msgEl(m){
   const el = document.createElement("div");
   el.className = "m " + (m.role === "user" ? "user" : "ai");
@@ -1189,7 +1253,7 @@ function newChat(project){
   S._newProject = project || null;
   renderPending(); renderTool(); renderThread(); renderChatList(); closeCanvas();
   $("input").focus();
-  if(window.innerWidth < 820) closeSide();
+  if(window.innerWidth < 820 && !S.openApp) closeSide();
 }
 function ensureChat(){
   if(S.chat) return S.chat;
@@ -1210,7 +1274,8 @@ function openChat(id){
   const c = S.chats.find(x => x.id === id); if(!c) return;
   S.chat = c; S.tool = null; setMode(c.mode || "aivx", true);
   const last = [...c.messages].reverse().find(m => m.artifact);
-  if(last && last.artifact.kind === "build") S.tool = "build";
+  if(last && last.artifact.kind === "assistant") S.tool = "build";
+  else if(last && last.artifact.kind === "build") S.tool = "app";
   renderTool(); renderThread(); renderChatList(); closeCanvas();
   if(window.innerWidth < 820) closeSide();
 }
@@ -1289,6 +1354,7 @@ async function send(textOverride){
   if(S.busy) return;
   if(S.pending.some(p => p.loading)) return toast("Still reading your files…");
   if(!text && !S.pending.length) return;
+  if(S.tool === "build" && !canBuildAssistant()) return;
   if(!canUse()) return;
 
   const chat = ensureChat();
@@ -1320,7 +1386,9 @@ async function runAssistant(ai, userMsg, tool){
     else if(tool === "doc") await doDoc(ai, userMsg);
     else if(tool === "sheet") await doSheet(ai, userMsg);
     else if(tool === "slides") await doSlides(ai, userMsg);
-    else if(tool === "build") await doBuild(ai, userMsg);
+    else if(tool === "build") await doAssistant(ai, userMsg);
+    else if(tool === "app") await doBuild(ai, userMsg);
+    else if(tool !== "code") await doAgentChat(ai, userMsg);
     else await doChat(ai, userMsg, tool === "code" ? "The user wants help with code. Write complete, working, well-commented code in fenced blocks with the language tag. For web UIs prefer a single self-contained HTML file (the user can press Preview). Explain briefly how to run it." : "");
   }catch(e){
     if(e.name === "AbortError"){ if(!ai.content) ai.content = "_Stopped._"; }
@@ -1377,6 +1445,104 @@ async function doChat(ai, userMsg, extra, contextBlock){
     model: S.model, signal: S.abort.signal, max_tokens: S.model === "think" ? 4096 : 2048,
     onToken: full => { ai.content = full; updateMsg(ai); }
   });
+}
+
+/* ---------------- chat that can use the AI Verse apps ---------------- */
+const ACTION_RE = /```aiv-actions\s*([\s\S]*?)(```|$)/;
+function stripActions(t){ return String(t || "").replace(/```aiv-actions[\s\S]*?(```|$)/g, "").trim(); }
+const DESTRUCTIVE = /\b(delete|remove|clear|reset|erase|wipe|sign ?out|log ?out|disconnect|forget)\b/i;
+function addStep(ai, text, done = true){ ai.steps = ai.steps || []; ai.steps.push({ text, done }); updateMsg(ai, true); }
+function agentRules(){
+  const apps = APPS.filter(a => a.url).map(a => `${a.id} = ${a.name} (${a.desc})`).join("; ");
+  return `AI VERSE APPS — you can open and use the user's AI Verse apps for them: ${apps}.
+To act in an app, end your reply with ONE fenced block like this:
+\`\`\`aiv-actions
+[{"do":"open","app":"aide"},{"do":"go","screen":"tasks"},{"do":"type","field":"Ask Aide","value":"Call the dentist Friday at 3pm","submit":true},{"do":"click","text":"Save"}]
+\`\`\`
+Actions: open {app id} · go {screen name from the app's screens list} · click {button text exactly as shown} · type {field label or placeholder, value, submit} · check {field, on} · read {} (just look at the screen again).
+Rules:
+- Only act when the user asks you to do, add, change, find, or check something in one of their apps. Otherwise just answer.
+- If the app's screen or saved data already answers the question, answer from it — no actions needed.
+- Use the app's controls exactly as listed on its screen. Many apps have a main "Ask" box that understands plain requests — typing there and submitting is often the simplest way to add things.
+- Before the block, say in a few words what you're about to do.
+- Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.
+- After your actions run you'll get the results and the updated screen. Then either continue with another block or confirm what you did in one or two sentences.`;
+}
+function appBlock(c){
+  const app = appById(c.app);
+  const ctrls = (c.controls || []).map(x => x.button ? `[${x.button}]` : `{${x.field}${x.type && x.type !== "text" ? " (" + x.type + ")" : ""}${x.value !== "" && x.value !== undefined && x.value !== false ? ": " + x.value : ""}}`).join(" ");
+  return `APP ON SCREEN — ${app.name}. Current screen: ${c.screen}. Screens: ${(c.screens || []).join(", ")}.
+Visible text:
+${(c.screenText || "").slice(0, 6000)}
+
+Controls on this screen (buttons in [ ], fields in { }): ${ctrls.slice(0, 3500)}
+
+Saved app data (JSON): ${(c.data || "").slice(0, 9000)}`;
+}
+function waitForLink(appId, ms = 15000){
+  return new Promise((res, rej) => {
+    const t0 = Date.now();
+    (function poll(){
+      if(Link.ready && Link.app === appId) return res();
+      if(Date.now() - t0 > ms) return rej(new Error("timeout"));
+      setTimeout(poll, 250);
+    })();
+  });
+}
+async function doAgentChat(ai, userMsg){
+  const base = historyFor(S.chat, S.chat.messages.indexOf(ai));
+  const userText = userMsg.content || "";
+  let msgs = null, visible = "", log = [];
+  for(let step = 0; step < 5; step++){
+    let block = "";
+    if(S.openApp && Link.ready && Link.app === S.openApp){
+      if(step === 0){ ai.status = "Looking at " + appById(S.openApp).name; updateMsg(ai); }
+      try{ block = appBlock(await appAsk("context")); }catch(e){}
+    }
+    const sys = systemPrompt(agentRules() + (block ? "\n\n" + block : ""));
+    if(!msgs) msgs = [{ role:"system", content:sys }, ...base]; else msgs[0] = { role:"system", content:sys };
+    const prefix = visible ? visible + "\n\n" : "";
+    ai.status = "Thinking"; updateMsg(ai);
+    const full = await streamChat(msgs, { model:S.model, signal:S.abort.signal, max_tokens:2048,
+      onToken: t => { ai.content = prefix + stripActions(t); updateMsg(ai); } });
+    visible = (prefix + stripActions(full)).trim();
+    ai.content = visible;
+    const m = full.match(ACTION_RE);
+    if(!m) break;
+    let actions;
+    try{ actions = JSON.parse(m[1].trim()); }catch(e){ addStep(ai, "Couldn't read the planned steps"); break; }
+    if(!Array.isArray(actions)) actions = [actions];
+    const results = [], runnable = [];
+    for(const a of actions.slice(0, 8)){
+      const d = String(a.do || "").toLowerCase();
+      if(d === "open" || d === "openapp"){
+        const want = String(a.app || "").toLowerCase();
+        const app = APPS.find(x => x.url && (x.id === want || x.name.toLowerCase() === want || x.name.toLowerCase().startsWith(want)));
+        if(!app){ results.push("couldn't find an app called " + a.app); continue; }
+        if(S.openApp !== app.id){ ai.status = "Opening " + app.name; updateMsg(ai, true); openFullApp(app, { keepChat:true }); }
+        try{ await waitForLink(app.id); results.push("opened " + app.name); }
+        catch(e){ results.push(app.name + " opened but isn't connected yet (it needs aiv-connect.js)"); }
+        continue;
+      }
+      if(d === "click" && DESTRUCTIVE.test(String(a.text || "")) && !DESTRUCTIVE.test(userText)){ results.push(`skipped "${a.text}" — ask the user to confirm first`); continue; }
+      runnable.push(a);
+    }
+    if(runnable.length){
+      if(!(S.openApp && Link.ready && Link.app === S.openApp)) results.push("no connected app is open");
+      else{
+        ai.status = "Working in " + appById(S.openApp).name; updateMsg(ai);
+        try{ const r = await appAsk("act", { actions:runnable }, 25000); (r.results || []).forEach(x => results.push(x)); }
+        catch(e){ results.push("the app didn't respond: " + e.message); }
+      }
+    }
+    results.forEach(r => addStep(ai, r.charAt(0).toUpperCase() + r.slice(1)));
+    log.push(...results);
+    ai.actionsLog = log;
+    if(S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError");
+    msgs.push({ role:"assistant", content:full.slice(0, 6000) });
+    msgs.push({ role:"user", content:"[Action results]\n- " + results.join("\n- ") + "\n\nThe app's updated screen is in the system message. If the task is done, confirm what you did in one or two sentences with no action block. If more steps are needed, output another aiv-actions block." });
+  }
+  if(!ai.content) ai.content = "Done.";
 }
 
 /* ---------------- image generation ---------------- */
@@ -1519,8 +1685,110 @@ async function doSlides(ai, userMsg){
   await addLib(item); openArtifact(item, "slides");
 }
 
-/* ---------------- BUILD (apps, tools, games, AIs) ---------------- */
-const BUILD_SYSTEM = `You are AIV X Build, an expert product designer and front-end engineer. You build complete, working web apps from a description.
+/* ---------------- BUILD: custom AI assistants ---------------- */
+const FREE_ASSISTANT_BUILDS = 1;
+function canBuildAssistant(){
+  if(S.pro) return true;
+  if(S.chat && S.chat.assistantId) return true;           // refining the assistant this chat already built
+  if((S.profile.aiBuilds || 0) < FREE_ASSISTANT_BUILDS) return true;
+  openUpgrade("You've built your free AI assistant. Get AIV Pro to build more.");
+  return false;
+}
+const ASSISTANT_SYSTEM = `You are AIV X Build. You design custom AI assistants from a description.
+Reply with ONLY this JSON and nothing else:
+{"name":"short memorable name","tagline":"one line on what it does","greeting":"the first thing it says to people","starters":["example question 1","example question 2","example question 3"],"instructions":"a detailed system prompt of 200-450 words written to the assistant in second person: who it is, what it does, who it serves, its tone and style, step-by-step behaviors, what to ask when information is missing, rules, and limits"}
+Rules: valid JSON with double quotes; use \\n for line breaks inside strings; no emojis.
+Never design an assistant meant to deceive people, impersonate a real person or organization, harass anyone, or give dangerous or illegal instructions — design a safe version instead.
+If a current assistant is provided, apply the user's requested changes and return the FULL updated JSON.`;
+
+async function doAssistant(ai, userMsg){
+  const chat = S.chat;
+  const prev = chat.assistantId ? S.libMap[chat.assistantId] : null;
+  const isNew = !prev;
+  if(isNew && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error("You've used your free AI assistant build. Get AIV Pro to build more.");
+  const item = prev ? Object.assign({}, prev) : { id:uid("l_"), kind:"assistant", title:"New assistant", spec:null, html:"", at:Date.now(), chat:chat.id };
+  ai.artifact = { lib:item.id, kind:"assistant", title:item.title };
+  ai.status = isNew ? "Designing your AI assistant" : "Updating your AI assistant"; updateMsg(ai);
+  let sys = ASSISTANT_SYSTEM;
+  if(prev && prev.spec) sys += "\n\nCURRENT ASSISTANT:\n" + JSON.stringify(prev.spec);
+  const hist = historyFor(chat, chat.messages.indexOf(ai)).slice(-8).map(m => ({ role:m.role, content:typeof m.content === "string" ? m.content : m.content[0].text }));
+  let spec = null, lastErr = "";
+  for(const model of ["auto", "auto"]){
+    try{
+      const s = parseMemJSON(await ask([{ role:"system", content:sys }, ...hist], { model, max_tokens:1800 }));
+      if(s.name && s.instructions){ spec = s; break; }
+      lastErr = "incomplete";
+    }catch(e){ lastErr = e.message; }
+    if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError");
+  }
+  if(!spec) throw new Error("The assistant didn't come back complete. Try again, or describe it a little differently.");
+  spec = {
+    name:String(spec.name).slice(0, 60), tagline:String(spec.tagline || "").slice(0, 140),
+    greeting:String(spec.greeting || "Hi! How can I help?").slice(0, 400),
+    starters:(Array.isArray(spec.starters) ? spec.starters : []).map(String).slice(0, 3),
+    instructions:String(spec.instructions).slice(0, 8000)
+  };
+  item.spec = spec; item.title = spec.name; item.html = assistantHTML(spec); item.at = Date.now();
+  ai.artifact.title = item.title;
+  if(isNew){
+    chat.assistantId = item.id;
+    if(!S.pro){ S.profile.aiBuilds = (S.profile.aiBuilds || 0) + 1; await saveProfile(); }
+  }
+  ai.content = isNew
+    ? `**${spec.name}** is ready. ${spec.tagline}\n\nTry it in the preview. Tell me anything you'd like to change — its tone, what it knows, or what it should and shouldn't do — and I'll update it.`
+    : `Updated **${spec.name}**. Try it in the preview.`;
+  await addLib(item);
+  openArtifact(item, "preview");
+}
+
+function assistantHTML(spec){
+  const cfg = JSON.stringify(spec).replace(/</g, "\\u003c");
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(spec.name)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#fff;--bg2:#f4f4f5;--line:#e4e4e7;--text:#18181b;--muted:#71717a;--accent:#0a0a0b;--accentText:#fff}
+@media (prefers-color-scheme: dark){:root{--bg:#0a0a0b;--bg2:#1b1b1f;--line:#26262b;--text:#f4f4f5;--muted:#8a8a92;--accent:#f4f4f5;--accentText:#0a0a0b}}
+html,body{height:100%}
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+header{padding:16px 20px;border-bottom:1px solid var(--line)}
+header h1{font-size:17px;font-weight:600}
+header p{font-size:13px;color:var(--muted);margin-top:2px}
+#m{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;max-width:760px;width:100%;margin:0 auto}
+.b{max-width:85%;padding:10px 14px;border-radius:16px;white-space:pre-wrap;line-height:1.5;font-size:15px;word-wrap:break-word}
+.u{align-self:flex-end;background:var(--bg2)}
+.a{align-self:flex-start;padding-left:0}
+.t{color:var(--muted)}
+#c{display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 10px;max-width:760px;width:100%;margin:0 auto}
+#c button{background:none;border:1px solid var(--line);color:var(--text);padding:7px 12px;border-radius:999px;font-size:13px;cursor:pointer}
+form{display:flex;gap:8px;padding:12px 20px 18px;max-width:760px;width:100%;margin:0 auto}
+input{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:999px;padding:12px 16px;font-size:15px;outline:none}
+form button{background:var(--accent);color:var(--accentText);border:0;border-radius:999px;padding:0 18px;font-size:14px;cursor:pointer}
+small{display:block;text-align:center;color:var(--muted);font-size:11px;padding-bottom:10px}
+</style></head><body>
+<header><h1 id="n"></h1><p id="tg"></p></header>
+<div id="m"></div><div id="c"></div>
+<form id="f"><input id="i" placeholder="Message" autocomplete="off"><button>Send</button></form>
+<small>Built with AIV X</small>
+<script>
+const C=${cfg};const H=[];const $=i=>document.getElementById(i);
+$("n").textContent=C.name;$("tg").textContent=C.tagline||"";
+function add(r,t){const d=document.createElement("div");d.className="b "+r;d.textContent=t;$("m").appendChild(d);$("m").scrollTop=1e9;return d}
+if(C.greeting)add("a",C.greeting);
+(C.starters||[]).forEach(s=>{const b=document.createElement("button");b.textContent=s;b.onclick=()=>send(s);$("c").appendChild(b)});
+let busy=false;
+async function send(t){t=t.trim();if(!t||busy)return;busy=true;$("c").innerHTML="";add("u",t);H.push({role:"user",content:t});
+const w=add("a t","Thinking...");
+try{const r=await AIV.chat([{role:"system",content:C.instructions},...H.slice(-16)]);w.className="b a";w.textContent=r;H.push({role:"assistant",content:r})}
+catch(e){w.textContent="Sorry, I couldn't respond right now. "+(e.message||"")}
+busy=false}
+$("f").onsubmit=e=>{e.preventDefault();send($("i").value);$("i").value=""};
+<\/script></body></html>`;
+}
+
+/* ---------------- CREATE AN APP (apps, tools, games, sites) ---------------- */
+const BUILD_SYSTEM = `You are AIV X App Creator, an expert product designer and front-end engineer. You build complete, working web apps, tools, games, and websites from a description.
+If the user asks for a custom AI assistant or chatbot, don't build it here: reply in one or two sentences that custom AI assistants are made with the Build button next to the + button, and output no code.
 
 Rules:
 - First line: TITLE: <short app name>
@@ -1757,7 +2025,7 @@ async function addLib(item){
   try{ await Store.saveLib(item); }catch(e){ console.warn(e); toast("Couldn't save to your library."); }
 }
 function openLibrary(filter = "all"){
-  const kinds = { all:"All", image:"Images", build:"Builds", doc:"Docs", sheet:"Sheets", slides:"Slides" };
+  const kinds = { all:"All", assistant:"Assistants", image:"Images", build:"Apps", doc:"Docs", sheet:"Sheets", slides:"Slides" };
   const items = S.library.filter(x => filter === "all" || x.kind === filter);
   const box = modal(`<div class="mh2"><h3>Library</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb"><div class="seg" style="display:inline-flex;margin-bottom:16px;flex-wrap:wrap">${Object.entries(kinds).map(([k, v]) => `<button data-f="${k}" class="${k === filter ? "on" : ""}">${v}</button>`).join("")}</div>
@@ -1778,11 +2046,11 @@ const CV = { item:null, view:null, slide:0 };
 function openArtifact(item, view, live){
   CV.item = item; CV.live = !!live;
   const kind = item.kind;
-  CV.view = view || (kind === "build" ? "preview" : kind);
-  $("canvas").classList.remove("hidden");
+  CV.view = view || (kind === "build" || kind === "assistant" ? "preview" : kind);
+  $("canvas").classList.remove("hidden"); $("workspace").classList.add("split");
   $("cvIcon").textContent = "";
   $("cvTitle").textContent = item.title;
-  const tabs = kind === "build" ? [["preview","Preview"],["code","Code"]] : kind === "doc" ? [["doc","Document"],["md","Markdown"]] : [];
+  const tabs = kind === "build" ? [["preview","Preview"],["code","Code"]] : kind === "assistant" ? [["preview","Try it"],["setup","Instructions"]] : kind === "doc" ? [["doc","Document"],["md","Markdown"]] : [];
   $("cvTabs").innerHTML = tabs.map(([k, v]) => `<button data-v="${k}" class="${k === CV.view ? "on" : ""}">${v}</button>`).join("");
   $("cvTabs").classList.toggle("hidden", !tabs.length);
   $("cvTabs").querySelectorAll("button").forEach(b => b.onclick = () => { saveCanvasEdits(); openArtifact(CV.item, b.dataset.v); });
@@ -1793,6 +2061,21 @@ function drawCanvas(){
   if(CV.view === "preview"){
     body.innerHTML = `<iframe id="cvFrame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" title="${esc(it.title)}"></iframe>`;
     $("cvFrame").srcdoc = injectBridge(it.html || "<p style='font-family:sans-serif;padding:20px;color:#888'>Building…</p>", it.store || {});
+  }else if(CV.view === "setup"){
+    const sp = it.spec || {};
+    body.innerHTML = `<div style="padding:20px;max-width:720px;margin:0 auto">
+      <label class="label" style="margin-top:0">Name</label><input class="input" id="asName" value="${esc(sp.name || "")}">
+      <label class="label">Tagline</label><input class="input" id="asTag" value="${esc(sp.tagline || "")}">
+      <label class="label">Greeting</label><input class="input" id="asGreet" value="${esc(sp.greeting || "")}">
+      <label class="label">Instructions <span class="muted small">— how your assistant thinks and behaves</span></label>
+      <textarea class="input" id="asIns" style="min-height:300px">${esc(sp.instructions || "")}</textarea>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center"><button class="btn primary sm" id="asSave">Save changes</button><span class="muted small">Or just tell AIV X what to change in the chat.</span></div></div>`;
+    $("asSave").onclick = async () => {
+      it.spec = Object.assign({}, sp, { name:$("asName").value.trim() || sp.name, tagline:$("asTag").value.trim(), greeting:$("asGreet").value.trim(), instructions:$("asIns").value.trim() || sp.instructions });
+      it.title = it.spec.name; it.html = assistantHTML(it.spec); it.at = Date.now();
+      $("cvTitle").textContent = it.title;
+      await addLib(it); toast("Saved"); openArtifact(it, "preview");
+    };
   }else if(CV.view === "code"){
     body.innerHTML = CV.live ? `<pre class="cv-code" id="cvCode"></pre>` : `<textarea class="cv-code-edit" id="cvCodeEdit" spellcheck="false"></textarea>`;
     if(CV.live) $("cvCode").textContent = it.html || ""; else $("cvCodeEdit").value = it.html || "";
@@ -1838,11 +2121,17 @@ async function saveCanvasEdits(){
   if(changed && !String(it.id).startsWith("tmp_")){ it.at = Date.now(); await addLib(it); }
 }
 $("cvBody").addEventListener("focusout", () => saveCanvasEdits());
-function closeCanvas(){ saveCanvasEdits(); $("canvas").classList.add("hidden"); CV.item = null; }
+function closeCanvas(){ saveCanvasEdits(); $("canvas").classList.add("hidden"); $("workspace").classList.remove("split"); CV.item = null; }
 $("cvClose").onclick = closeCanvas;
 $("cvMore").onclick = e => {
   const it = CV.item; if(!it) return; saveCanvasEdits();
   const items = [];
+  if(it.kind === "assistant"){
+    items.push({ label:"Download as a web page", fn:() => download(slug(it.title) + ".html", injectBridge(it.html, {}, true), "text/html") });
+    items.push({ label:"Open in new tab", fn:() => window.open(URL.createObjectURL(new Blob([injectBridge(it.html, {}, true)], { type:"text/html" })), "_blank") });
+    items.push({ label:"Copy instructions", fn:() => { navigator.clipboard.writeText((it.spec && it.spec.instructions) || ""); toast("Instructions copied"); } });
+    items.push({ label:"Restart preview", fn:() => openArtifact(it, "preview") });
+  }
   if(it.kind === "build"){
     items.push({ label:"Download HTML", fn:() => download(slug(it.title) + ".html", injectBridge(it.html, {}, true), "text/html") });
     items.push({ label:"Open in new tab", fn:() => window.open(URL.createObjectURL(new Blob([injectBridge(it.html, {}, true)], { type:"text/html" })), "_blank") });
@@ -1951,7 +2240,7 @@ function setTool(t){
 }
 function renderTool(){
   const t = S.tool && TOOLS[S.tool];
-  $("toolSlot").innerHTML = t && S.tool !== "build" ? `<span class="toolpill">${esc(t.name)}<button title="Turn off">×</button></span>` : "";
+  $("toolSlot").innerHTML = t ? `<span class="toolpill">${S.tool === "build" ? "AI assistant" : esc(t.name)}<button title="Turn off">×</button></span>` : "";
   const x = $("toolSlot").querySelector("button"); if(x) x.onclick = () => { S.tool = null; renderTool(); };
   $("buildBtn").classList.toggle("on", S.tool === "build");
   $("input").placeholder = t ? t.place : (S.mode !== "aivx" ? "Ask " + appById(S.mode).name : "Ask AIV X");
@@ -1962,12 +2251,12 @@ $("plusBtn").onclick = e => {
     { label:"Add photos & files", desc:"PDF, Word, Excel, slides, audio, code", fn:() => $("fileInput").click() },
     { label:"Take a photo", fn:() => $("camInput").click() },
     { sep:true },
-    ...["image","search","research","doc","sheet","slides","code","link"].map(k => ({ label:TOOLS[k].name, desc:TOOLS[k].desc, check:S.tool === k, fn:() => setTool(k) })),
+    ...["image","search","research","doc","sheet","slides","app","code","link"].map(k => ({ label:TOOLS[k].name, desc:TOOLS[k].desc, check:S.tool === k, fn:() => setTool(k) })),
     { sep:true },
     { label:"Work in a project", desc:"Chats with shared instructions", fn:() => pickProject() },
   ], { up:true });
 };
-$("buildBtn").onclick = () => { if(S.tool === "build"){ S.tool = null; renderTool(); } else openBuild(); };
+$("buildBtn").onclick = () => openBuild();
 $("modelBtn").onclick = e => {
   e.stopPropagation();
   showMenu(e.currentTarget, MODELS.map(m => ({ label:m.name, desc:m.desc, check:S.model === m.id, fn:() => { S.model = m.id; $("modelName").textContent = m.name; LSX.set("aivx_model", m.id); } })), { up:true });
@@ -2007,41 +2296,29 @@ $("micBtn").onclick = async () => {
 
 /* ---------------- BUILD modal ---------------- */
 function openBuild(){
-  const types = [
-    ["app","App","A full web app"], ["tool","Tool","Calculator, converter, tracker"], ["game","Game","Something fun to play"],
-    ["site","Website","Landing page or portfolio"], ["ai","AI assistant","A custom AI for a job"], ["feature","Feature","Add to one of my apps"],
-  ];
-  let type = "app";
-  const examples = {
-    app:["A habit tracker with streaks","A recipe box with grocery lists","A budget app with charts"],
-    tool:["A drug dose calculator for EMS students","A unit converter","A pomodoro timer with stats"],
-    game:["Snake with a high score","A trivia game about anatomy","Memory card matching"],
-    site:["A landing page for my business","A personal portfolio","An event page with RSVP"],
-    ai:["An AI that writes Instagram captions","A study buddy that quizzes me","A customer support bot for my shop"],
-    feature:["A flashcard spaced-repetition mode","A meal photo calorie estimator","A mock interview timer"],
-  };
-  const m = modal(`<div class="mh2"><h3>Build with AIV X</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
+  if(!S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS){
+    openUpgrade("You've built your free AI assistant. Get AIV Pro to build more.");
+    return;
+  }
+  const examples = ["An assistant that writes Instagram captions for my bakery","A study buddy that quizzes me on EMS protocols","A customer support assistant for my online shop","A writing coach that edits my emails to sound professional","A meal planner that knows I'm vegetarian","A tutor that explains math step by step"];
+  const left = S.pro ? "AIV Pro: build as many assistants as you like." : "Your free plan includes 1 AI assistant. After that, building more needs AIV Pro.";
+  modal(`<div class="mh2"><h3>Build your AI assistant</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb">
-      <div class="buildopts">${types.map(([k, n, d]) => `<button class="buildopt ${k === type ? "on" : ""}" data-t="${k}"><b>${n}</b>${d}</button>`).join("")}</div>
-      <div id="featApp" class="hidden"><label class="label">Which app is it for?</label><select class="input" id="featSel">${APPS.filter(a => a.id !== "aivx").map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></div>
-      <label class="label">Describe what you want</label>
-      <textarea class="input" id="buildDesc" placeholder="What should it do? Who is it for? Any must-have features or style?"></textarea>
-      <div class="starters" id="buildEx" style="justify-content:flex-start;margin-top:10px"></div>
+      <p class="muted small" style="margin-bottom:6px">Describe the assistant you want. AIV X designs its personality, instructions, and greeting, and you can try it, refine it, and download it.</p>
+      <label class="label">What should your assistant do?</label>
+      <textarea class="input" id="buildDesc" placeholder="Who is it for? What should it help with? How should it sound? Anything it should never do?"></textarea>
+      <div class="starters" id="buildEx" style="justify-content:flex-start;margin-top:10px">${examples.map(x => `<button class="starter">${esc(x)}</button>`).join("")}</div>
+      <p class="small" style="margin-top:16px;color:var(--text2)">${esc(left)}</p>
     </div>
     <div class="mf"><button class="btn" data-close>Cancel</button><button class="btn primary" id="buildGo">Build it</button></div>`);
-  const drawEx = () => { $("buildEx").innerHTML = examples[type].map(x => `<button class="starter">${esc(x)}</button>`).join(""); $("buildEx").querySelectorAll(".starter").forEach(b => b.onclick = () => { $("buildDesc").value = b.textContent; $("buildDesc").focus(); }); };
-  m.querySelectorAll(".buildopt").forEach(b => b.onclick = () => { type = b.dataset.t; m.querySelectorAll(".buildopt").forEach(x => x.classList.toggle("on", x === b)); $("featApp").classList.toggle("hidden", type !== "feature"); drawEx(); });
-  drawEx();
+  $("buildEx").querySelectorAll(".starter").forEach(b => b.onclick = () => { $("buildDesc").value = b.textContent; $("buildDesc").focus(); });
   setTimeout(() => $("buildDesc").focus(), 50);
   $("buildGo").onclick = () => {
     const d = $("buildDesc").value.trim(); if(!d) return $("buildDesc").focus();
-    const label = { app:"web app", tool:"tool", game:"game", site:"website", ai:"AI assistant app (a chat interface powered by AIV.chat with a carefully written system prompt for its job)", feature:"feature" }[type];
-    let prompt = `Build a ${label}: ${d}`;
-    if(type === "feature"){ const a = appById($("featSel").value); prompt = `Build a standalone ${label} for my app "${a.name}" (${a.desc}): ${d}. Match a clean modern style so it could be added to that app later.`; }
     closeModal();
-    if(lastArtifact("build")) newChat();
+    newChat();
     S.tool = "build"; renderTool();
-    send(prompt);
+    send("Build me an AI assistant: " + d);
   };
 }
 
@@ -2056,30 +2333,112 @@ function setMode(id, silent){
 }
 $("modeChip").onclick = e => {
   e.stopPropagation();
-  const cur = appById(S.mode);
   showMenu(e.currentTarget, [
-    { head:"Turn AIV X into…" },
-    ...APPS.map(a => ({ label:a.name, desc:a.id === "aivx" ? "Default" : "", check:S.mode === a.id, fn:() => setMode(a.id) })),
+    { head:"Open an app — AIV X stays beside you" },
+    ...APPS.filter(a => a.url).map(a => ({ label:a.name, check:S.openApp === a.id, fn:() => openFullApp(a) })),
     { sep:true },
-    ...(cur.url ? [{ label:"Open full " + cur.name + " app", fn:() => openFullApp(cur) }] : []),
+    { label:"AIV X", desc:"Just chat", check:!S.openApp && S.mode === "aivx", fn:() => { if(S.openApp) closeApp(); else setMode("aivx"); } },
     { label:"Browse AI Verse apps", fn:() => openApps() },
   ]);
 };
 function openApps(){
   const m = modal(`<div class="mh2"><h3>AI Verse apps</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
-    <div class="mb"><p class="muted small" style="margin-bottom:14px">Turn AIV X into any of these apps right here in the chat, or open the full app.</p>
-    <div class="apps-grid">${APPS.map(a => `<div class="appcard ${S.mode === a.id ? "on" : ""}"><div class="nm">${esc(a.name)}</div><div class="ds">${esc(a.desc)}</div>
-    <div class="row"><button class="btn sm primary" data-use="${a.id}">${S.mode === a.id ? "Active" : "Use in AIV X"}</button>${a.url ? `<button class="btn sm" data-open="${a.id}">Open app</button>` : ""}</div></div>`).join("")}</div></div>`, true);
-  m.querySelectorAll("[data-use]").forEach(b => b.onclick = () => { closeModal(); setMode(b.dataset.use); });
+    <div class="mb"><p class="muted small" style="margin-bottom:14px">Open an app and AIV X stays beside it as your copilot. Or use an app's skills in chat only.</p>
+    <div class="apps-grid">${APPS.filter(a => a.url).map(a => `<div class="appcard ${S.openApp === a.id ? "on" : ""}"><div class="nm">${esc(a.name)}</div><div class="ds">${esc(a.desc)}</div>
+    <div class="row"><button class="btn sm primary" data-open="${a.id}">${S.openApp === a.id ? "Open now" : "Open"}</button><button class="btn sm" data-use="${a.id}">Chat only</button></div></div>`).join("")}</div></div>`, true);
+  m.querySelectorAll("[data-use]").forEach(b => b.onclick = () => { closeModal(); if(S.openApp) closeApp(true); setMode(b.dataset.use); });
   m.querySelectorAll("[data-open]").forEach(b => b.onclick = () => { closeModal(); openFullApp(appById(b.dataset.open)); });
 }
-function openFullApp(app){
-  if(!app.url) return;
-  $("appTitle").textContent = app.name;
-  $("appIframe").src = app.url; $("appNewTab").href = app.url;
-  $("appframe").classList.remove("hidden");
+
+/* ---------------- APP ON SCREEN + AIV X COPILOT ---------------- */
+function openFullApp(app, opts = {}){
+  if(!app || !app.url) return;
+  closeMenu(); closeModal(); closeCanvas();
+  const switching = S.openApp && S.openApp !== app.id;
+  S.openApp = app.id;
+  Link.ready = false; Link.app = null; Link.synced = ""; renderLink();
+  if(opts.keepChat){ if(S.chat) S.chat.mode = app.id; }
+  else if(switching || (S.chat && S.chat.messages.length && S.chat.mode !== app.id)) newChat();
+  setMode(app.id, true);
+  if(innerWidth >= 820 && !$("side").classList.contains("collapsed")){ S._sideWasOpen = true; closeSide(); }
+  $("appLoading").classList.remove("hidden");
+  $("appIframe").onload = () => $("appLoading").classList.add("hidden");
+  $("appIframe").src = app.url;
+  $("appNewTab").href = app.url;
+  $("appPane").classList.remove("hidden");
+  $("workspace").classList.add("appmode");
+  $("workspace").classList.toggle("cop-hidden", innerWidth < 820);
+  $("appCtl").classList.remove("hidden");
+  $("copApp").textContent = app.name;
+  renderCopilot();
+  try{ history.replaceState(null, "", "#app/" + app.id); }catch(e){}
 }
-$("appBack").onclick = () => { $("appframe").classList.add("hidden"); $("appIframe").src = "about:blank"; };
+function closeApp(keepMode){
+  if(!S.openApp) return;
+  S.openApp = null;
+  Link.ready = false; Link.app = null; renderLink();
+  $("appIframe").src = "about:blank";
+  $("appPane").classList.add("hidden");
+  $("workspace").classList.remove("appmode", "cop-hidden");
+  $("appCtl").classList.add("hidden");
+  if(S._sideWasOpen && innerWidth >= 820) openSide();
+  S._sideWasOpen = false;
+  if(!keepMode) setMode("aivx", true);
+  if(!S.chat || !S.chat.messages.length) renderEmpty();
+  renderCopilot();
+  try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+}
+function toggleCopilot(show){
+  const ws = $("workspace");
+  if(show === undefined) show = ws.classList.contains("cop-hidden");
+  ws.classList.toggle("cop-hidden", !show);
+  renderCopilot();
+  if(show) setTimeout(() => $("input").focus(), 50);
+}
+function renderCopilot(){
+  const on = !!S.openApp, hidden = $("workspace").classList.contains("cop-hidden");
+  $("copilotBtn").classList.toggle("on", on && !hidden);
+  $("copFab").classList.toggle("hidden", !(on && hidden && innerWidth < 820));
+}
+/* ---- bridge to the app (aiv-connect.js inside each AI Verse app) ---- */
+const APP_ORIGIN = new URL(APP_BASE).origin;
+const Link = { app:null, ready:false, synced:"", n:0, waiting:{} };
+function renderLink(){
+  const el = $("copLink"); if(!el) return;
+  el.textContent = Link.ready ? (Link.synced === "pulled" || Link.synced === "pushed" || Link.synced === "same" || Link.synced === "saved" ? "Linked · synced" : "Linked") : (S.openApp ? "Connecting…" : "");
+  el.classList.toggle("on", Link.ready);
+}
+window.addEventListener("message", async e => {
+  if(e.origin !== APP_ORIGIN) return;
+  const f = $("appIframe"); if(!f || e.source !== f.contentWindow) return;
+  const d = e.data || {}; if(!d.aivConnect) return;
+  const reply = (id, result, error) => { try{ e.source.postMessage({ aivx:1, type:"reply", id, result, error }, e.origin); }catch(x){} };
+  if(d.type === "hello"){
+    Link.app = d.app; Link.ready = true; renderLink();
+    e.source.postMessage({ aivx:1, type:"welcome", signedIn:!!S.user }, e.origin);
+    if(S.chat && S.chat.messages.length && S.openApp === d.app) persistChat();
+    return;
+  }
+  if(!S.user) return;
+  if(d.type === "pull"){ try{ reply(d.id, await Store.getAppData(d.app)); }catch(err){ reply(d.id, null, err.message); } return; }
+  if(d.type === "push"){ try{ await Store.setAppData(d.app, d.at, d.data); Link.synced = "saved"; renderLink(); reply(d.id, true); }catch(err){ reply(d.id, null, err.message); } return; }
+  if(d.type === "synced"){ Link.synced = d.result; renderLink(); return; }
+  if(d.type === "answer" && Link.waiting[d.id]){ const w = Link.waiting[d.id]; delete Link.waiting[d.id]; w(d.result); }
+});
+function appAsk(type, extra, timeout = 12000){
+  return new Promise((res, rej) => {
+    const f = $("appIframe");
+    if(!Link.ready || !f || !f.contentWindow) return rej(new Error("the app isn't connected"));
+    const id = ++Link.n; Link.waiting[id] = res;
+    f.contentWindow.postMessage(Object.assign({ aivx:1, type, id }, extra || {}), APP_ORIGIN);
+    setTimeout(() => { if(Link.waiting[id]){ delete Link.waiting[id]; rej(new Error("timed out")); } }, timeout);
+  });
+}
+$("copilotBtn").onclick = () => toggleCopilot();
+$("copHide").onclick = () => toggleCopilot(false);
+$("copFab").onclick = () => toggleCopilot(true);
+$("copNew").onclick = () => newChat();
+$("appClose").onclick = () => closeApp();
 
 /* ---------------- PROJECTS ---------------- */
 function editProject(p){
@@ -2132,7 +2491,7 @@ function openUpgrade(reason){
   const m = modal(`<div class="mh2"><h3>AIV Pro</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb">${reason ? `<p style="margin-bottom:14px"><b>${esc(reason)}</b></p>` : ""}
       <p class="muted">Get more out of AIV X with your own AIV key.</p>
-      <ul style="margin:14px 0 18px 20px;line-height:1.9"><li>Unlimited messages, images, and research</li><li>Longer, bigger builds</li><li>Use AIV in apps you build and download</li><li>Your own AIV API key for every AI Verse app</li></ul>
+      <ul style="margin:14px 0 18px 20px;line-height:1.9"><li>Build unlimited AI assistants</li><li>Unlimited messages, images, and research</li><li>Longer, bigger builds</li><li>Use AIV in apps you build and download</li><li>Your own AIV API key for every AI Verse app</li></ul>
       <a class="btn primary" href="${esc(UPGRADE_URL)}" target="_blank" rel="noopener" style="width:100%">Get AIV Pro</a>
       <label class="label" style="margin-top:22px">Already have an AIV key?</label>
       <div style="display:flex;gap:8px"><input class="input" id="upKey" placeholder="aiv-xxxxxxxx" value="${esc(S.profile.proKey || "")}"><button class="btn" id="upGo">Unlock</button></div>
@@ -2237,7 +2596,7 @@ $("meBtn").onclick = e => {
 function closeSide(){ if(innerWidth < 820){ $("side").classList.add("collapsed"); $("scrim").classList.add("hidden"); } else $("side").classList.add("collapsed"); $("sideOpen").classList.remove("hidden"); }
 function openSide(){ $("side").classList.remove("collapsed"); if(innerWidth < 820) $("scrim").classList.remove("hidden"); $("sideOpen").classList.add("hidden"); }
 let wasMobile = innerWidth < 820;
-addEventListener("resize", () => { const m = innerWidth < 820; if(m !== wasMobile){ wasMobile = m; if(m) closeSide(); else { $("scrim").classList.add("hidden"); openSide(); } } });
+addEventListener("resize", () => { const m = innerWidth < 820; if(m !== wasMobile){ wasMobile = m; if(m) closeSide(); else { $("scrim").classList.add("hidden"); if(!S.openApp) openSide(); } if(S.openApp) $("workspace").classList.toggle("cop-hidden", m); renderCopilot(); } });
 $("sideClose").onclick = closeSide; $("sideOpen").onclick = openSide; $("scrim").onclick = closeSide;
 $("navNew").onclick = () => newChat(); $("newBtn").onclick = () => newChat();
 $("navSearch").onclick = () => openSearch();
@@ -2271,6 +2630,8 @@ async function onSignedIn(u){
   if(S.profile.proKey) api("/verify", { key:S.profile.proKey }).then(r => { S.pro = !!r.valid; renderUsage(); }).catch(() => {});
   $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
   renderMe(); renderUsage(); setMode("aivx", true); newChat();
+  const hm = location.hash.match(/^#app\/(\w+)/);
+  if(hm){ const a = APPS.find(x => x.id === hm[1]); if(a && a.url) setTimeout(() => openFullApp(a), 0); }
   if(innerWidth < 820) closeSide(); else $("sideOpen").classList.add("hidden");
 }
 paintIcons();
