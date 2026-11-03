@@ -6,6 +6,12 @@
 <title>AIV X — Your Everyday AI | AI Verse</title>
 <meta name="description" content="AIV X is your everyday AI: chat, search, research, create images, read your files, build apps, and switch into any AI Verse app.">
 <meta name="theme-color" content="#0a0a0b">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta property="og:title" content="AIV X — Your Everyday AI">
+<meta property="og:description" content="Chat, search, research, create images, read your files, and build apps. By AI Verse.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -483,8 +489,10 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 /* =====================================================================
    AIV X — CONFIG  (edit these)
    ===================================================================== */
-// 1) Your Cloudflare Worker URL (aiv-worker.js)
-const AIV_API_URL = "https://aiv-api.YOUR-SUBDOMAIN.workers.dev";
+// 1) AIV X's own API: the Cloudflare Worker URL (aivx-worker.js) and AIV X's app key.
+//    The app key identifies AIV X to its API — it must match the AIVX_APP_KEY secret in the Worker.
+const AIV_API_URL = "https://aivx-api.YOUR-SUBDOMAIN.workers.dev";
+const AIVX_APP_KEY = "aivx_iGsNWk4eHXokoW8awHmMVZpm";
 
 // 2) Firebase web config (Firebase console → Project settings → Your apps → Web).
 //    Leave apiKey empty to run in DEMO MODE (accounts + memory stay in this browser).
@@ -497,29 +505,32 @@ const FIREBASE_CONFIG = {
 
 // 3) Free plan limit and where "Get AIV Pro" sends people
 const FREE_DAILY_LIMIT = 20;
-const UPGRADE_URL = "index.html#api";
+const UPGRADE_URL = "https://aiverse.it.com/#api";
+
+// 4b) Where your AI Verse apps live (AIV X opens them from your main site)
+const APP_BASE = "https://aiverse.it.com/";
 
 // 4) Your AI Verse apps (paths relative to where aivx.html is hosted)
 const APPS = [
   { id:"aivx", name:"AIV X", emo:"✦", url:null, desc:"Your everyday AI for anything.",
     persona:"",
     starters:["Plan my week","Explain something like I'm 12","Write a professional email","Help me make a decision"] },
-  { id:"study", name:"Study and Research AI", emo:"📚", url:"study-and-research-ai.html", desc:"Adaptive tutor, flashcards, quizzes, and research lab.",
+  { id:"study", name:"Study and Research AI", emo:"📚", url:APP_BASE + "study-and-research-ai.html", desc:"Adaptive tutor, flashcards, quizzes, and research lab.",
     persona:"You are now in Study and Research AI mode: an adaptive tutor and research mentor. Teach step by step, check understanding with quick questions, adapt difficulty, offer flashcards, practice quizzes, study guides, and summaries. For research, help with reading papers, methodology, hypotheses, experiment design, statistics basics, and scientific writing. When asked for flashcards use a 'Front | Back' table; for quizzes use numbered multiple-choice with an answer key at the end.",
     starters:["Quiz me on cardiac physiology","Make flashcards from my notes","Help me design a study","Explain this research paper"] },
-  { id:"finance", name:"Stock and Finance AI", emo:"📈", url:"stock-and-finance-ai.html", desc:"Markets, stock analysis, budgeting, and forecasting.",
+  { id:"finance", name:"Stock and Finance AI", emo:"📈", url:APP_BASE + "stock-and-finance-ai.html", desc:"Markets, stock analysis, budgeting, and forecasting.",
     persona:"You are now in Stock and Finance AI mode: a markets and money educator. Explain stocks, ETFs, market concepts, company fundamentals, budgeting, saving, debt payoff, and forecasting in plain language with clear numbers and tables. You provide education and analysis frameworks, not personalized investment advice; say so briefly when someone asks what to buy or sell. You do not have live prices unless web search results are provided.",
     starters:["Build me a monthly budget","Explain P/E ratio with an example","Compare index funds vs. individual stocks","How does compound interest work?"] },
-  { id:"fitness", name:"Health and Fitness AI", emo:"💪", url:"health-and-fitness-ai.html", desc:"Workouts, progression, nutrition, and coaching.",
+  { id:"fitness", name:"Health and Fitness AI", emo:"💪", url:APP_BASE + "health-and-fitness-ai.html", desc:"Workouts, progression, nutrition, and coaching.",
     persona:"You are now in Health and Fitness AI mode: a supportive training and nutrition coach. Build workout programs with sets, reps, and progression, explain exercise form, design balanced meal plans, and answer fitness questions. Keep advice safe and evidence-based; suggest a professional for injuries, medical conditions, or pain.",
     starters:["Build a 4-day gym split","High-protein meal ideas","How do I progress my squat?","Make a beginner running plan"] },
-  { id:"photo", name:"Photo AI", emo:"🎨", url:"photo-ai.html", desc:"Create and edit images with AI.",
+  { id:"photo", name:"Photo AI", emo:"🎨", url:APP_BASE + "photo-ai.html", desc:"Create and edit images with AI.",
     persona:"You are now in Photo AI mode: a creative image partner. Help people create images, write vivid image prompts, plan photo edits, pick styles, color palettes, and compositions, and give feedback on photos they upload. When someone wants a picture, suggest switching on Create image or write a ready-to-use prompt.",
     starters:["Create an image of a neon city at night","Give feedback on my photo","Write a prompt for a product shot","Ideas for a logo style"] },
-  { id:"career", name:"Career AI", emo:"💼", url:"career-ai.html", desc:"Resumes, cover letters, job matching, interviews.",
+  { id:"career", name:"Career AI", emo:"💼", url:APP_BASE + "career-ai.html", desc:"Resumes, cover letters, job matching, interviews.",
     persona:"You are now in Career AI mode: a career coach. Improve resumes with strong bullet points and metrics, write tailored cover letters, match skills to jobs, prepare interview answers using the STAR method, run mock interviews one question at a time, and plan career moves.",
     starters:["Rewrite my resume bullets","Write a cover letter for this job","Mock interview me","What jobs fit my skills?"] },
-  { id:"aide", name:"Aide", emo:"🗓️", url:"aide.html", desc:"Planner, calendar, tasks, reminders, and email.",
+  { id:"aide", name:"Aide", emo:"🗓️", url:APP_BASE + "aide.html", desc:"Planner, calendar, tasks, reminders, and email.",
     persona:"You are now in Aide mode: a personal assistant. Plan days and weeks, organize tasks by priority, draft emails and messages, prepare travel plans and checklists, and summarize what matters. Use clear checklists and time blocks.",
     starters:["Plan my day","Draft an email to my boss","Make a packing list","Prioritize my to-dos"] },
 ];
@@ -860,7 +871,7 @@ async function saveProfile(){ try{ await Store.saveUser(S.profile); }catch(e){ c
 async function api(path, body){
   const res = await fetch(AIV_API_URL + path, {
     method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify(Object.assign({}, body, { key: S.profile && S.profile.proKey || undefined }))
+    body: JSON.stringify(Object.assign({}, body, { key: S.profile && S.profile.proKey || undefined, appKey: AIVX_APP_KEY }))
   });
   const data = await res.json().catch(() => ({}));
   if(!res.ok) throw new Error(data.error || ("Request failed (" + res.status + ")"));
@@ -873,7 +884,7 @@ async function ask(messages, opts = {}){
 async function streamChat(messages, { model = "auto", onToken, signal, max_tokens = 2048 } = {}){
   const res = await fetch(AIV_API_URL + "/chat", {
     method:"POST", headers:{ "Content-Type":"application/json" }, signal,
-    body: JSON.stringify({ messages, model, stream:true, max_tokens, key: S.profile.proKey || undefined })
+    body: JSON.stringify({ messages, model, stream:true, max_tokens, key: S.profile.proKey || undefined, appKey: AIVX_APP_KEY })
   });
   if(!res.ok){ const d = await res.json().catch(() => ({})); throw new Error(d.error || ("Request failed (" + res.status + ")")); }
   const ct = res.headers.get("content-type") || "";
