@@ -22,7 +22,7 @@ It runs as its own website with its own API:
 4. (Optional, recommended) Storage → KV → create `aivx-limits`, then bind it to the Worker as `LIMITS`.
    This blocks heavy free use on the server side (default 60 AI calls per visitor per day; change with a `FREE_DAILY_CAP` variable).
 5. `SITE_ORIGINS` in `aivx-worker.js` is already set to aiv-x.com.
-6. Copy the Worker URL (e.g. `https://aivx-api.yourname.workers.dev`) into `AIV_API_URL` at the top of `index.html`.
+6. Copy the Worker URL (`https://aivx-api.domhasaball.workers.dev`) into `AIV_API_URL` at the top of `index.html`.
 
 ## 2. Turn on accounts (Firebase)
 1. console.firebase.google.com → Add project → add a **Web app** → copy its config into `FIREBASE_CONFIG` in `index.html`.
