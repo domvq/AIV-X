@@ -1168,6 +1168,11 @@ function bump(n = 1){
   S.profile.usage = { date:today(), count:usageCount() + n };
   renderUsage(); saveProfile();
 }
+function refund(n = 1){
+  if(S.pro) return;
+  S.profile.usage = { date:today(), count:Math.max(0, usageCount() - n) };
+  renderUsage(); saveProfile();
+}
 function renderUsage(){
   if(S.pro){ $("usage").innerHTML = `<span>AIV Pro · unlimited</span>`; $("mePlan").textContent = "AIV Pro"; $("upBtn").classList.add("hidden"); return; }
   const c = usageCount(), pct = Math.min(100, c / FREE_DAILY_LIMIT * 100);
@@ -1305,7 +1310,8 @@ async function send(textOverride){
 
 async function runAssistant(ai, userMsg, tool){
   S.busy = true; S.abort = new AbortController(); setSending(true);
-  bump(tool === "research" ? 3 : 1);
+  const cost = tool === "research" ? 3 : 1;
+  bump(cost);
   try{
     if(tool === "image") await doImage(ai, userMsg);
     else if(tool === "search") await doSearch(ai, userMsg);
@@ -1318,7 +1324,7 @@ async function runAssistant(ai, userMsg, tool){
     else await doChat(ai, userMsg, tool === "code" ? "The user wants help with code. Write complete, working, well-commented code in fenced blocks with the language tag. For web UIs prefer a single self-contained HTML file (the user can press Preview). Explain briefly how to run it." : "");
   }catch(e){
     if(e.name === "AbortError"){ if(!ai.content) ai.content = "_Stopped._"; }
-    else ai.error = friendlyError(e);
+    else { ai.error = friendlyError(e); refund(cost); }
   }
   ai.pending = false; ai.status = "";
   (ai.steps || []).forEach(s => s.done = true);
