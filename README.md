@@ -21,13 +21,13 @@ It runs as its own website with its own API:
    - (optional) `BRAVE_KEY` for better web search
 4. (Optional, recommended) Storage → KV → create `aivx-limits`, then bind it to the Worker as `LIMITS`.
    This blocks heavy free use on the server side (default 60 AI calls per visitor per day; change with a `FREE_DAILY_CAP` variable).
-5. In `aivx-worker.js`, set `SITE_ORIGINS` to AIV X's real domain, then redeploy.
+5. `SITE_ORIGINS` in `aivx-worker.js` is already set to aiv-x.com.
 6. Copy the Worker URL (e.g. `https://aivx-api.yourname.workers.dev`) into `AIV_API_URL` at the top of `index.html`.
 
 ## 2. Turn on accounts (Firebase)
 1. console.firebase.google.com → Add project → add a **Web app** → copy its config into `FIREBASE_CONFIG` in `index.html`.
 2. Authentication → Sign-in method → enable **Google**, **Apple**, **Phone**, **Email/Password**.
-3. Authentication → Settings → Authorized domains → add AIV X's domain and `domvq.github.io`.
+3. Authentication → Settings → Authorized domains → add `aiv-x.com`, `www.aiv-x.com`, and `domvq.github.io`.
 4. Firestore Database → Create → Rules:
    ```
    rules_version = '2';
@@ -44,7 +44,7 @@ Until `FIREBASE_CONFIG` is filled in, AIV X runs in demo mode (accounts saved in
 ## 3. Publish the website (GitHub Pages)
 1. Create a new repo (e.g. `AIVX`) and upload these files.
 2. Settings → Pages → Deploy from branch → `main` / root.
-3. Custom domain (optional): enter it in Settings → Pages, then in Namecheap add a CNAME record
+3. Custom domain: enter `aiv-x.com` in Settings → Pages. At your domain registrar, add four A records for `@` (185.199.108.153, 185.199.109.153, 185.199.110.153, 185.199.111.153) and a CNAME record for `www`
    pointing to `domvq.github.io`. GitHub adds the `CNAME` file for you.
 
 ## Rotating the app key

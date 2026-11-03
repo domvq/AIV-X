@@ -6,7 +6,7 @@
 <title>AIV X — Your Everyday AI | AI Verse</title>
 <meta name="description" content="AIV X is your everyday AI: chat, search, research, create images, read your files, build apps, and switch into any AI Verse app.">
 <meta name="theme-color" content="#0a0a0b">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -48,6 +48,8 @@ a{color:var(--glow)}
 .hidden{display:none!important}
 .brand{font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.22em;text-transform:uppercase}
 .brand b{color:var(--glow);font-weight:600}
+.brand{display:flex;align-items:center;line-height:0}
+.brandmark{height:1em;width:auto;display:block;overflow:visible}
 svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .iconbtn{width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2)}
 .iconbtn:hover{background:var(--bg3);color:var(--text)}
@@ -73,7 +75,7 @@ textarea.input{resize:vertical;min-height:90px}
 .auth-art::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 70% 55% at 65% 40%,rgba(59,130,246,.28),transparent 70%),radial-gradient(ellipse 40% 35% at 15% 85%,rgba(255,255,255,.07),transparent 70%)}
 .auth-art .stars{position:absolute;inset:0;background-image:radial-gradient(1px 1px at 20% 30%,#fff9,transparent),radial-gradient(1px 1px at 80% 20%,#fff7,transparent),radial-gradient(1px 1px at 60% 70%,#fff6,transparent),radial-gradient(1px 1px at 35% 85%,#fff5,transparent),radial-gradient(1px 1px at 90% 60%,#fff7,transparent),radial-gradient(1.5px 1.5px at 10% 55%,#fff8,transparent),radial-gradient(1px 1px at 50% 12%,#fff6,transparent),radial-gradient(1px 1px at 72% 88%,#fff5,transparent)}
 .auth-art>*{position:relative}
-.auth-art .brand{font-size:26px}
+.auth-art .brand{font-size:58px}
 .auth-art h1{font-family:'Barlow Condensed';font-weight:500;text-transform:uppercase;letter-spacing:.04em;font-size:clamp(44px,6vw,80px);line-height:.95}
 .auth-art p{color:#c9c9d0;max-width:440px;margin-top:16px;font-size:17px}
 .auth-feats{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
@@ -100,7 +102,7 @@ textarea.input{resize:vertical;min-height:90px}
 #side{width:var(--side);flex:none;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;transition:margin .2s}
 #side.collapsed{margin-left:calc(-1 * var(--side))}
 .side-top{display:flex;align-items:center;justify-content:space-between;padding:12px 10px 6px 16px}
-.side-top .brand{font-size:20px}
+.side-top .brand{font-size:34px;color:var(--text)}
 .side-nav{padding:4px 8px}
 .navitem{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;font-size:14px;color:var(--text);text-align:left}
 .navitem:hover,.navitem.on{background:var(--bg3)}
@@ -112,6 +114,7 @@ textarea.input{resize:vertical;min-height:90px}
 .side-h button:hover{color:var(--text)}
 .chatitem{display:flex;align-items:center;gap:6px;width:100%;padding:7px 10px;border-radius:10px;font-size:14px;color:var(--text);position:relative}
 .chatitem:hover,.chatitem.on{background:var(--bg3)}
+.chatitem svg.i{width:14px;height:14px;color:var(--muted)}
 .chatitem .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .chatitem .more{opacity:0;color:var(--muted);padding:0 4px}
 .chatitem:hover .more,.chatitem.on .more{opacity:1}
@@ -149,6 +152,11 @@ textarea.input{resize:vertical;min-height:90px}
 .starters{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:720px;margin-top:18px}
 .starter{border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--text2);background:var(--panel)}
 .starter:hover{background:var(--bg2);color:var(--text)}
+#chatcol.centered{justify-content:center;padding-bottom:9vh}
+#chatcol.centered #scroll{flex:0 0 auto;overflow:visible}
+#chatcol.centered .empty{padding:0 20px 26px}
+#chatcol.centered .disclaimer{display:none}
+.starters.below{margin:16px auto 0;padding:0 16px}
 
 /* messages */
 .m{margin:22px 0;display:flex;flex-direction:column}
@@ -202,7 +210,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 .genimg{max-width:420px;width:100%;border-radius:16px;display:block;margin:6px 0;cursor:zoom-in}
 .artifact-card{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0;background:var(--panel);cursor:pointer;max-width:420px}
 .artifact-card:hover{background:var(--bg2)}
-.artifact-card .ic{width:40px;height:40px;border-radius:10px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+.artifact-card .ic{width:40px;height:40px;border-radius:10px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:600;letter-spacing:.08em;color:var(--text2);flex:none}
 .artifact-card .tt{font-weight:500}
 .artifact-card .st{font-size:13px;color:var(--muted)}
 .actions{display:flex;gap:2px;margin-top:6px;opacity:.75}
@@ -307,7 +315,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
 .card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel);display:flex;flex-direction:column}
-.card .th{aspect-ratio:1;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:34px;cursor:pointer}
+.card .th{aspect-ratio:1;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--muted);cursor:pointer}
 .card .th img{width:100%;height:100%;object-fit:cover}
 .card .cb{padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:6px;align-items:center}
 .card .cb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -347,7 +355,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 <div id="auth" class="hidden">
   <div class="auth-art">
     <div class="stars"></div>
-    <div class="brand">AIV <b>X</b></div>
+    <div class="brand" data-brand></div>
     <div>
       <h1>Your everyday<br>AI, from AI Verse.</h1>
       <p>Chat, search, research, create images, read your files, build apps — and turn AIV X into any AI Verse app in one tap.</p>
@@ -406,7 +414,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 <div id="app" class="hidden">
   <aside id="side">
     <div class="side-top">
-      <div class="brand">AIV <b>X</b></div>
+      <div class="brand" data-brand></div>
       <button class="iconbtn" id="sideClose" title="Close sidebar"><span data-i="sidebar"></span></button>
     </div>
     <div class="side-nav">
@@ -432,7 +440,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
   <main id="main">
     <div class="topbar">
       <button class="iconbtn" id="sideOpen" title="Open sidebar"><span data-i="sidebar"></span></button>
-      <button class="modechip" id="modeChip"><span class="emo" id="modeEmo"></span><span id="modeName"></span><span data-i="chev"></span></button>
+      <button class="modechip" id="modeChip"><span id="modeName"></span><span data-i="chev"></span></button>
       <div class="sp"></div>
       <button class="upbtn hide-m" id="upBtn"><span data-i="gift"></span>Get AIV Pro</button>
       <button class="iconbtn" id="shareBtn" title="Export chat"><span data-i="share"></span></button>
@@ -457,6 +465,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
             </div>
           </div>
           <div class="disclaimer">AIV X can make mistakes. Check important info.</div>
+          <div class="starters below hidden" id="belowStarters"></div>
         </div>
       </div>
       <section id="canvas" class="hidden">
@@ -491,7 +500,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
    ===================================================================== */
 // 1) AIV X's own API: the Cloudflare Worker URL (aivx-worker.js) and AIV X's app key.
 //    The app key identifies AIV X to its API — it must match the AIVX_APP_KEY secret in the Worker.
-const AIV_API_URL = "https://aivx-api.domhasaball.workers.dev/";
+const AIV_API_URL = "https://aivx-api.YOUR-SUBDOMAIN.workers.dev";
 const AIVX_APP_KEY = "aivx_iGsNWk4eHXokoW8awHmMVZpm";
 
 // 2) Firebase web config (Firebase console → Project settings → Your apps → Web).
@@ -512,25 +521,25 @@ const APP_BASE = "https://aiverse.it.com/";
 
 // 4) Your AI Verse apps (paths relative to where aivx.html is hosted)
 const APPS = [
-  { id:"aivx", name:"AIV X", emo:"✦", url:null, desc:"Your everyday AI for anything.",
+  { id:"aivx", name:"AIV X", url:null, desc:"Your everyday AI for anything.",
     persona:"",
     starters:["Plan my week","Explain something like I'm 12","Write a professional email","Help me make a decision"] },
-  { id:"study", name:"Study and Research AI", emo:"📚", url:APP_BASE + "study-and-research-ai.html", desc:"Adaptive tutor, flashcards, quizzes, and research lab.",
+  { id:"study", name:"Study and Research AI", url:APP_BASE + "study-and-research-ai.html", desc:"Adaptive tutor, flashcards, quizzes, and research lab.",
     persona:"You are now in Study and Research AI mode: an adaptive tutor and research mentor. Teach step by step, check understanding with quick questions, adapt difficulty, offer flashcards, practice quizzes, study guides, and summaries. For research, help with reading papers, methodology, hypotheses, experiment design, statistics basics, and scientific writing. When asked for flashcards use a 'Front | Back' table; for quizzes use numbered multiple-choice with an answer key at the end.",
     starters:["Quiz me on cardiac physiology","Make flashcards from my notes","Help me design a study","Explain this research paper"] },
-  { id:"finance", name:"Stock and Finance AI", emo:"📈", url:APP_BASE + "stock-and-finance-ai.html", desc:"Markets, stock analysis, budgeting, and forecasting.",
+  { id:"finance", name:"Stock and Finance AI", url:APP_BASE + "stock-and-finance-ai.html", desc:"Markets, stock analysis, budgeting, and forecasting.",
     persona:"You are now in Stock and Finance AI mode: a markets and money educator. Explain stocks, ETFs, market concepts, company fundamentals, budgeting, saving, debt payoff, and forecasting in plain language with clear numbers and tables. You provide education and analysis frameworks, not personalized investment advice; say so briefly when someone asks what to buy or sell. You do not have live prices unless web search results are provided.",
     starters:["Build me a monthly budget","Explain P/E ratio with an example","Compare index funds vs. individual stocks","How does compound interest work?"] },
-  { id:"fitness", name:"Health and Fitness AI", emo:"💪", url:APP_BASE + "health-and-fitness-ai.html", desc:"Workouts, progression, nutrition, and coaching.",
+  { id:"fitness", name:"Health and Fitness AI", url:APP_BASE + "health-and-fitness-ai.html", desc:"Workouts, progression, nutrition, and coaching.",
     persona:"You are now in Health and Fitness AI mode: a supportive training and nutrition coach. Build workout programs with sets, reps, and progression, explain exercise form, design balanced meal plans, and answer fitness questions. Keep advice safe and evidence-based; suggest a professional for injuries, medical conditions, or pain.",
     starters:["Build a 4-day gym split","High-protein meal ideas","How do I progress my squat?","Make a beginner running plan"] },
-  { id:"photo", name:"Photo AI", emo:"🎨", url:APP_BASE + "photo-ai.html", desc:"Create and edit images with AI.",
+  { id:"photo", name:"Photo AI", url:APP_BASE + "photo-ai.html", desc:"Create and edit images with AI.",
     persona:"You are now in Photo AI mode: a creative image partner. Help people create images, write vivid image prompts, plan photo edits, pick styles, color palettes, and compositions, and give feedback on photos they upload. When someone wants a picture, suggest switching on Create image or write a ready-to-use prompt.",
     starters:["Create an image of a neon city at night","Give feedback on my photo","Write a prompt for a product shot","Ideas for a logo style"] },
-  { id:"career", name:"Career AI", emo:"💼", url:APP_BASE + "career-ai.html", desc:"Resumes, cover letters, job matching, interviews.",
+  { id:"career", name:"Career AI", url:APP_BASE + "career-ai.html", desc:"Resumes, cover letters, job matching, interviews.",
     persona:"You are now in Career AI mode: a career coach. Improve resumes with strong bullet points and metrics, write tailored cover letters, match skills to jobs, prepare interview answers using the STAR method, run mock interviews one question at a time, and plan career moves.",
     starters:["Rewrite my resume bullets","Write a cover letter for this job","Mock interview me","What jobs fit my skills?"] },
-  { id:"aide", name:"Aide", emo:"🗓️", url:APP_BASE + "aide.html", desc:"Planner, calendar, tasks, reminders, and email.",
+  { id:"aide", name:"Aide", url:APP_BASE + "aide.html", desc:"Planner, calendar, tasks, reminders, and email.",
     persona:"You are now in Aide mode: a personal assistant. Plan days and weeks, organize tasks by priority, draft emails and messages, prepare travel plans and checklists, and summarize what matters. Use clear checklists and time blocks.",
     starters:["Plan my day","Draft an email to my boss","Make a packing list","Prioritize my to-dos"] },
 ];
@@ -542,15 +551,15 @@ const MODELS = [
 ];
 
 const TOOLS = {
-  search:   { emo:"🌐", name:"Web search",    desc:"Find real-time news and info", place:"Search the web" },
-  research: { emo:"🔭", name:"Deep research", desc:"Get a detailed report with sources", place:"What should I research?" },
-  image:    { emo:"🖼️", name:"Create image",  desc:"Visualize anything", place:"Describe an image" },
-  doc:      { emo:"📄", name:"Document",      desc:"Write and edit documents", place:"What should the document be?" },
-  sheet:    { emo:"📊", name:"Spreadsheet",   desc:"Create and edit tables", place:"What should the spreadsheet track?" },
-  slides:   { emo:"🖥️", name:"Presentation",  desc:"Create slide decks", place:"What is the presentation about?" },
-  code:     { emo:"💻", name:"Code",          desc:"Write, explain, and run code", place:"What should I code?" },
-  link:     { emo:"🔗", name:"Read a link",   desc:"Summarize or ask about a web page", place:"Paste a link, then your question" },
-  build:    { emo:"🛠️", name:"Build",         desc:"Build any app, tool, game, or AI", place:"Describe what to build" },
+  search:   { name:"Web search",    desc:"Find real-time news and info", place:"Search the web" },
+  research: { name:"Deep research", desc:"Get a detailed report with sources", place:"What should I research?" },
+  image:    { name:"Create image",  desc:"Visualize anything", place:"Describe an image" },
+  doc:      { name:"Document",      desc:"Write and edit documents", place:"What should the document be?" },
+  sheet:    { name:"Spreadsheet",   desc:"Create and edit tables", place:"What should the spreadsheet track?" },
+  slides:   { name:"Presentation",  desc:"Create slide decks", place:"What is the presentation about?" },
+  code:     { name:"Code",          desc:"Write, explain, and run code", place:"What should I code?" },
+  link:     { name:"Read a link",   desc:"Summarize or ask about a web page", place:"Paste a link, then your question" },
+  build:    { name:"Build",         desc:"Build any app, tool, game, or AI", place:"Describe what to build" },
 };
 
 /* =====================================================================
@@ -579,9 +588,23 @@ const ICONS = {
   download:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>',
   pencil:'<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   memory:'<path d="M12 3a6 6 0 0 0-6 6c0 2.2 1.2 3.4 2 4.5.8 1 1 2 1 3.5h6c0-1.5.2-2.5 1-3.5.8-1.1 2-2.3 2-4.5a6 6 0 0 0-6-6Z"/><path d="M9 20h6"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+  pin:'<path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3Z"/>',
   expand:'<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
 };
 function icon(name){ return '<svg class="i" viewBox="0 0 24 24">' + (ICONS[name] || '') + '</svg>'; }
+/* AIV X brand mark: the AIV logo + a larger slashed X */
+let brandN = 0;
+function brandSVG(){
+  const id = "aivxcut" + (++brandN);
+  return `<svg class="brandmark" viewBox="70 200 1600 630" fill="none" role="img" aria-label="AIV X">
+  <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="48"><path d="M125 640 L283 388 L430 640"/><path d="M256 557 H300"/><path d="M525 392 V640"/><path d="M625 392 L765 642 L905 392"/></g>
+  <g transform="translate(1010 198) scale(5.26)">
+    <defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-10" y="-10" width="150" height="140"><rect x="-10" y="-10" width="150" height="140" fill="#fff"/><path d="M107.4 1.8 L12.6 118.2" stroke="#000" stroke-width="3"/></mask></defs>
+    <g mask="url(#${id})" fill="currentColor"><polygon points="17,22 41,22 103,98 79,98"/><polygon points="79,22 103,22 41,98 17,98"/><polygon points="94.5,22 103,22 118,3"/><polygon points="17,98 25.5,98 3,117"/></g>
+  </g></svg>`;
+}
+function paintBrand(){ document.querySelectorAll("[data-brand]").forEach(el => { if(!el.firstChild) el.innerHTML = brandSVG(); }); }
 function paintIcons(root){ (root || document).querySelectorAll('[data-i]').forEach(el => { if(!el.firstChild) el.innerHTML = icon(el.dataset.i); }); }
 
 const $ = id => document.getElementById(id);
@@ -927,7 +950,8 @@ How you respond:
 - Be honest about uncertainty. Never invent facts, quotes, links, or sources. You don't have live internet access unless search results are included in this conversation; say so if asked about very recent events and suggest turning on Web search.
 - You can read photos and files the user attaches, create images (Create image), search the web, run deep research, write documents, spreadsheets, and presentations, and build apps with the Build button.
 - For medical, legal, or financial questions, give clear, useful general information and suggest a professional when it really matters. For emergencies, tell them to call local emergency services.
-- Never help with weapons, malware, or harming people.`;
+- Never help with weapons, malware, or harming people.
+- Keep a clean, simple style: don't use emojis unless the user asks for them.`;
   if(app.persona) p += "\n\nMODE: " + app.persona;
   const proj = S.chat && S.chat.project && (S.profile.projects || []).find(x => x.id === S.chat.project);
   if(proj && proj.instructions) p += `\n\nPROJECT "${proj.name}" INSTRUCTIONS:\n${proj.instructions}`;
@@ -1006,6 +1030,7 @@ function splitThought(text){
 function renderThread(){
   const t = $("thread");
   if(!S.chat || !S.chat.messages.length){ renderEmpty(); return; }
+  leaveCentered();
   t.innerHTML = "";
   S.chat.messages.forEach(m => t.appendChild(msgEl(m)));
   paintIcons(t);
@@ -1015,13 +1040,17 @@ function renderEmpty(){
   const app = appById(S.mode);
   const name = (S.profile.name || "").split(" ")[0];
   const proj = S.chat && S.chat.project && (S.profile.projects || []).find(x => x.id === S.chat.project);
-  const h = app.id === "aivx" ? (name ? `What's on your mind today, ${esc(name)}?` : "What's on your mind today?") : `${app.emo} ${esc(app.name)}`;
-  $("thread").innerHTML = `<div class="empty" style="min-height:60vh"><h1>${h}</h1>
+  const h = app.id === "aivx" ? (name ? `What's on your mind today, ${esc(name)}?` : "What's on your mind today?") : esc(app.name);
+  $("chatcol").classList.add("centered");
+  $("thread").innerHTML = `<div class="empty"><h1>${h}</h1>
     <div class="modeline">${proj ? "Project · " + esc(proj.name) : app.id === "aivx" ? "Chat, search, create, and build — all in one place." : esc(app.desc) + (app.url ? ` · <a href="#" data-openapp="${app.id}">Open full app</a>` : "")}</div>
-    <div class="starters">${app.starters.map(s => `<button class="starter">${esc(s)}</button>`).join("")}</div></div>`;
-  $("thread").querySelectorAll(".starter").forEach(b => b.onclick = () => { $("input").value = b.textContent; autoGrow(); send(); });
+    </div>`;
+  const bs = $("belowStarters"); bs.classList.remove("hidden");
+  bs.innerHTML = app.starters.map(s => `<button class="starter">${esc(s)}</button>`).join("");
+  bs.querySelectorAll(".starter").forEach(b => b.onclick = () => { $("input").value = b.textContent; autoGrow(); send(); });
   const oa = $("thread").querySelector("[data-openapp]"); if(oa) oa.onclick = e => { e.preventDefault(); openFullApp(app); };
 }
+function leaveCentered(){ $("chatcol").classList.remove("centered"); $("belowStarters").classList.add("hidden"); }
 function scrollDown(force){
   const s = $("scroll");
   if(force || s.scrollHeight - s.scrollTop - s.clientHeight < 160) s.scrollTop = s.scrollHeight;
@@ -1031,7 +1060,7 @@ function attHTML(a){
   const ext = (a.name.split(".").pop() || "FILE").slice(0,4).toUpperCase();
   return `<div class="att"><div class="fi">${esc(ext)}</div><div class="nm" title="${esc(a.name)}">${esc(a.name)}</div></div>`;
 }
-const KIND_EMO = { build:"🛠️", doc:"📄", sheet:"📊", slides:"🖥️", image:"🖼️" };
+const KIND_EMO = { build:"APP", doc:"DOC", sheet:"SHEET", slides:"SLIDES", image:"IMG" };
 function msgEl(m){
   const el = document.createElement("div");
   el.className = "m " + (m.role === "user" ? "user" : "ai");
@@ -1043,14 +1072,14 @@ function msgEl(m){
     el.querySelector(".att.img-only img") && el.querySelectorAll(".att.img-only img").forEach(i => i.onclick = () => lightbox(i.src));
   }else{
     let html = "";
-    if(m.tool && TOOLS[m.tool] && m.tool !== "build") html += `<div class="ai-head"><span>${TOOLS[m.tool].emo} ${TOOLS[m.tool].name}</span></div>`;
+    if(m.tool && TOOLS[m.tool] && m.tool !== "build") html += `<div class="ai-head"><span>${TOOLS[m.tool].name}</span></div>`;
     if(m.steps && m.steps.length) html += `<div class="steps">${m.steps.map(s => `<div>${s.done ? '<span class="ok">✓</span>' : '<span class="thinking"><span class="orb"></span></span>'}<span>${esc(s.text)}</span></div>`).join("")}</div>`;
     const sp = splitThought(m.content || "");
     if(sp.thought) html += `<details class="thought" ${sp.thinking ? "open" : ""}><summary>${sp.thinking ? "Thinking…" : "Thought process"}</summary><div>${esc(sp.thought)}</div></details>`;
     if(m.pending && !sp.answer && !(m.images && m.images.length) && !(m.steps && m.steps.length) && !sp.thought) html += `<div class="thinking"><span class="orb"></span>${esc(m.status || "Thinking")}</div>`;
     if(sp.answer) html += `<div class="md body ${m.pending ? "cursor" : ""}">${renderMarkdown(sp.answer, m.sources)}</div>`;
     (m.images || []).forEach(im => { const src = im.src || (S.libMap[im.lib] && S.libMap[im.lib].src); if(src) html += `<img class="genimg" src="${src}" alt="${esc(im.prompt || "Generated image")}">`; });
-    if(m.artifact){ const k = m.artifact; html += `<div class="artifact-card" data-lib="${esc(k.lib)}"><div class="ic">${KIND_EMO[k.kind] || "✦"}</div><div><div class="tt">${esc(k.title)}</div><div class="st">${m.pending ? "Building…" : "Click to open"}</div></div></div>`; }
+    if(m.artifact){ const k = m.artifact; html += `<div class="artifact-card" data-lib="${esc(k.lib)}"><div class="ic">${KIND_EMO[k.kind] || "FILE"}</div><div><div class="tt">${esc(k.title)}</div><div class="st">${m.pending ? "Building…" : "Click to open"}</div></div></div>`; }
     if(m.sources && m.sources.length) html += `<div class="sources">${m.sources.map((s, i) => `<a class="src" href="${esc(s.url)}" target="_blank" rel="noopener"><span class="h">[${i+1}] ${esc(hostOf(s.url))}</span><span class="tt">${esc(s.title)}</span></a>`).join("")}</div>`;
     if(m.error) html += `<div class="err-msg">${esc(m.error)}</div>`;
     if(!m.pending){
@@ -1071,7 +1100,7 @@ function updateMsg(m, immediate){
     raf = 0;
     const old = $("thread").querySelector(`.m[data-id="${m.id}"]`);
     const nu = msgEl(m); paintIcons(nu);
-    if(old) old.replaceWith(nu); else { const e = $("thread").querySelector(".empty"); if(e) $("thread").innerHTML = ""; $("thread").appendChild(nu); }
+    if(old) old.replaceWith(nu); else { const e = $("thread").querySelector(".empty"); if(e){ $("thread").innerHTML = ""; leaveCentered(); } $("thread").appendChild(nu); }
     scrollDown();
   };
   if(immediate){ if(raf) cancelAnimationFrame(raf); draw(); }
@@ -1167,7 +1196,7 @@ function renderChatList(){
   const pl = $("projectList"); pl.innerHTML = "";
   (S.profile.projects || []).forEach(p => {
     const b = document.createElement("button"); b.className = "navitem";
-    b.innerHTML = `<span class="emo">${S.openProjects[p.id] ? "📂" : "📁"}</span><span style="flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span><span class="more" data-pmore>⋯</span>`;
+    b.innerHTML = `${icon("folder")}<span style="flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span><span class="more" data-pmore>⋯</span>`;
     b.onclick = e => {
       if(e.target.closest("[data-pmore]")){ e.stopPropagation(); return projectMenu(p, e.target); }
       S.openProjects[p.id] = !S.openProjects[p.id]; renderChatList();
@@ -1185,26 +1214,26 @@ function renderChatList(){
 function chatItem(c){
   const b = document.createElement("button");
   b.className = "chatitem" + (S.chat && S.chat.id === c.id ? " on" : "");
-  b.innerHTML = `${c.pinned ? "📌 " : ""}<span class="t">${esc(c.title)}</span><span class="more">⋯</span>`;
+  b.innerHTML = `${c.pinned ? icon("pin") : ""}<span class="t">${esc(c.title)}</span><span class="more">⋯</span>`;
   b.onclick = e => { if(e.target.classList.contains("more")){ e.stopPropagation(); return chatMenu(c, e.target); } openChat(c.id); };
   return b;
 }
 function chatMenu(c, anchor){
   showMenu(anchor, [
-    { emo:"✏️", label:"Rename", fn:async () => { const t = prompt("Rename chat", c.title); if(t){ c.title = t.slice(0,80); renderChatList(); await Store.saveChat(c); } } },
-    { emo:"📌", label:c.pinned ? "Unpin" : "Pin", fn:async () => { c.pinned = !c.pinned; renderChatList(); await Store.saveChat(c); } },
-    { emo:"📁", label:"Move to project", fn:() => moveToProject(c) },
-    { emo:"⬇️", label:"Export as Markdown", fn:() => exportChat(c) },
+    { label:"Rename", fn:async () => { const t = prompt("Rename chat", c.title); if(t){ c.title = t.slice(0,80); renderChatList(); await Store.saveChat(c); } } },
+    { label:c.pinned ? "Unpin" : "Pin", fn:async () => { c.pinned = !c.pinned; renderChatList(); await Store.saveChat(c); } },
+    { label:"Move to project", fn:() => moveToProject(c) },
+    { label:"Export as Markdown", fn:() => exportChat(c) },
     { sep:true },
-    { emo:"🗑️", label:"Delete", fn:async () => { if(!confirm("Delete this chat?")) return; S.chats = S.chats.filter(x => x.id !== c.id); if(S.chat && S.chat.id === c.id) newChat(); renderChatList(); await Store.deleteChat(c.id); } },
+    { label:"Delete", fn:async () => { if(!confirm("Delete this chat?")) return; S.chats = S.chats.filter(x => x.id !== c.id); if(S.chat && S.chat.id === c.id) newChat(); renderChatList(); await Store.deleteChat(c.id); } },
   ]);
 }
 function moveToProject(c){
   const ps = S.profile.projects || [];
   if(!ps.length) return toast("Create a project first with + next to Projects.");
   showMenu(document.activeElement || $("chatList"), [
-    ...ps.map(p => ({ emo:"📁", label:p.name, check:c.project === p.id, fn:async () => { c.project = p.id; renderChatList(); await Store.saveChat(c); } })),
-    { emo:"↩️", label:"No project", fn:async () => { c.project = null; renderChatList(); await Store.saveChat(c); } },
+    ...ps.map(p => ({ label:p.name, check:c.project === p.id, fn:async () => { c.project = p.id; renderChatList(); await Store.saveChat(c); } })),
+    { label:"No project", fn:async () => { c.project = null; renderChatList(); await Store.saveChat(c); } },
   ]);
 }
 function exportChat(c){
@@ -1244,7 +1273,7 @@ async function send(textOverride){
   chat.messages.push(userMsg);
   S.pending = []; renderPending();
   $("input").value = ""; autoGrow(); updateSend();
-  if(chat.messages.length === 1) $("thread").innerHTML = "";
+  if(chat.messages.length === 1){ $("thread").innerHTML = ""; leaveCentered(); }
   updateMsg(userMsg, true);
 
   const ai = { id:uid("m_"), role:"assistant", content:"", pending:true, tool, at:Date.now() };
@@ -1475,7 +1504,7 @@ Rules:
     await AIV.chat("prompt")  or  await AIV.chat([{role:"system",content:"..."},{role:"user",content:"..."}])   → returns the AI's reply as a string
     await AIV.image("prompt")  → returns an image data URL
   Show a loading state while waiting and handle errors with a friendly message.
-- No external images; use emoji, CSS, or inline SVG.
+- No external images; use CSS or simple inline SVG line icons. Default to a clean, minimal style with no emojis unless the user asks for them.
 - After the code block, write 2-3 short sentences on what you built and ideas for next steps.
 When the user asks for changes to the current app, return the FULL updated HTML file with the changes applied.`;
 
@@ -1645,7 +1674,7 @@ function openLibrary(filter = "all"){
   const items = S.library.filter(x => filter === "all" || x.kind === filter);
   const box = modal(`<div class="mh2"><h3>Library</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb"><div class="seg" style="display:inline-flex;margin-bottom:16px;flex-wrap:wrap">${Object.entries(kinds).map(([k, v]) => `<button data-f="${k}" class="${k === filter ? "on" : ""}">${v}</button>`).join("")}</div>
-    ${items.length ? `<div class="grid">${items.map(x => `<div class="card" data-id="${x.id}"><div class="th">${x.kind === "image" ? `<img src="${x.src}" alt="">` : (KIND_EMO[x.kind] || "✦")}</div><div class="cb"><span title="${esc(x.title)}">${esc(x.title)}</span><button class="iconbtn" data-del title="Delete" style="width:28px;height:28px">🗑</button></div></div>`).join("")}</div>`
+    ${items.length ? `<div class="grid">${items.map(x => `<div class="card" data-id="${x.id}"><div class="th">${x.kind === "image" ? `<img src="${x.src}" alt="">` : (KIND_EMO[x.kind] || "FILE")}</div><div class="cb"><span title="${esc(x.title)}">${esc(x.title)}</span><button class="iconbtn" data-del title="Delete" style="width:28px;height:28px">${icon("x")}</button></div></div>`).join("")}</div>`
       : `<div class="muted" style="text-align:center;padding:40px 0">Images, apps, documents, spreadsheets, and slides you create will appear here.</div>`}</div>`, true);
   box.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { closeModal(); openLibrary(b.dataset.f); });
   box.querySelectorAll(".card").forEach(c => {
@@ -1664,7 +1693,7 @@ function openArtifact(item, view, live){
   const kind = item.kind;
   CV.view = view || (kind === "build" ? "preview" : kind);
   $("canvas").classList.remove("hidden");
-  $("cvIcon").textContent = KIND_EMO[kind] || "✦";
+  $("cvIcon").textContent = "";
   $("cvTitle").textContent = item.title;
   const tabs = kind === "build" ? [["preview","Preview"],["code","Code"]] : kind === "doc" ? [["doc","Document"],["md","Markdown"]] : [];
   $("cvTabs").innerHTML = tabs.map(([k, v]) => `<button data-v="${k}" class="${k === CV.view ? "on" : ""}">${v}</button>`).join("");
@@ -1728,26 +1757,26 @@ $("cvMore").onclick = e => {
   const it = CV.item; if(!it) return; saveCanvasEdits();
   const items = [];
   if(it.kind === "build"){
-    items.push({ emo:"⬇️", label:"Download HTML", fn:() => download(slug(it.title) + ".html", injectBridge(it.html, {}, true), "text/html") });
-    items.push({ emo:"↗️", label:"Open in new tab", fn:() => window.open(URL.createObjectURL(new Blob([injectBridge(it.html, {}, true)], { type:"text/html" })), "_blank") });
-    items.push({ emo:"📋", label:"Copy code", fn:() => { navigator.clipboard.writeText(it.html); toast("Code copied"); } });
-    items.push({ emo:"🔄", label:"Reload preview", fn:() => openArtifact(it, "preview") });
+    items.push({ label:"Download HTML", fn:() => download(slug(it.title) + ".html", injectBridge(it.html, {}, true), "text/html") });
+    items.push({ label:"Open in new tab", fn:() => window.open(URL.createObjectURL(new Blob([injectBridge(it.html, {}, true)], { type:"text/html" })), "_blank") });
+    items.push({ label:"Copy code", fn:() => { navigator.clipboard.writeText(it.html); toast("Code copied"); } });
+    items.push({ label:"Reload preview", fn:() => openArtifact(it, "preview") });
   }
   if(it.kind === "doc"){
-    items.push({ emo:"⬇️", label:"Download Word (.doc)", fn:() => download(slug(it.title) + ".doc", docHTML(it), "application/msword") });
-    items.push({ emo:"⬇️", label:"Download Markdown", fn:() => download(slug(it.title) + ".md", it.content || "", "text/markdown") });
-    items.push({ emo:"🖨️", label:"Print / Save as PDF", fn:() => { const w = window.open("", "_blank"); if(!w) return toast("Allow pop-ups to print."); w.document.write(docHTML(it)); w.document.close(); setTimeout(() => w.print(), 400); } });
-    items.push({ emo:"📋", label:"Copy text", fn:() => { navigator.clipboard.writeText(it.content || ""); toast("Copied"); } });
+    items.push({ label:"Download Word (.doc)", fn:() => download(slug(it.title) + ".doc", docHTML(it), "application/msword") });
+    items.push({ label:"Download Markdown", fn:() => download(slug(it.title) + ".md", it.content || "", "text/markdown") });
+    items.push({ label:"Print / Save as PDF", fn:() => { const w = window.open("", "_blank"); if(!w) return toast("Allow pop-ups to print."); w.document.write(docHTML(it)); w.document.close(); setTimeout(() => w.print(), 400); } });
+    items.push({ label:"Copy text", fn:() => { navigator.clipboard.writeText(it.content || ""); toast("Copied"); } });
   }
   if(it.kind === "sheet"){
-    items.push({ emo:"⬇️", label:"Download Excel (.xlsx)", fn:async () => { await loadScript(CDN.xlsx); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(it.rows), "Sheet1"); XLSX.writeFile(wb, slug(it.title) + ".xlsx"); } });
-    items.push({ emo:"⬇️", label:"Download CSV", fn:() => download(slug(it.title) + ".csv", toCSV(it.rows), "text/csv") });
-    items.push({ emo:"➕", label:"Add row", fn:() => { it.rows.push(Array(it.rows[0].length).fill("")); drawCanvas(); addLib(it); } });
-    items.push({ emo:"➕", label:"Add column", fn:() => { it.rows.forEach((r, i) => r.push(i ? "" : "New column")); drawCanvas(); addLib(it); } });
+    items.push({ label:"Download Excel (.xlsx)", fn:async () => { await loadScript(CDN.xlsx); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(it.rows), "Sheet1"); XLSX.writeFile(wb, slug(it.title) + ".xlsx"); } });
+    items.push({ label:"Download CSV", fn:() => download(slug(it.title) + ".csv", toCSV(it.rows), "text/csv") });
+    items.push({ label:"Add row", fn:() => { it.rows.push(Array(it.rows[0].length).fill("")); drawCanvas(); addLib(it); } });
+    items.push({ label:"Add column", fn:() => { it.rows.forEach((r, i) => r.push(i ? "" : "New column")); drawCanvas(); addLib(it); } });
   }
   if(it.kind === "slides"){
-    items.push({ emo:"⬇️", label:"Download presentation (HTML)", fn:() => download(slug(it.title) + ".html", deckHTML(it), "text/html") });
-    items.push({ emo:"⬇️", label:"Download outline (.md)", fn:() => download(slug(it.title) + ".md", `# ${it.title}\n\n` + it.slides.map((s, i) => `## ${i+1}. ${s.title}\n${s.bullets.map(b => "- " + b).join("\n")}${s.notes ? "\n\n> " + s.notes : ""}`).join("\n\n"), "text/markdown") });
+    items.push({ label:"Download presentation (HTML)", fn:() => download(slug(it.title) + ".html", deckHTML(it), "text/html") });
+    items.push({ label:"Download outline (.md)", fn:() => download(slug(it.title) + ".md", `# ${it.title}\n\n` + it.slides.map((s, i) => `## ${i+1}. ${s.title}\n${s.bullets.map(b => "- " + b).join("\n")}${s.notes ? "\n\n> " + s.notes : ""}`).join("\n\n"), "text/markdown") });
   }
   showMenu(e.currentTarget, items);
 };
@@ -1804,7 +1833,7 @@ function showMenu(anchor, items, opts = {}){
   closeMenu();
   menuEl = document.createElement("div"); menuEl.className = "menu";
   menuEl.innerHTML = items.map((it, i) => it.sep ? `<div class="sep"></div>` : it.head ? `<div class="mh">${esc(it.head)}</div>` :
-    `<button class="mi" data-i="${i}"><span class="emo">${it.emo || ""}</span><span>${esc(it.label)}${it.desc ? `<span class="d"> ${esc(it.desc)}</span>` : ""}</span>${it.check ? '<span class="chk">✓</span>' : ""}</button>`).join("");
+    `<button class="mi" data-i="${i}"><span>${esc(it.label)}${it.desc ? `<span class="d"> ${esc(it.desc)}</span>` : ""}</span>${it.check ? '<span class="chk">✓</span>' : ""}</button>`).join("");
   document.body.appendChild(menuEl);
   const r = anchor.getBoundingClientRect(), mw = menuEl.offsetWidth, mh = menuEl.offsetHeight;
   let left = Math.min(r.left, innerWidth - mw - 8), top = opts.up || r.bottom + mh > innerHeight - 8 ? r.top - mh - 6 : r.bottom + 6;
@@ -1835,7 +1864,7 @@ function setTool(t){
 }
 function renderTool(){
   const t = S.tool && TOOLS[S.tool];
-  $("toolSlot").innerHTML = t && S.tool !== "build" ? `<span class="toolpill">${t.emo} ${esc(t.name)}<button title="Turn off">×</button></span>` : "";
+  $("toolSlot").innerHTML = t && S.tool !== "build" ? `<span class="toolpill">${esc(t.name)}<button title="Turn off">×</button></span>` : "";
   const x = $("toolSlot").querySelector("button"); if(x) x.onclick = () => { S.tool = null; renderTool(); };
   $("buildBtn").classList.toggle("on", S.tool === "build");
   $("input").placeholder = t ? t.place : (S.mode !== "aivx" ? "Ask " + appById(S.mode).name : "Ask AIV X");
@@ -1843,12 +1872,12 @@ function renderTool(){
 $("plusBtn").onclick = e => {
   e.stopPropagation();
   showMenu(e.currentTarget, [
-    { emo:"📎", label:"Add photos & files", desc:"PDF, Word, Excel, slides, audio, code", fn:() => $("fileInput").click() },
-    { emo:"📷", label:"Take a photo", fn:() => $("camInput").click() },
+    { label:"Add photos & files", desc:"PDF, Word, Excel, slides, audio, code", fn:() => $("fileInput").click() },
+    { label:"Take a photo", fn:() => $("camInput").click() },
     { sep:true },
-    ...["image","search","research","doc","sheet","slides","code","link"].map(k => ({ emo:TOOLS[k].emo, label:TOOLS[k].name, desc:TOOLS[k].desc, check:S.tool === k, fn:() => setTool(k) })),
+    ...["image","search","research","doc","sheet","slides","code","link"].map(k => ({ label:TOOLS[k].name, desc:TOOLS[k].desc, check:S.tool === k, fn:() => setTool(k) })),
     { sep:true },
-    { emo:"📁", label:"Work in a project", desc:"Chats with shared instructions", fn:() => pickProject() },
+    { label:"Work in a project", desc:"Chats with shared instructions", fn:() => pickProject() },
   ], { up:true });
 };
 $("buildBtn").onclick = () => { if(S.tool === "build"){ S.tool = null; renderTool(); } else openBuild(); };
@@ -1892,8 +1921,8 @@ $("micBtn").onclick = async () => {
 /* ---------------- BUILD modal ---------------- */
 function openBuild(){
   const types = [
-    ["app","📱","App","A full web app"], ["tool","🧰","Tool","Calculator, converter, tracker"], ["game","🎮","Game","Something fun to play"],
-    ["site","🌐","Website","Landing page or portfolio"], ["ai","🤖","AI assistant","A custom AI for a job"], ["feature","🧩","Feature","Add to one of my apps"],
+    ["app","App","A full web app"], ["tool","Tool","Calculator, converter, tracker"], ["game","Game","Something fun to play"],
+    ["site","Website","Landing page or portfolio"], ["ai","AI assistant","A custom AI for a job"], ["feature","Feature","Add to one of my apps"],
   ];
   let type = "app";
   const examples = {
@@ -1904,10 +1933,10 @@ function openBuild(){
     ai:["An AI that writes Instagram captions","A study buddy that quizzes me","A customer support bot for my shop"],
     feature:["A flashcard spaced-repetition mode","A meal photo calorie estimator","A mock interview timer"],
   };
-  const m = modal(`<div class="mh2"><h3>🛠️ Build with AIV X</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
+  const m = modal(`<div class="mh2"><h3>Build with AIV X</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb">
-      <div class="buildopts">${types.map(([k, e, n, d]) => `<button class="buildopt ${k === type ? "on" : ""}" data-t="${k}"><span class="emo">${e}</span><b>${n}</b>${d}</button>`).join("")}</div>
-      <div id="featApp" class="hidden"><label class="label">Which app is it for?</label><select class="input" id="featSel">${APPS.filter(a => a.id !== "aivx").map(a => `<option value="${a.id}">${a.emo} ${esc(a.name)}</option>`).join("")}</select></div>
+      <div class="buildopts">${types.map(([k, n, d]) => `<button class="buildopt ${k === type ? "on" : ""}" data-t="${k}"><b>${n}</b>${d}</button>`).join("")}</div>
+      <div id="featApp" class="hidden"><label class="label">Which app is it for?</label><select class="input" id="featSel">${APPS.filter(a => a.id !== "aivx").map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></div>
       <label class="label">Describe what you want</label>
       <textarea class="input" id="buildDesc" placeholder="What should it do? Who is it for? Any must-have features or style?"></textarea>
       <div class="starters" id="buildEx" style="justify-content:flex-start;margin-top:10px"></div>
@@ -1933,7 +1962,7 @@ function openBuild(){
 function setMode(id, silent){
   const app = appById(id);
   S.mode = app.id;
-  $("modeEmo").textContent = app.emo; $("modeName").textContent = app.name;
+  $("modeName").textContent = app.name;
   renderTool();
   if(!S.chat || !S.chat.messages.length) renderEmpty();
   if(!silent){ if(S.chat){ S.chat.mode = app.id; persistChat(); } toast(app.id === "aivx" ? "Back to AIV X" : "AIV X is now " + app.name); }
@@ -1943,23 +1972,23 @@ $("modeChip").onclick = e => {
   const cur = appById(S.mode);
   showMenu(e.currentTarget, [
     { head:"Turn AIV X into…" },
-    ...APPS.map(a => ({ emo:a.emo, label:a.name, desc:a.id === "aivx" ? "Default" : "", check:S.mode === a.id, fn:() => setMode(a.id) })),
+    ...APPS.map(a => ({ label:a.name, desc:a.id === "aivx" ? "Default" : "", check:S.mode === a.id, fn:() => setMode(a.id) })),
     { sep:true },
-    ...(cur.url ? [{ emo:"↗️", label:"Open full " + cur.name + " app", fn:() => openFullApp(cur) }] : []),
-    { emo:"🧭", label:"Browse AI Verse apps", fn:() => openApps() },
+    ...(cur.url ? [{ label:"Open full " + cur.name + " app", fn:() => openFullApp(cur) }] : []),
+    { label:"Browse AI Verse apps", fn:() => openApps() },
   ]);
 };
 function openApps(){
   const m = modal(`<div class="mh2"><h3>AI Verse apps</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb"><p class="muted small" style="margin-bottom:14px">Turn AIV X into any of these apps right here in the chat, or open the full app.</p>
-    <div class="apps-grid">${APPS.map(a => `<div class="appcard ${S.mode === a.id ? "on" : ""}"><div class="emo">${a.emo}</div><div class="nm">${esc(a.name)}</div><div class="ds">${esc(a.desc)}</div>
+    <div class="apps-grid">${APPS.map(a => `<div class="appcard ${S.mode === a.id ? "on" : ""}"><div class="nm">${esc(a.name)}</div><div class="ds">${esc(a.desc)}</div>
     <div class="row"><button class="btn sm primary" data-use="${a.id}">${S.mode === a.id ? "Active" : "Use in AIV X"}</button>${a.url ? `<button class="btn sm" data-open="${a.id}">Open app</button>` : ""}</div></div>`).join("")}</div></div>`, true);
   m.querySelectorAll("[data-use]").forEach(b => b.onclick = () => { closeModal(); setMode(b.dataset.use); });
   m.querySelectorAll("[data-open]").forEach(b => b.onclick = () => { closeModal(); openFullApp(appById(b.dataset.open)); });
 }
 function openFullApp(app){
   if(!app.url) return;
-  $("appTitle").textContent = app.emo + " " + app.name;
+  $("appTitle").textContent = app.name;
   $("appIframe").src = app.url; $("appNewTab").href = app.url;
   $("appframe").classList.remove("hidden");
 }
@@ -1988,11 +2017,11 @@ function editProject(p){
     closeModal(); renderChatList(); await saveProfile();
   };
 }
-function projectMenu(p, anchor){ showMenu(anchor, [{ emo:"💬", label:"New chat in project", fn:() => newChat(p.id) }, { emo:"✏️", label:"Edit project", fn:() => editProject(p) }]); }
+function projectMenu(p, anchor){ showMenu(anchor, [{ label:"New chat in project", fn:() => newChat(p.id) }, { label:"Edit project", fn:() => editProject(p) }]); }
 function pickProject(){
   const ps = S.profile.projects || [];
   if(!ps.length) return editProject();
-  showMenu($("plusBtn"), [...ps.map(p => ({ emo:"📁", label:p.name, fn:() => newChat(p.id) })), { sep:true }, { emo:"➕", label:"New project", fn:() => editProject() }], { up:true });
+  showMenu($("plusBtn"), [...ps.map(p => ({ label:p.name, fn:() => newChat(p.id) })), { sep:true }, { label:"New project", fn:() => editProject() }], { up:true });
 }
 $("newProject").onclick = () => editProject();
 
@@ -2107,12 +2136,12 @@ function renderMe(){
 $("meBtn").onclick = e => {
   e.stopPropagation();
   showMenu(e.currentTarget, [
-    { emo:"⚙️", label:"Settings", fn:() => openSettings() },
-    { emo:"🧠", label:"Memory", fn:() => openSettings("memory") },
-    { emo:"✨", label:"Personalization", fn:() => openSettings("personal") },
-    { emo:"💎", label:S.pro ? "AIV Pro" : "Upgrade to AIV Pro", fn:() => openUpgrade() },
+    { label:"Settings", fn:() => openSettings() },
+    { label:"Memory", fn:() => openSettings("memory") },
+    { label:"Personalization", fn:() => openSettings("personal") },
+    { label:S.pro ? "AIV Pro" : "Upgrade to AIV Pro", fn:() => openUpgrade() },
     { sep:true },
-    { emo:"↪️", label:"Log out", fn:() => Auth.signOut() },
+    { label:"Log out", fn:() => Auth.signOut() },
   ], { up:true });
 };
 function closeSide(){ if(innerWidth < 820){ $("side").classList.add("collapsed"); $("scrim").classList.add("hidden"); } else $("side").classList.add("collapsed"); $("sideOpen").classList.remove("hidden"); }
@@ -2155,6 +2184,7 @@ async function onSignedIn(u){
   if(innerWidth < 820) closeSide(); else $("sideOpen").classList.add("hidden");
 }
 paintIcons();
+paintBrand();
 setSending(false);
 Auth.init(onSignedIn).catch(e => { $("auth").classList.remove("hidden"); $("authErr").textContent = "Couldn't start sign-in: " + e.message; });
 </script>
