@@ -885,11 +885,19 @@ function defaultProfile(u){
     name: u.name || (u.email ? u.email.split("@")[0] : "") || "",
     email: u.email || "", phone: u.phone || "", provider: u.provider || "",
     createdAt: Date.now(),
-    settings: { memoryOn:true, learnOn:true, aboutMe:"", style:"", theme:"system", voice:"" },
+    settings: { memoryOn:true, learnOn:true, chatHistoryOn:true, aboutMe:"", style:"", theme:"system", voice:"" },
     memories: [], usage: { date:today(), count:0 }, proKey:"", projects:[]
   };
 }
-async function saveProfile(){ try{ await Store.saveUser(S.profile); }catch(e){ console.warn(e); } }
+let profileErrShown = false;
+async function saveProfile(){
+  try{ await Store.saveUser(S.profile); return true; }
+  catch(e){
+    console.warn("[AIV X] couldn't save profile:", e);
+    if(!profileErrShown){ profileErrShown = true; toast("Couldn't save your memory and settings: " + (e.code || e.message)); }
+    return false;
+  }
+}
 
 /* =====================================================================
    API
@@ -964,6 +972,17 @@ How you respond:
     p += "\n\nMEMORY — things you've learned about this user from past chats. Use them naturally only when they make your answer better; don't recite them or mention that you have memory unless asked:\n" +
       S.profile.memories.slice(-80).map(m => "- " + m.text).join("\n");
   }
+  if(st.chatHistoryOn !== false){
+    const recent = S.chats.filter(c => (!S.chat || c.id !== S.chat.id) && c.messages && c.messages.length).slice(0, 8);
+    if(recent.length){
+      p += "\n\nRECENT CONVERSATIONS with this user (newest first). Use them for continuity when relevant — e.g. if they refer to something from before — but don't bring them up otherwise:\n" +
+        recent.map(c => {
+          const said = c.messages.filter(m => m.role === "user" && m.content).slice(-3).map(m => m.content.replace(/\s+/g, " ").slice(0, 160)).join(" | ");
+          return `- "${c.title}" (${new Date(c.updatedAt).toLocaleDateString()}): ${said}`;
+        }).join("\n");
+    }
+  }
+  p += "\n\nIf the user asks what you remember about them, tell them plainly from the MEMORY section above (or say you don't have anything saved yet), and mention they can manage it in Settings > Memory.";
   if(extra) p += "\n\n" + extra;
   return p;
 }
@@ -1545,34 +1564,93 @@ function lastArtifact(kind){
 /* =====================================================================
    MEMORY — learns from each conversation
    ===================================================================== */
+const MEMORY_SYSTEM = `You maintain a long-term memory about ONE user for an AI assistant called AIV X.
+Look at what the USER just said and decide what is worth remembering for future conversations.
+
+SAVE durable facts the user states about themselves, for example:
+- name, job or role, workplace, school, city
+- projects they're working on, businesses, products, websites
+- goals, plans, deadlines
+- skills, tools, tech they use
+- preferences, likes and dislikes, how they want answers
+- people in their life, by role ("has a sister named Ana")
+If the user says "remember ..." save it exactly.
+If the user says "forget ..." or a fact changed, remove or update the matching memory.
+
+DO NOT SAVE: questions they asked, general knowledge, anything the assistant said, guesses, passwords, ID/card/bank numbers, exact street addresses.
+
+Write each memory as one short third-person sentence, like "Works as an AEMT" or "Is building an AI company called AI Verse".
+Do not add a memory that duplicates an existing one.
+
+Reply with ONLY this JSON and nothing else:
+{"add":["..."],"update":[{"id":"mem_id","text":"..."}],"remove":["mem_id"]}
+Use empty arrays when nothing should change.`;
+
+function parseMemJSON(out){
+  if(out && typeof out === "object") return out;
+  const s = String(out || "").replace(/```(?:json)?/gi, "");
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if(a < 0 || b <= a) throw new Error("no JSON");
+  return JSON.parse(s.slice(a, b + 1));
+}
+function memNoteOn(ai, text){ ai.memNote = text; updateMsg(ai, true); persistChat(); }
+function memLog(result){
+  S.profile.memStatus = { at:Date.now(), result:String(result).slice(0, 160) };
+  try{ console.info("[AIV X memory]", result); }catch(e){}
+}
+
 async function learnFrom(userMsg, ai){
   const st = S.profile.settings;
   if(!st.learnOn || ai.error || !userMsg) return;
-  const said = (userMsg.content || "") + (userMsg.atts && userMsg.atts.length ? "\n[Shared: " + userMsg.atts.map(a => a.name).join(", ") + "]" : "") + (userMsg.ctx ? "\n" + userMsg.ctx.slice(0, 3000) : "");
-  if(said.trim().length < 8) return;
+  const text = (userMsg.content || "").trim();
   const mems = S.profile.memories;
-  try{
-    const out = await ask([{ role:"system", content:`You maintain a long-term memory about ONE user for an AI assistant. Given the existing memories and the latest exchange, decide what to change.
-Save durable, useful facts the USER stated about themselves: name, job, location (city level), projects, goals, preferences, tastes, routines, people they mention by role, skills, tools they use, and how they like answers.
-Do NOT save: one-off questions, things the assistant said, guesses, passwords, ID/card/bank numbers, exact addresses, or health, religion, sexuality, or political details unless the user explicitly says "remember".
-If the user says "remember X", save it. If they say "forget X" or a fact changed, remove or update it.
-Write each memory as one short third-person sentence ("Works as an EMT in Sacramento").
-Reply with JSON only: {"add":["..."],"update":[{"id":"...","text":"..."}],"remove":["id"]}. Use empty arrays when nothing changes — most exchanges change nothing.` },
-      { role:"user", content:"EXISTING MEMORIES:\n" + (mems.length ? mems.map(m => m.id + ": " + m.text).join("\n") : "(none)") + "\n\nUSER SAID:\n" + said.slice(0, 5000) + "\n\nASSISTANT REPLIED (context only):\n" + splitThought(ai.content || "").answer.slice(0, 1200) }], { model:"auto", max_tokens:400 });
-    const j = JSON.parse(out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1));
-    let changed = 0;
-    (j.remove || []).forEach(id => { const i = mems.findIndex(m => m.id === id); if(i >= 0){ mems.splice(i, 1); changed++; } });
-    (j.update || []).forEach(u => { const m = mems.find(x => x.id === u.id); if(m && u.text){ m.text = String(u.text).slice(0, 300); m.at = Date.now(); changed++; } });
-    (j.add || []).forEach(t => {
-      t = String(t || "").trim().slice(0, 300);
-      if(t && !mems.some(m => m.text.toLowerCase() === t.toLowerCase())){ mems.push({ id:uid("mem_"), text:t, at:Date.now() }); changed++; }
-    });
-    if(changed){
-      while(mems.length > 300) mems.shift();
-      await saveProfile();
-      ai.memNote = "Memory updated"; updateMsg(ai, true); persistChat();
-    }
-  }catch(e){ /* memory is best-effort */ }
+
+  // 1) Explicit "remember ..." — save right away, no AI needed
+  const rm = text.match(/^(?:hey[, ]+)?(?:please\s+)?(?:can you\s+)?(?:remember|note|save to memory|keep in mind)(?:\s+that)?[:,]?\s+([\s\S]{3,300})$/i);
+  if(rm){
+    let t = rm[1].trim().replace(/[.!]+$/, "");
+    if(/\b(i|i'm|im|i've|my|me|mine)\b/i.test(t)) t = 'User said: "' + t + '"';
+    if(!mems.some(m => m.text.toLowerCase() === t.toLowerCase())) mems.push({ id:uid("mem_"), text:t, at:Date.now() });
+    memLog("saved: " + t);
+    await saveProfile();
+    return memNoteOn(ai, "Saved to memory");
+  }
+
+  // 2) Explicit "forget ..." — remove matching memories
+  const fm = text.match(/^(?:please\s+)?forget(?:\s+that|\s+about)?\s+([\s\S]{2,200})$/i);
+  if(fm){
+    const words = fm[1].toLowerCase().split(/\W+/).filter(w => w.length > 3);
+    const before = mems.length;
+    S.profile.memories = mems.filter(m => !words.length || words.filter(w => m.text.toLowerCase().includes(w)).length < Math.max(1, Math.ceil(words.length / 2)));
+    if(S.profile.memories.length !== before){ memLog("forgot " + (before - S.profile.memories.length)); await saveProfile(); return memNoteOn(ai, "Removed from memory"); }
+  }
+
+  // 3) Learn from the conversation
+  const said = text + (userMsg.atts && userMsg.atts.length ? "\n[Shared: " + userMsg.atts.map(a => a.name).join(", ") + "]" : "") + (userMsg.ctx ? "\n" + userMsg.ctx.slice(0, 2500) : "");
+  if(said.trim().length < 6) return;
+  const msgs = [{ role:"system", content:MEMORY_SYSTEM },
+    { role:"user", content:"EXISTING MEMORIES:\n" + (mems.length ? mems.map(m => m.id + ": " + m.text).join("\n") : "(none)") +
+      "\n\nTHE USER JUST SAID:\n" + said.slice(0, 5000) +
+      "\n\n(For context only, the assistant replied:)\n" + splitThought(ai.content || "").answer.slice(0, 800) + "\n\nNow reply with the JSON." }];
+  let j = null, lastErr = "";
+  for(const model of ["auto", "fast"]){
+    try{ j = parseMemJSON(await ask(msgs, { model, max_tokens:500 })); break; }
+    catch(e){ lastErr = e.message; }
+  }
+  if(!j){ memLog("error: " + lastErr); saveProfile(); return; }
+
+  let changed = 0;
+  const live = S.profile.memories;
+  (Array.isArray(j.remove) ? j.remove : []).forEach(id => { const i = live.findIndex(m => m.id === id); if(i >= 0){ live.splice(i, 1); changed++; } });
+  (Array.isArray(j.update) ? j.update : []).forEach(u => { const m = u && live.find(x => x.id === u.id); if(m && u.text){ m.text = String(u.text).slice(0, 300); m.at = Date.now(); changed++; } });
+  (Array.isArray(j.add) ? j.add : []).forEach(t => {
+    t = String((t && t.text) || t || "").trim().slice(0, 300);
+    if(t.length > 3 && !live.some(m => m.text.toLowerCase() === t.toLowerCase())){ live.push({ id:uid("mem_"), text:t, at:Date.now() }); changed++; }
+  });
+  memLog(changed ? "updated " + changed : "nothing new");
+  while(live.length > 300) live.shift();
+  await saveProfile();
+  if(changed) memNoteOn(ai, "Memory updated");
 }
 </script>
 
@@ -2097,12 +2175,15 @@ function drawSettings(sec){
     const mems = S.profile.memories;
     b.innerHTML = `<div class="set-row"><div class="lt">Reference saved memories<small>AIV X uses what it remembers to personalize answers.</small></div>${sw(st.memoryOn)}</div>
       <div class="set-row"><div class="lt">Learn from my chats<small>AIV X saves useful facts you share — like your work, goals, and preferences.</small></div>${sw(st.learnOn)}</div>
+      <div class="set-row"><div class="lt">Reference recent chats<small>New chats can pick up where your recent conversations left off.</small></div>${sw(st.chatHistoryOn !== false)}</div>
+      ${S.profile.memStatus ? `<div class="muted small" style="margin-top:10px">Last memory check: ${esc(S.profile.memStatus.result)} · ${new Date(S.profile.memStatus.at).toLocaleString()}</div>` : ""}
       <div style="display:flex;gap:8px;margin-top:16px"><input class="input" id="mAdd" placeholder="Add something for AIV X to remember"><button class="btn" id="mAddGo">Add</button></div>
       <div class="memlist">${mems.length ? [...mems].reverse().map(x => `<div class="memrow" data-id="${x.id}"><span>${esc(x.text)}</span><button title="Delete">✕</button></div>`).join("") : '<div class="muted small" style="padding:10px 0">Nothing saved yet. As you chat, AIV X will remember helpful details here. You can delete anything anytime.</div>'}</div>
       ${mems.length ? '<button class="btn danger sm" id="mClear" style="margin-top:16px">Clear all memories</button>' : ""}`;
     const s = b.querySelectorAll(".switch");
     s[0].onclick = async () => { st.memoryOn = !st.memoryOn; s[0].classList.toggle("on", st.memoryOn); await saveProfile(); };
     s[1].onclick = async () => { st.learnOn = !st.learnOn; s[1].classList.toggle("on", st.learnOn); await saveProfile(); };
+    s[2].onclick = async () => { st.chatHistoryOn = st.chatHistoryOn === false; s[2].classList.toggle("on", st.chatHistoryOn); await saveProfile(); };
     b.querySelectorAll(".memrow button").forEach(x => x.onclick = async () => { const id = x.parentElement.dataset.id; S.profile.memories = mems.filter(mm => mm.id !== id); await saveProfile(); drawSettings("memory"); });
     $("mAddGo").onclick = async () => { const t = $("mAdd").value.trim(); if(!t) return; mems.push({ id:uid("mem_"), text:t.slice(0, 300), at:Date.now() }); await saveProfile(); drawSettings("memory"); };
     $("mAdd").onkeydown = e => { if(e.key === "Enter") $("mAddGo").click(); };
