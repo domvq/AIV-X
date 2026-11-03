@@ -1513,6 +1513,7 @@ async function doAgentChat(ai, userMsg){
     try{ actions = JSON.parse(m[1].trim()); }catch(e){ addStep(ai, "Couldn't read the planned steps"); break; }
     if(!Array.isArray(actions)) actions = [actions];
     const results = [], runnable = [];
+    let notLinked = null;
     for(const a of actions.slice(0, 8)){
       const d = String(a.do || "").toLowerCase();
       if(d === "open" || d === "openapp"){
@@ -1521,14 +1522,23 @@ async function doAgentChat(ai, userMsg){
         if(!app){ results.push("couldn't find an app called " + a.app); continue; }
         if(S.openApp !== app.id){ ai.status = "Opening " + app.name; updateMsg(ai, true); openFullApp(app, { keepChat:true }); }
         try{ await waitForLink(app.id); results.push("opened " + app.name); }
-        catch(e){ results.push(app.name + " opened but isn't connected yet (it needs aiv-connect.js)"); }
+        catch(e){ notLinked = app; }
         continue;
       }
       if(d === "click" && DESTRUCTIVE.test(String(a.text || "")) && !DESTRUCTIVE.test(userText)){ results.push(`skipped "${a.text}" — ask the user to confirm first`); continue; }
       runnable.push(a);
     }
+    if(notLinked){
+      addStep(ai, "Opened " + notLinked.name + ", but couldn't connect to it");
+      ai.content = (visible ? visible + "\n\n" : "") + `I opened **${notLinked.name}**, but I can't connect to it yet, so I can't see or use it. The app on aiverse.it.com needs the updated files with the AIV X connector. Once those are uploaded, ask me again.`;
+      break;
+    }
     if(runnable.length){
-      if(!(S.openApp && Link.ready && Link.app === S.openApp)) results.push("no connected app is open");
+      if(!(S.openApp && Link.ready && Link.app === S.openApp)){
+        addStep(ai, "This app isn't connected to AIV X yet");
+        ai.content = (visible ? visible + "\n\n" : "") + `I can't reach **${appById(S.openApp || "aivx").name}** yet, so I can't use it for you. The app on aiverse.it.com needs the updated files with the AIV X connector.`;
+        break;
+      }
       else{
         ai.status = "Working in " + appById(S.openApp).name; updateMsg(ai);
         try{ const r = await appAsk("act", { actions:runnable }, 25000); (r.results || []).forEach(x => results.push(x)); }
@@ -2402,6 +2412,7 @@ function renderCopilot(){
 }
 /* ---- bridge to the app (aiv-connect.js inside each AI Verse app) ---- */
 const APP_ORIGIN = new URL(APP_BASE).origin;
+const APP_ORIGINS = [APP_ORIGIN, APP_ORIGIN.replace("://", "://www."), "https://aiverse.it.com", "https://www.aiverse.it.com", "https://domvq.github.io"];
 const Link = { app:null, ready:false, synced:"", n:0, waiting:{} };
 function renderLink(){
   const el = $("copLink"); if(!el) return;
@@ -2409,8 +2420,9 @@ function renderLink(){
   el.classList.toggle("on", Link.ready);
 }
 window.addEventListener("message", async e => {
-  if(e.origin !== APP_ORIGIN) return;
+  if(!APP_ORIGINS.includes(e.origin)) return;
   const f = $("appIframe"); if(!f || e.source !== f.contentWindow) return;
+  Link.origin = e.origin;
   const d = e.data || {}; if(!d.aivConnect) return;
   const reply = (id, result, error) => { try{ e.source.postMessage({ aivx:1, type:"reply", id, result, error }, e.origin); }catch(x){} };
   if(d.type === "hello"){
@@ -2430,7 +2442,7 @@ function appAsk(type, extra, timeout = 12000){
     const f = $("appIframe");
     if(!Link.ready || !f || !f.contentWindow) return rej(new Error("the app isn't connected"));
     const id = ++Link.n; Link.waiting[id] = res;
-    f.contentWindow.postMessage(Object.assign({ aivx:1, type, id }, extra || {}), APP_ORIGIN);
+    f.contentWindow.postMessage(Object.assign({ aivx:1, type, id }, extra || {}), Link.origin || APP_ORIGIN);
     setTimeout(() => { if(Link.waiting[id]){ delete Link.waiting[id]; rej(new Error("timed out")); } }, timeout);
   });
 }
