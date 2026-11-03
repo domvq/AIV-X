@@ -2414,7 +2414,7 @@ function openFullApp(app, opts = {}){
   $("appLoading").classList.remove("hidden");
   $("appIframe").onload = () => $("appLoading").classList.add("hidden");
   $("appIframe").src = app.url;
-  $("appNewTab").href = app.url;
+  $("appNewTab").href = app.url + "?from=aivx&back=" + encodeURIComponent(location.origin + location.pathname + "#app/" + app.id);
   $("appPane").classList.remove("hidden");
   $("workspace").classList.add("appmode");
   $("workspace").classList.toggle("cop-hidden", innerWidth < 820);
@@ -2475,6 +2475,7 @@ window.addEventListener("message", async e => {
   if(d.type === "pull"){ try{ reply(d.id, await Store.getAppData(d.app)); }catch(err){ reply(d.id, null, err.message); } return; }
   if(d.type === "push"){ try{ await Store.setAppData(d.app, d.at, d.data); Link.synced = "saved"; renderLink(); reply(d.id, true); }catch(err){ reply(d.id, null, err.message); } return; }
   if(d.type === "synced"){ Link.synced = d.result; renderLink(); return; }
+  if(d.type === "close"){ closeApp(); return; }
   if(d.type === "answer" && Link.waiting[d.id]){ const w = Link.waiting[d.id]; delete Link.waiting[d.id]; w(d.result); }
 });
 function appAsk(type, extra, timeout = 12000){
