@@ -1451,6 +1451,35 @@ async function doChat(ai, userMsg, extra, contextBlock){
 const ACTION_RE = /```aiv-actions\s*([\s\S]*?)(```|$)/;
 function stripActions(t){ return String(t || "").replace(/```aiv-actions[\s\S]*?(```|$)/g, "").trim(); }
 const DESTRUCTIVE = /\b(delete|remove|clear|reset|erase|wipe|sign ?out|log ?out|disconnect|forget)\b/i;
+function parseActions(raw){
+  let s = String(raw || "").replace(/```[a-z-]*/gi, "").trim()
+    .replace(/[\u201C\u201D\u201E\u2033]/g, '"').replace(/[\u2018\u2019\u2032]/g, "'");
+  const tries = [];
+  const a = s.indexOf("["), b = s.lastIndexOf("]");
+  if(a >= 0 && b > a) tries.push(s.slice(a, b + 1));
+  const c = s.indexOf("{"), d = s.lastIndexOf("}");
+  if(c >= 0 && d > c) tries.push("[" + s.slice(c, d + 1) + "]");
+  const fixes = [
+    t => t,
+    t => t.replace(/,\s*([\]}])/g, "$1"),
+    t => t.replace(/,\s*([\]}])/g, "$1").replace(/([{,]\s*)([A-Za-z_][\w]*)\s*:/g, '$1"$2":'),
+    t => t.replace(/,\s*([\]}])/g, "$1").replace(/([{,]\s*)([A-Za-z_][\w]*)\s*:/g, '$1"$2":').replace(/'([^'\\]*)'/g, '"$1"'),
+    t => t.replace(/}\s*{/g, "},{").replace(/,\s*([\]}])/g, "$1").replace(/([{,]\s*)([A-Za-z_][\w]*)\s*:/g, '$1"$2":'),
+  ];
+  for(const t of tries) for(const f of fixes){
+    try{
+      const v = JSON.parse(f(t));
+      const list = (Array.isArray(v) ? v : [v]).flat().filter(x => x && typeof x === "object" && x.do);
+      if(list.length) return list;
+    }catch(e){}
+  }
+  // last resort: read each {...} on its own
+  const objs = [];
+  (s.match(/\{[^{}]*\}/g) || []).forEach(o => {
+    for(const f of fixes){ try{ const v = JSON.parse(f(o)); if(v && v.do){ objs.push(v); break; } }catch(e){} }
+  });
+  return objs.length ? objs : null;
+}
 function addStep(ai, text, done = true){ ai.steps = ai.steps || []; ai.steps.push({ text, done }); updateMsg(ai, true); }
 function agentRules(){
   const apps = APPS.filter(a => a.url).map(a => `${a.id} = ${a.name} (${a.desc})`).join("; ");
@@ -1492,7 +1521,7 @@ function waitForLink(appId, ms = 15000){
 async function doAgentChat(ai, userMsg){
   const base = historyFor(S.chat, S.chat.messages.indexOf(ai));
   const userText = userMsg.content || "";
-  let msgs = null, visible = "", log = [];
+  let msgs = null, visible = "", log = [], retriedPlan = false;
   for(let step = 0; step < 5; step++){
     let block = "";
     if(S.openApp && Link.ready && Link.app === S.openApp){
@@ -1509,9 +1538,20 @@ async function doAgentChat(ai, userMsg){
     ai.content = visible;
     const m = full.match(ACTION_RE);
     if(!m) break;
-    let actions;
-    try{ actions = JSON.parse(m[1].trim()); }catch(e){ addStep(ai, "Couldn't read the planned steps"); break; }
-    if(!Array.isArray(actions)) actions = [actions];
+    let actions = parseActions(m[1]);
+    if(!actions){
+      if(step < 4 && !retriedPlan){
+        retriedPlan = true;
+        msgs.push({ role:"assistant", content:full.slice(0, 6000) });
+        msgs.push({ role:"user", content:'Your aiv-actions block was not valid JSON, so nothing ran. Send it again: one ```aiv-actions block containing only a JSON array, using double quotes, for example [{"do":"go","screen":"tasks"}]. No other text.' });
+        ai.status = "Fixing the plan"; updateMsg(ai);
+        continue;
+      }
+      addStep(ai, "Couldn't read the planned steps, so nothing was changed");
+      ai.content = (visible ? visible + "\n\n" : "") + "I had trouble planning those steps, so I didn't change anything. Try asking again, maybe in a slightly different way.";
+      break;
+    }
+    retriedPlan = false;
     const results = [], runnable = [];
     let notLinked = null;
     for(const a of actions.slice(0, 8)){
