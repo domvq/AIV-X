@@ -1,13 +1,44 @@
 {
-  "name": "AIV X — Your Everyday AI",
+  "name": "AIV X — Build Your Personal AI",
   "short_name": "AIV X",
-  "description": "Chat, search, research, create images, read your files, and build apps. By AI Verse.",
-  "start_url": "./",
-  "scope": "./",
+  "description": "Build your own personal AI with AIV X, free to start. Create custom AI apps and get AI for health, fitness, study, research, finance, photos, and career.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0a0a0b",
   "theme_color": "#0a0a0b",
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "id": "/",
+  "categories": [
+    "productivity",
+    "education",
+    "health",
+    "finance",
+    "lifestyle"
   ]
 }

@@ -3,15 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>AIV X — Your Everyday AI | AI Verse</title>
-<meta name="description" content="AIV X is your everyday AI: chat, search, research, create images, read your files, build apps, and switch into any AI Verse app.">
+<title>AIV X — Build Your Personal AI. Your Way. Free to Start</title>
+<meta name="description" content="Build your own personal AI with AIV X, free to start. Create custom AI apps and get AI for health, fitness, study, research, finance, photos, and career.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://aiv-x.com/">
+<meta name="application-name" content="AIV X">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="icon" href="favicon.ico" sizes="any">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta property="og:title" content="AIV X — Your Everyday AI">
-<meta property="og:description" content="Chat, search, research, create images, read your files, and build apps. By AI Verse.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AIV X">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AIV X by AI Verse">
+<meta property="og:url" content="https://aiv-x.com/">
+<meta property="og:title" content="AIV X — Build Your Personal AI. Your Way. Free to Start">
+<meta property="og:description" content="An AI that builds your personal AI experience, the way you want it. Start free with custom AI apps plus AI for health, fitness, study, finance, and career.">
+<meta property="og:image" content="https://aiv-x.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AIV X — Build your personal AI. Your way. Free to start.">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AIV X — Build Your Personal AI. Your Way. Free to Start">
+<meta name="twitter:description" content="An AI that builds your personal AI experience, the way you want it. Start free with custom AI apps plus AI for health, fitness, study, finance, and career.">
+<meta name="twitter:image" content="https://aiv-x.com/og-image.png">
+<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "WebApplication", "@id": "https://aiv-x.com/#app", "name": "AIV X", "alternateName": "AIV X by AI Verse", "url": "https://aiv-x.com/", "description": "Build your own personalized AI with AIV X, free to start. Create custom AI apps and access your AI assistant, health and fitness tools, study and research AI, finance tools, photo editor, and career assistant, all in one AI platform.", "applicationCategory": "ProductivityApplication", "applicationSubCategory": "AI assistant", "operatingSystem": "Web browser", "browserRequirements": "Requires JavaScript", "image": "https://aiv-x.com/og-image.png", "inLanguage": "en", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD", "name": "Free plan", "description": "Free plan with daily messages and one custom AI app. AIV Pro available for unlimited use."}, "featureList": ["Build your own custom AI apps", "AI chat assistant with memory", "Web search and deep research", "Read PDFs, Word, Excel, and PowerPoint files", "AI image creation", "Documents, spreadsheets, and presentations", "Health and fitness AI", "Study and research AI", "Stock and finance AI", "AI photo editor", "Career AI", "Personal assistant AI"], "publisher": {"@id": "https://aiverse.it.com/#org"}, "isAccessibleForFree": true}, {"@type": "Organization", "@id": "https://aiverse.it.com/#org", "name": "AI Verse", "url": "https://aiverse.it.com/", "logo": "https://aiv-x.com/icon-512.png", "email": "team@aiverse.it.com"}, {"@type": "WebSite", "@id": "https://aiv-x.com/#site", "name": "AIV X", "url": "https://aiv-x.com/", "publisher": {"@id": "https://aiverse.it.com/#org"}}]}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -79,7 +98,10 @@ textarea.input{resize:vertical;min-height:90px}
 .auth-art h1{font-family:'Barlow Condensed';font-weight:500;text-transform:uppercase;letter-spacing:.04em;font-size:clamp(44px,6vw,80px);line-height:.95}
 .auth-art p{color:#c9c9d0;max-width:440px;margin-top:16px;font-size:17px}
 .auth-feats{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
-.auth-feats span{border:1px solid #ffffff30;padding:6px 12px;border-radius:999px;font-size:13px;color:#ddd}
+.auth-feats{list-style:none}
+.auth-feats li{border:1px solid #ffffff30;padding:6px 12px;border-radius:999px;font-size:13px;color:#ddd}
+.auth-art p.lead{color:#fff;font-size:19px;font-weight:500;margin-top:18px}
+.auth-art p.lead+p{margin-top:8px}
 .auth-form{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 20px}
 .auth-card{width:100%;max-width:380px}
 .auth-card h2{font-size:28px;font-weight:600;letter-spacing:-.02em}
@@ -107,7 +129,8 @@ textarea.input{resize:vertical;min-height:90px}
   .auth-art h1{font-size:clamp(34px,10vw,48px)}
   .auth-art p{font-size:15px;margin-top:10px}
   .auth-feats{gap:6px;margin-top:14px}
-  .auth-feats span{font-size:12px;padding:5px 10px}
+  .auth-feats li{font-size:12px;padding:5px 10px}
+  .auth-art p.lead{font-size:16px;margin-top:12px}
   .auth-art>.small{display:none}
   .auth-form{flex:none;align-items:flex-start;padding:22px 20px 36px;background:transparent;position:relative}
   .auth-card h2{color:#fff}
@@ -421,9 +444,10 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
     <div class="stars"></div>
     <div class="brand" data-brand></div>
     <div>
-      <h1>Your everyday<br>AI, from AI Verse.</h1>
-      <p>Chat, search, research, create images, read your files, build apps — and turn AIV X into any AI Verse app in one tap.</p>
-      <div class="auth-feats"><span>Chat &amp; voice</span><span>Files &amp; photos</span><span>Web search</span><span>Deep research</span><span>Image creation</span><span>Build any app</span><span>Memory</span></div>
+      <h1>Build your personal&nbsp;AI.<br>Your way.</h1>
+      <p class="lead">An AI that builds your personal AI experience, the way you want it.</p>
+      <p>Create and customize your own AI, built around the way you think, work, and live. Explore powerful AI apps for health, fitness, studying, research, finance, career growth, and everyday life — all in one platform.</p>
+      <ul class="auth-feats" aria-label="What you can do with AIV X"><li>Build your own AI</li><li>AI assistant</li><li>Health &amp; fitness</li><li>Study &amp; research</li><li>Finance</li><li>Photo editor</li><li>Career</li><li>Memory</li></ul>
     </div>
     <div class="small" style="color:#888">© AI Verse · aiverse.it.com</div>
   </div>
