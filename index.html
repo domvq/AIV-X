@@ -550,7 +550,7 @@ const FIREBASE_CONFIG = {
 
 // 3) Free plan limit and where "Get AIV Pro" sends people
 const FREE_DAILY_LIMIT = 20;
-const UPGRADE_URL = "https://aiverse.it.com/introducing-aiv-x.html#buy";
+const UPGRADE_URL = "https://aiverse.it.com/#api";
 
 // 4b) Where your AI Verse apps live (AIV X opens them from your main site)
 const APP_BASE = "https://aiverse.it.com/apps/";
@@ -2265,9 +2265,13 @@ function showMenu(anchor, items, opts = {}){
   let left = Math.min(r.left, innerWidth - mw - 8), top = opts.up || r.bottom + mh > innerHeight - 8 ? r.top - mh - 6 : r.bottom + 6;
   menuEl.style.left = Math.max(8, left) + "px"; menuEl.style.top = Math.max(8, top) + "px";
   menuEl.querySelectorAll(".mi").forEach(b => b.onclick = ev => { ev.stopPropagation(); const it = items[+b.dataset.i]; closeMenu(); it.fn && it.fn(); });
-  setTimeout(() => document.addEventListener("click", closeMenu, { once:true }), 0);
+  setTimeout(() => { if(menuEl){ menuCloser = () => closeMenu(); document.addEventListener("click", menuCloser); } }, 0);
 }
-function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl = null; } }
+let menuCloser = null;
+function closeMenu(){
+  if(menuCloser){ document.removeEventListener("click", menuCloser); menuCloser = null; }
+  if(menuEl){ menuEl.remove(); menuEl = null; }
+}
 function modal(inner, wide){
   closeModal();
   const m = document.createElement("div"); m.className = "modal"; m.id = "modal";
