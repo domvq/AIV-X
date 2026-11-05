@@ -575,6 +575,43 @@ th.sortable:hover{color:var(--text)}
   #copFab{display:none!important}
   .cop-head{padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top))}
 }
+
+/* =================== PHONE: ChatGPT-style clean look =================== */
+@media (max-width:640px){
+  /* round header buttons */
+  #sideOpen,#newBtn{width:44px;height:44px;border-radius:50%;background:var(--bg2);border:1px solid var(--line)}
+  .modechip{padding:8px 14px;border-radius:999px}
+  /* one-row message box:  +  [Ask AIV X]  mic  voice/send  */
+  .composer{display:flex;flex-wrap:wrap;align-items:center;border-radius:30px;padding:5px 6px}
+  .composer .crow{display:contents}
+  .composer .pending{order:0;flex:1 0 100%}
+  #toolSlot{order:0;flex:1 0 100%;padding:4px 6px 0}
+  #toolSlot:empty{display:none}
+  #plusBtn{order:1}
+  #input{order:2;flex:1 1 0;width:auto;min-width:0;padding:10px 6px!important;min-height:24px;max-height:160px}
+  #micBtn{order:3}
+  #voiceBtn,#sendBtn{order:4}
+  .composer .sp,#buildBtn,#modelBtn{display:none!important}
+  #composer:not(.has-text) #voiceBtn{background:var(--text);color:var(--bg);border-radius:50%;width:42px;min-width:42px;height:42px;padding:0}
+  .disclaimer{display:none}
+  #chatcol:not(.centered) .disclaimer{display:block}
+  /* the action list above the message box */
+  #belowStarters.quick{display:flex;flex-direction:column;align-items:stretch;gap:0;overflow:visible;margin:0 0 8px;padding:0 6px}
+  #belowStarters.quick.hidden{display:none}
+  .qa{display:flex;align-items:center;gap:16px;padding:13px 10px;font-size:17px;color:var(--text);background:none;border:0;border-radius:12px;text-align:left}
+  .qa:active{background:var(--bg3)}
+  .qa .i{width:24px;height:24px;color:var(--text2)}
+  #chatcol.centered .empty{display:none}
+  .toast{bottom:calc(96px + env(safe-area-inset-bottom))!important;max-width:calc(100% - 32px)}
+}
+/* computers and tablets: the same actions as chips under the message box */
+@media (min-width:641px){
+.qa{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--line2);border-radius:999px;font-size:14px;color:var(--text2);background:var(--panel)}
+.qa:hover{background:var(--bg3);color:var(--text)}
+.qa .i{width:18px;height:18px}
+}
+/* Build lives outside the message box now (Build your AI, sidebar Build) */
+#buildBtn{display:none!important}
 </style>
 </head>
 <body>
@@ -692,7 +729,7 @@ th.sortable:hover{color:var(--text)}
         <div class="composer-wrap">
           <div class="composer" id="composer">
             <div class="pending hidden" id="pending"></div>
-            <textarea id="input" rows="1" placeholder="Ask AIV X"></textarea>
+            <textarea id="input" rows="1" placeholder="Ask"></textarea>
             <div class="crow">
               <button class="cbtn" id="plusBtn" title="Add files and more"><span data-i="plus"></span></button>
               <button class="cbtn build" id="buildBtn" title="Build your own AI app"><span data-i="hammer"></span><span class="lbl">Build</span></button>
@@ -836,6 +873,10 @@ const ICONS = {
   wave:'<path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/>',
   video:'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/>',
   chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  image:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="15.5" cy="9.5" r="1.8"/><path d="m3 17 5-5 4 4 3-3 6 6"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/>',
+  menu:'<path d="M4 8h16M4 16h11"/>',
+  modes:'<circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="7" cy="17" r="3"/><path d="M17 14v6M14 17h6"/>',
 };
 function icon(name){ return '<svg class="i" viewBox="0 0 24 24">' + (ICONS[name] || '') + '</svg>'; }
 /* AIV X brand mark: the AIV logo + a larger slashed X */
@@ -1371,8 +1412,24 @@ function renderEmpty(){
     <div class="modeline">${proj ? "Project · " + esc(proj.name) : S.openApp ? "I'm right here while you use the app." : app.id === "aivx" ? "Chat, search, create, and build — all in one place." : esc(app.desc) + (app.url ? ` · <a href="#" data-openapp="${app.id}">Open full app</a>` : "")}</div>
     </div>`;
   const bs = $("belowStarters"); bs.classList.remove("hidden");
-  bs.innerHTML = app.starters.map(s => `<button class="starter">${esc(s)}</button>`).join("");
-  bs.querySelectorAll(".starter").forEach(b => b.onclick = () => { $("input").value = b.textContent; autoGrow(); send(); });
+  if(S.openApp){
+    bs.classList.remove("quick");
+    bs.innerHTML = app.starters.map(s => `<button class="starter">${esc(s)}</button>`).join("");
+    bs.querySelectorAll(".starter").forEach(b => b.onclick = () => { $("input").value = b.textContent; autoGrow(); send(); });
+  }else{
+    bs.classList.add("quick");
+    const modeLbl = S.mode === "aivx" ? "AI mode" : "AI mode: " + app.name;
+    bs.innerHTML = [["build","hammer","Build your AI"],["mode","modes",modeLbl]]
+      .map(([k, ic, t]) => `<button class="qa" data-qa="${k}"><span data-i="${ic}"></span><span>${esc(t)}</span></button>`).join("");
+    paintIcons(bs);
+    bs.querySelectorAll(".qa").forEach(b => b.onclick = e => {
+      e.stopPropagation();
+      const k = b.dataset.qa;
+      if(k === "build") openBuild();
+      else if(k === "mode") openAIMode(b);
+      else { S.tool = null; setTool(k); }
+    });
+  }
   const oa = $("thread").querySelector("[data-openapp]"); if(oa) oa.onclick = e => { e.preventDefault(); openFullApp(app); };
 }
 function leaveCentered(){ $("chatcol").classList.remove("centered"); $("belowStarters").classList.add("hidden"); }
@@ -3692,7 +3749,7 @@ function renderTool(){
   $("toolSlot").innerHTML = t ? `<span class="toolpill">${S.tool === "build" ? "AI app" : esc(t.name)}<button title="Turn off">×</button></span>` : "";
   const x = $("toolSlot").querySelector("button"); if(x) x.onclick = () => { S.tool = null; renderTool(); };
   $("buildBtn").classList.toggle("on", S.tool === "build");
-  $("input").placeholder = t ? t.place : (S.mode !== "aivx" ? "Ask " + appById(S.mode).name : "Ask AIV X");
+  $("input").placeholder = t ? t.place : (S.mode !== "aivx" ? "Ask " + appById(S.mode).name : "Ask");
 }
 $("plusBtn").onclick = e => {
   e.stopPropagation();
@@ -3795,6 +3852,18 @@ $("modeChip").onclick = e => {
     { label:"Browse AI Verse apps", fn:() => openApps() },
   ]);
 };
+// "AI mode": pick which AI you're talking to (AIV X, or one of the AI Verse apps' AIs)
+function openAIMode(anchor){
+  showMenu(anchor || $("modeChip"), [
+    { head:"Choose your AI" },
+    { label:"AIV X", desc:"Your everyday AI for anything", check:S.mode === "aivx", fn:() => setMode("aivx") },
+    ...APPS.filter(a => a.id !== "aivx").map(a => ({ label:a.name, desc:a.desc, check:S.mode === a.id, fn:() => setMode(a.id) })),
+    { sep:true },
+    { label:"Open an app full screen", desc:"Use the app with AIV X beside it", fn:() => openApps() },
+  ], { up:true });
+}
+function phoneIcons(){ const b = $("sideOpen"); if(b){ b.innerHTML = icon(innerWidth <= 640 ? "menu" : "sidebar"); } }
+phoneIcons(); addEventListener("resize", phoneIcons);
 function openApps(){
   const m = modal(`<div class="mh2"><h3>AI Verse apps</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb"><p class="muted small" style="margin-bottom:14px">Open an app and AIV X stays beside it as your copilot. Or use an app's skills in chat only.</p>
