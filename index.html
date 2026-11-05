@@ -799,23 +799,23 @@ const APPS = [
   { id:"aivx", name:"AIV X", url:null, desc:"Your everyday AI for anything.",
     persona:"",
     starters:["Plan my week","Explain something like I'm 12","Write a professional email","Help me make a decision"] },
-  { id:"study", name:"Study and Research AI", url:APP_BASE + "study-and-research-ai.html", desc:"Adaptive tutor, flashcards, quizzes, and research lab.",
-    persona:"You are now in Study and Research AI mode: an adaptive tutor and research mentor. Teach step by step, check understanding with quick questions, adapt difficulty, offer flashcards, practice quizzes, study guides, and summaries. For research, help with reading papers, methodology, hypotheses, experiment design, statistics basics, and scientific writing. When asked for flashcards use a 'Front | Back' table; for quizzes use numbered multiple-choice with an answer key at the end.",
+  { id:"study", name:"AI Study and Research", url:APP_BASE + "ai-study-and-research.html", desc:"Adaptive tutor, flashcards, quizzes, and research lab.",
+    persona:"You are now in AI Study and Research mode: an adaptive tutor and research mentor. Teach step by step, check understanding with quick questions, adapt difficulty, offer flashcards, practice quizzes, study guides, and summaries. For research, help with reading papers, methodology, hypotheses, experiment design, statistics basics, and scientific writing. When asked for flashcards use a 'Front | Back' table; for quizzes use numbered multiple-choice with an answer key at the end.",
     starters:["Quiz me on cardiac physiology","Make flashcards from my notes","Help me design a study","Explain this research paper"] },
-  { id:"finance", name:"Stock and Finance AI", url:APP_BASE + "stock-and-finance-ai.html", desc:"Markets, stock analysis, budgeting, and forecasting.",
-    persona:"You are now in Stock and Finance AI mode: a markets and money educator. Explain stocks, ETFs, market concepts, company fundamentals, budgeting, saving, debt payoff, and forecasting in plain language with clear numbers and tables. You provide education and analysis frameworks, not personalized investment advice; say so briefly when someone asks what to buy or sell. You do not have live prices unless web search results are provided.",
+  { id:"finance", name:"AI Stock and Finance", url:APP_BASE + "ai-stock-and-finance.html", desc:"Markets, stock analysis, budgeting, and forecasting.",
+    persona:"You are now in AI Stock and Finance mode: a markets and money educator. Explain stocks, ETFs, market concepts, company fundamentals, budgeting, saving, debt payoff, and forecasting in plain language with clear numbers and tables. You provide education and analysis frameworks, not personalized investment advice; say so briefly when someone asks what to buy or sell. You do not have live prices unless web search results are provided.",
     starters:["Build me a monthly budget","Explain P/E ratio with an example","Compare index funds vs. individual stocks","How does compound interest work?"] },
-  { id:"fitness", name:"Health and Fitness AI", url:APP_BASE + "health-and-fitness-ai.html", desc:"Workouts, progression, nutrition, and coaching.",
-    persona:"You are now in Health and Fitness AI mode: a supportive training and nutrition coach. Build workout programs with sets, reps, and progression, explain exercise form, design balanced meal plans, and answer fitness questions. Keep advice safe and evidence-based; suggest a professional for injuries, medical conditions, or pain.",
+  { id:"fitness", name:"AI Health and Fitness", url:APP_BASE + "ai-health-and-fitness.html", desc:"Workouts, progression, nutrition, and coaching.",
+    persona:"You are now in AI Health and Fitness mode: a supportive training and nutrition coach. Build workout programs with sets, reps, and progression, explain exercise form, design balanced meal plans, and answer fitness questions. Keep advice safe and evidence-based; suggest a professional for injuries, medical conditions, or pain.",
     starters:["Build a 4-day gym split","High-protein meal ideas","How do I progress my squat?","Make a beginner running plan"] },
-  { id:"photo", name:"Photo AI", url:APP_BASE + "photo-ai.html", desc:"Create and edit images with AI.",
-    persona:"You are now in Photo AI mode: a creative image partner. Help people create images, write vivid image prompts, plan photo edits, pick styles, color palettes, and compositions, and give feedback on photos they upload. When someone wants a picture, suggest switching on Create image or write a ready-to-use prompt.",
+  { id:"photo", name:"AI Photo", url:APP_BASE + "ai-photo.html", desc:"Create and edit images with AI.",
+    persona:"You are now in AI Photo mode: a creative image partner. Help people create images, write vivid image prompts, plan photo edits, pick styles, color palettes, and compositions, and give feedback on photos they upload. When someone wants a picture, suggest switching on Create image or write a ready-to-use prompt.",
     starters:["Create an image of a neon city at night","Give feedback on my photo","Write a prompt for a product shot","Ideas for a logo style"] },
-  { id:"career", name:"Career AI", url:APP_BASE + "career-ai.html", desc:"Resumes, cover letters, job matching, interviews.",
-    persona:"You are now in Career AI mode: a career coach. Improve resumes with strong bullet points and metrics, write tailored cover letters, match skills to jobs, prepare interview answers using the STAR method, run mock interviews one question at a time, and plan career moves.",
+  { id:"career", name:"AI Career", url:APP_BASE + "ai-career.html", desc:"Resumes, cover letters, job matching, interviews.",
+    persona:"You are now in AI Career mode: a career coach. Improve resumes with strong bullet points and metrics, write tailored cover letters, match skills to jobs, prepare interview answers using the STAR method, run mock interviews one question at a time, and plan career moves.",
     starters:["Rewrite my resume bullets","Write a cover letter for this job","Mock interview me","What jobs fit my skills?"] },
-  { id:"aide", name:"Personal Assistant AI", url:APP_BASE + "personal-assistant-ai.html", desc:"Planner, calendar, tasks, reminders, and email.",
-    persona:"You are now in Personal Assistant AI mode: a personal assistant. Plan days and weeks, organize tasks by priority, draft emails and messages, prepare travel plans and checklists, and summarize what matters. Use clear checklists and time blocks.",
+  { id:"aide", name:"AI Personal Assistant", url:APP_BASE + "ai-personal-assistant.html", desc:"Planner, calendar, tasks, reminders, and email.",
+    persona:"You are now in AI Personal Assistant mode: a personal assistant. Plan days and weeks, organize tasks by priority, draft emails and messages, prepare travel plans and checklists, and summarize what matters. Use clear checklists and time blocks.",
     starters:["Plan my day","Draft an email to my boss","Make a packing list","Prioritize my to-dos"] },
 ];
 
@@ -1835,8 +1835,8 @@ Rules:
 - In apps, use the controls exactly as listed on the screen. Many apps have a main "Ask" box that understands plain requests.
 - For multi-step jobs, first say your plan in one short line, then work through it step by step. You can use several tools in one block and keep going for several rounds.
 - After you act in an app, check the updated screen in the system message to confirm each change actually happened. If it didn't, try another way (a different button, field, or screen) before telling the user. Only say something is done when you've seen it on the screen.
-- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in Photo AI, budgets and stocks in Stock and Finance AI, workouts and meals in Health and Fitness AI, flashcards and studying in Study and Research AI, resumes and jobs in Career AI, tasks, reminders, calendar, and email in Personal Assistant AI), open that app and do it there.
-- You can move between apps in one job (for example, read a budget in one app, then add a task in Personal Assistant AI).
+- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in AI Photo, budgets and stocks in AI Stock and Finance, workouts and meals in AI Health and Fitness, flashcards and studying in AI Study and Research, resumes and jobs in AI Career, tasks, reminders, calendar, and email in AI Personal Assistant), open that app and do it there.
+- You can move between apps in one job (for example, read a budget in one app, then add a task in AI Personal Assistant).
 - Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.
 
 ${UI_RULES}`;
@@ -3529,10 +3529,10 @@ async function doRouted(ai, userMsg){
     if(im && linked){
       try{
         const r = await appAsk("addimage", { src:im.src, name:im.title, prompt:im.prompt }, 30000);
-        if(r && r.ok){ ai.steps.push({ text:"Added it to Photo AI", done:true }); ai.content = "Here's your picture. It's also open in Photo AI, so you can keep editing it there: remove the background, change the style, add text, or make more versions."; return; }
+        if(r && r.ok){ ai.steps.push({ text:"Added it to AI Photo", done:true }); ai.content = "Here's your picture. It's also open in AI Photo, so you can keep editing it there: remove the background, change the style, add text, or make more versions."; return; }
       }catch(e){}
     }
-    ai.content = "Here's your picture. I opened Photo AI too, so you can edit it there. Save the image and open it in the app, or ask me for changes here.";
+    ai.content = "Here's your picture. I opened AI Photo too, so you can edit it there. Save the image and open it in the app, or ask me for changes here.";
     return;
   }
   if(!linked){
@@ -4067,7 +4067,7 @@ function drawSettings(sec){
     b.innerHTML = `<div class="set-row"><div class="lt">Reference saved memories<small>AIV X uses what it remembers to personalize answers.</small></div>${sw(st.memoryOn)}</div>
       <div class="set-row"><div class="lt">Learn from my chats<small>AIV X saves useful facts you share — like your work, goals, and preferences.</small></div>${sw(st.learnOn)}</div>
       <div class="set-row"><div class="lt">Reference recent chats<small>New chats can pick up where your recent conversations left off.</small></div>${sw(st.chatHistoryOn !== false)}</div>
-      <div class="set-row"><div class="lt">Improve AIV X for everyone<small>Lets AI Verse use your chats and feedback to train and improve AIV X's AI, and lets AIV X use free AI providers that may also learn from requests. Health and Fitness AI chats and your uploaded files are never used. Turning this off stops future use.</small></div>${sw(st.improve !== false)}</div>
+      <div class="set-row"><div class="lt">Improve AIV X for everyone<small>Lets AI Verse use your chats and feedback to train and improve AIV X's AI, and lets AIV X use free AI providers that may also learn from requests. AI Health and Fitness chats and your uploaded files are never used. Turning this off stops future use.</small></div>${sw(st.improve !== false)}</div>
       ${S.profile.memStatus ? `<div class="muted small" style="margin-top:10px">Last memory check: ${esc(S.profile.memStatus.result)} · ${new Date(S.profile.memStatus.at).toLocaleString()}</div>` : ""}
       <div style="display:flex;gap:8px;margin-top:16px"><input class="input" id="mAdd" placeholder="Add something for AIV X to remember"><button class="btn" id="mAddGo">Add</button></div>
       <div class="memlist">${mems.length ? [...mems].reverse().map(x => `<div class="memrow" data-id="${x.id}"><span>${esc(x.text)}</span><button title="Delete">✕</button></div>`).join("") : '<div class="muted small" style="padding:10px 0">Nothing saved yet. As you chat, AIV X will remember helpful details here. You can delete anything anytime.</div>'}</div>
@@ -4119,7 +4119,7 @@ function applyTheme(){
 function askConsent(){
   const m = modal(`<div class="mh2"><h3>Our Terms and Privacy Policy</h3></div>
     <div class="mb"><p class="muted" style="margin-bottom:10px">We updated our <a href="terms.html" target="_blank" rel="noopener">Terms of Use</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. To keep using AIV X, please review and agree to them.</p>
-    <p class="muted small" style="margin-bottom:14px">What's new: AIV X now uses chats and feedback to help train and improve its AI, and runs on several free AI providers. Health and Fitness AI chats and uploaded files are never used. You can choose below, and change it anytime in Settings &gt; Memory.</p>
+    <p class="muted small" style="margin-bottom:14px">What's new: AIV X now uses chats and feedback to help train and improve its AI, and runs on several free AI providers. AI Health and Fitness chats and uploaded files are never used. You can choose below, and change it anytime in Settings &gt; Memory.</p>
     <label class="agree" style="margin:0 0 10px"><input type="checkbox" id="cImprove" checked><span>Use my chats to improve AIV X.</span></label>
     <label class="agree" id="cAgreeRow" style="margin:0"><input type="checkbox" id="cAgree"><span>I'm 18 or older and agree to the Terms of Use and Privacy Policy.</span></label></div>
     <div class="mf"><button class="btn" id="cOut">Log out</button><button class="btn primary" id="cOk" disabled>Agree and continue</button></div>`);
