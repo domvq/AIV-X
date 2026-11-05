@@ -512,6 +512,7 @@ th.sortable:hover{color:var(--text)}
 .run pre{margin:0;padding:10px 12px;border-top:1px solid var(--line);white-space:pre-wrap;word-break:break-word;max-height:260px;overflow:auto;font-size:12.5px;background:transparent}
 .runbox{margin:-4px 0 12px}
 .zipbar{margin:8px 0}
+.ui-chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
 </style>
 </head>
 <body>
@@ -686,6 +687,9 @@ const FIREBASE_CONFIG = {
 
 // 3) Free plan limit and where "Get AIV Pro" sends people
 const FREE_DAILY_LIMIT = 20;
+
+// 3b) Accounts that can see and download the training data (Settings > Training data)
+const ADMIN_EMAILS = ["domhasaball@gmail.com"];
 const UPGRADE_URL = "https://aiverse.it.com/#api";
 
 // 4b) Where your AI Verse apps live (AIV X opens them from your main site)
@@ -1215,6 +1219,7 @@ How you respond:
         }).join("\n");
     }
   }
+  p += "\n\nHOW YOU IMPROVE (say this accurately if asked; don't claim you retrain yourself): you don't change your own model during a chat. You remember facts and preferences about this user in Memory, including lessons from their thumbs-down feedback. AI Verse uses thumbs up and down, and chats from people who have Improve AIV X turned on, to train and improve future versions of AIV X. The user can give feedback with the thumbs buttons under any answer.";
   p += "\n\nIf the user asks what you remember about them, tell them plainly from the MEMORY section above (or say you don't have anything saved yet), and mention they can manage it in Settings > Memory.";
   if(extra) p += "\n\n" + extra;
   return p;
@@ -1539,6 +1544,7 @@ async function send(textOverride){
   const ctx = S.pending.filter(p => p.text).map(p => `[Attached file: ${p.name}]\n${p.text}`).join("\n\n");
   const images = S.pending.filter(p => p.kind === "image").map(p => p.data);
   const userMsg = { id:uid("m_"), role:"user", content:text, atts, ctx: ctx ? ctx.slice(0, 40000) : "", _images:images, tool, at:Date.now() };
+  const routed = autoRoute(text, tool, images.length); if(routed) userMsg.routed = routed.id;
   chat.messages.push(userMsg);
   S.pending = []; renderPending();
   $("input").value = ""; autoGrow(); updateSend();
@@ -1555,7 +1561,8 @@ async function runAssistant(ai, userMsg, tool){
   const cost = tool === "research" || tool === "video" ? 3 : 1;
   bump(cost);
   try{
-    if(tool === "image") await doImage(ai, userMsg);
+    if(userMsg.routed && (!tool || tool === "image")) await doRouted(ai, userMsg);
+    else if(tool === "image") await doImage(ai, userMsg);
     else if(tool === "search") await doSearch(ai, userMsg);
     else if(tool === "research") await doResearch(ai, userMsg);
     else if(tool === "video") await doVideo(ai, userMsg);
@@ -1566,7 +1573,7 @@ async function runAssistant(ai, userMsg, tool){
     else if(tool === "build") await doAssistant(ai, userMsg);
     else if(tool === "app") await doBuild(ai, userMsg);
     else if(tool === "code") await doCode(ai, userMsg);
-    else await doAgentChat(ai, userMsg);
+    else await doAgentChat(ai, userMsg, userMsg._retry ? "FEEDBACK ON YOUR LAST TRY: the user didn't like your previous answer to this message. " + userMsg._retry + " Give a better answer that fixes this. Don't apologize at length or mention this note." : undefined);
   }catch(e){
     if(e.name === "AbortError"){ if(!ai.content) ai.content = "_Stopped._"; }
     else { ai.error = friendlyError(e); refund(cost); }
@@ -1622,7 +1629,7 @@ async function doChat(ai, userMsg, extra, contextBlock, opts = {}){
   await streamChat(msgs, {
     model: opts.model || aivModel(S.model), signal: S.abort.signal, max_tokens: opts.maxTokens || (S.model === "think" ? 4096 : 2048),
     onStatus: s => { ai.status = s; updateMsg(ai); },
-    onMeta: d => { if(d.sources && d.sources.length && !(ai.sources && ai.sources.length)) ai.sources = d.sources; },
+    onMeta: d => { if(d.engine) ai.engine = d.engine; if(d.sources && d.sources.length && !(ai.sources && ai.sources.length)) ai.sources = d.sources; },
     onToken: full => { ai.content = full; updateMsg(ai); }
   });
 }
@@ -1705,6 +1712,7 @@ Rules:
 - In apps, use the controls exactly as listed on the screen. Many apps have a main "Ask" box that understands plain requests.
 - For multi-step jobs, first say your plan in one short line, then work through it step by step. You can use several tools in one block and keep going for several rounds.
 - After you act in an app, check the updated screen in the system message to confirm each change actually happened. If it didn't, try another way (a different button, field, or screen) before telling the user. Only say something is done when you've seen it on the screen.
+- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in Photo AI, budgets and stocks in Stock and Finance AI, workouts and meals in Health and Fitness AI, flashcards and studying in Study and Research AI, resumes and jobs in Career AI, tasks, reminders, calendar, and email in Aide), open that app and do it there.
 - You can move between apps in one job (for example, read a budget in one app, then add a task in Aide).
 - Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.
 
@@ -1731,7 +1739,7 @@ function waitForLink(appId, ms = 15000){
     })();
   });
 }
-async function doAgentChat(ai, userMsg){
+async function doAgentChat(ai, userMsg, hint){
   const base = historyFor(S.chat, S.chat.messages.indexOf(ai));
   const userText = userMsg.content || "";
   let msgs = null, visible = "", log = [], retriedPlan = false;
@@ -1741,15 +1749,16 @@ async function doAgentChat(ai, userMsg){
       if(step === 0){ ai.status = "Looking at " + appById(S.openApp).name; updateMsg(ai); }
       try{ block = appBlock(await appAsk("context")); }catch(e){}
     }
-    const sys = systemPrompt(agentRules() + (block ? "\n\n" + block : ""));
+    const sys = systemPrompt(agentRules() + (hint ? "\n\n" + hint : "") + (block ? "\n\n" + block : ""));
     if(!msgs) msgs = [{ role:"system", content:sys }, ...base]; else msgs[0] = { role:"system", content:sys };
     const prefix = visible ? visible + "\n\n" : "";
     ai.status = "Thinking"; updateMsg(ai);
     const full = await streamChat(msgs, { model:aivModel(S.model), signal:S.abort.signal, max_tokens:2500,
       onStatus: s => { ai.status = s; updateMsg(ai); },
-      onMeta: d => { if(d.sources && d.sources.length && !(ai.sources && ai.sources.length)) ai.sources = d.sources.slice(); },
+      onMeta: d => { if(d.engine) ai.engine = d.engine; if(d.sources && d.sources.length && !(ai.sources && ai.sources.length)) ai.sources = d.sources.slice(); },
       onToken: t => { ai.content = prefix + stripActions(t); updateMsg(ai); } });
-    visible = (prefix + stripActions(full)).trim();
+    const fresh = stripActions(full).trim();
+    visible = (prefix && repeats(prefix, fresh) ? fresh : prefix + fresh).trim();
     ai.content = visible;
     const found = findActions(full);
     if(!found) break;
@@ -1815,7 +1824,7 @@ async function doAgentChat(ai, userMsg){
     ai.actionsLog = log;
     if(S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError");
     msgs.push({ role:"assistant", content:full.slice(0, 6000) });
-    msgs.push({ role:"user", content:("[Tool results]\n- " + results.join("\n- ")).slice(0, 24000) + "\n\n" + (S.openApp ? "The app's updated screen is in the system message. " : "") + "If you have what you need, give the user your answer now (no tools block), citing web sources as [n]. If more steps are needed, use another tools block." });
+    msgs.push({ role:"user", content:("[Tool results]\n- " + results.join("\n- ")).slice(0, 24000) + "\n\n" + (S.openApp ? "The app's updated screen is in the system message. " : "") + "If you have what you need, finish your answer now (no tools block), citing web sources as [n]. The user can already see what you wrote before the tools ran, so continue from there and don't repeat or summarize it. If more steps are needed, use another tools block." });
   }
   if(!ai.content) ai.content = "Done.";
 }
@@ -2593,7 +2602,7 @@ async function contribute(userMsg, ai){
     if(!answer || answer === "_Stopped._") return;
     await Store.contribute(ai.id, {
       owner:Store.uid, v:1, at:Date.now(),
-      app:S.openApp || S.mode || "aivx", tool:userMsg.tool || "chat", model:S.model,
+      app:S.openApp || S.mode || "aivx", tool:userMsg.tool || "chat", model:S.model, engine:ai.engine || "",
       prompt:String(userMsg.content || "").slice(0, 8000),
       hadFiles:!!(userMsg.atts && userMsg.atts.length),
       reply:answer.slice(0, 16000),
@@ -3351,6 +3360,213 @@ async function runInline(btn, code, lang){
   const r = await runBlock({ lang, code, name:"" });
   box.innerHTML = runsHTML([r]); box.querySelector("details").open = true;
 }
+
+/* ---------------- Open the right AI Verse app for the request ---------------- */
+const ROUTE_VERB = /\b(make|create|generate|draw|design|paint|render|sketch|build|plan|track|log|add|set ?up|schedule|remind|draft|write|update|analy[sz]e|review|start|organi[sz]e|prioriti[sz]e|edit|enhance|retouch|upscale|show me|give me|put|save|record|book|prepare|prep|calculate|forecast)\b/i;
+const NOT_APP = /\b(code|coding|function|script|python|javascript|html|css|sql|website|web page|landing page|an app|my app|program|algorithm|essay|poem|story)\b/i;
+const APP_ROUTES = [
+  ["photo",   /\b(image|picture|pic|photo|photograph|portrait|headshot|selfie|logo|poster|artwork|illustration|drawing|painting|wallpaper|avatar|thumbnail|banner|meme|sticker)s?\b/i,
+              /\b(image|picture|pic|photo|drawing|painting|portrait|illustration) of\b|\b(draw|paint|sketch|illustrate)( me)? (a|an|the|my|some|two|three)\b|\bremove (the )?background\b|\b(edit|enhance|retouch|upscale|crop) (this|my|the) (photo|picture|image|pic)\b/i],
+  ["career",  /\b(resume|résumé|cv|cover letter|job (search|application|applications|listing|offer)|jobs|interview|linkedin|career)\b/i, /\bmock interview\b/i],
+  ["study",   /\b(flashcards?|study guide|study plan|practice (test|quiz|exam)|quiz|exam|lesson|research (paper|study|proposal|question)|literature review)\b/i, /\bquiz me\b|\bhelp me study\b|\bmake (me )?flashcards\b/i],
+  ["fitness", /\b(workouts?|exercises?|gym|meal plan|meals?|calories|macros|protein|diet|running plan|training plan|squat|bench press|deadlift|cardio|weight loss|lose weight|bulking|cutting)\b/i, null],
+  ["finance", /\b(budget|budgets|stocks?|portfolio|investments?|investing|ticker|dividends?|expenses|spending|savings plan|net worth|crypto|bitcoin|paper trad\w*|watchlist)\b/i, null],
+  ["aide",    /\b(tasks?|to-?dos?|reminders?|calendar|schedule|meetings?|appointments?|emails?|e-mail|itinerary|packing list|daily briefing)\b/i, /\bremind me\b|\bplan my (day|week|morning|weekend)\b|\badd (a |an )?(task|reminder|event)\b/i],
+];
+function routeApp(text){
+  const t = String(text || "");
+  if(!t || t.length > 800 || NOT_APP.test(t)) return null;
+  for(const [id, nouns, direct] of APP_ROUTES){
+    const app = APPS.find(a => a.id === id && a.url);
+    if(!app) continue;
+    if((direct && direct.test(t)) || (ROUTE_VERB.test(t) && nouns.test(t))) return app;
+  }
+  return null;
+}
+function autoRoute(text, tool, nImages){
+  if(!S.profile || S.profile.settings.autoApps === false) return null;
+  if(tool && tool !== "image") return null;
+  if(tool === "image") return APPS.find(a => a.id === "photo" && a.url) || null;
+  if(nImages && !/\b(edit|enhance|retouch|remove|background|upscale|crop|fix|restore)\b/i.test(text)) return null;
+  return routeApp(text);
+}
+function isImageAsk(userMsg){
+  return userMsg.tool === "image" || /\b(create|make|generate|draw|design|paint|render|sketch|give me|show me)\b/i.test(userMsg.content || "") && !(userMsg._images && userMsg._images.length);
+}
+async function doRouted(ai, userMsg){
+  const app = appById(userMsg.routed);
+  ai.steps = [];
+  if(S.openApp !== app.id){ ai.status = "Opening " + app.name; updateMsg(ai, true); openFullApp(app, { keepChat:true }); }
+  let linked = Link.ready && Link.app === app.id;
+  if(!linked){ try{ await waitForLink(app.id, 15000); linked = true; }catch(e){} }
+  ai.steps.push({ text:"Opened " + app.name, done:true }); updateMsg(ai, true);
+  if(app.id === "photo" && isImageAsk(userMsg)){
+    await doImage(ai, userMsg);
+    const im = ai.images && ai.images[0] && S.libMap[ai.images[0].lib];
+    if(im && linked){
+      try{
+        const r = await appAsk("addimage", { src:im.src, name:im.title, prompt:im.prompt }, 30000);
+        if(r && r.ok){ ai.steps.push({ text:"Added it to Photo AI", done:true }); ai.content = "Here's your picture. It's also open in Photo AI, so you can keep editing it there: remove the background, change the style, add text, or make more versions."; return; }
+      }catch(e){}
+    }
+    ai.content = "Here's your picture. I opened Photo AI too, so you can edit it there. Save the image and open it in the app, or ask me for changes here.";
+    return;
+  }
+  if(!linked){
+    ai.steps.push({ text:"Couldn't connect to " + app.name + ", so I'm doing it here", done:true });
+    return doAgentChat(ai, userMsg);
+  }
+  return doAgentChat(ai, userMsg, `ROUTED TO ${app.name.toUpperCase()}: this request is something ${app.name} is built for, and it's now open on the user's screen next to you. Do it inside the app: look at its screen and controls (APP ON SCREEN), go to the right screen, and use its fields and buttons — many apps have a main Ask box that understands plain requests. Confirm what you did from the updated screen. If the app can't do this part, do it yourself with your own tools and say so briefly.`);
+}
+
+/* ---------------- Feedback that actually improves AIV X ---------------- */
+function repeats(a, b){
+  const w = s => new Set(String(s).toLowerCase().match(/[a-z0-9']{4,}/g) || []);
+  const A = w(a), B = w(b); if(B.size < 25) return false;
+  let n = 0; B.forEach(x => { if(A.has(x)) n++; });
+  return n / B.size > 0.6;
+}
+const FB_REASONS = ["Wrong or made-up info", "Didn't do what I asked", "Showed code or symbols I didn't want", "Too long", "Too short or vague", "Repeated itself", "Used the wrong app or tool", "Unsafe or offensive"];
+const _rateMessage = rateMessage;
+rateMessage = async function(m, val){
+  if(val > 0 || m.rating === -1) return _rateMessage(m, val);
+  const box = modal(`<div class="mh2"><h3>What went wrong?</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
+    <div class="mb"><div class="ui-chips" id="fbR">${FB_REASONS.map((r, i) => `<button class="ui-chip" data-r="${i}">${esc(r)}</button>`).join("")}</div>
+    <label class="label">What should it have said or done? <span class="muted small">(optional)</span></label>
+    <textarea class="input" id="fbNote" placeholder="For example: just say hi back, without any code."></textarea>
+    <label class="agree" style="margin:12px 0 0"><input type="checkbox" id="fbMem" checked><span>Remember this for my future chats</span></label></div>
+    <div class="mf"><button class="btn" id="fbSend">Send feedback</button><button class="btn primary" id="fbRetry">Send and try again</button></div>`);
+  paintIcons(box);
+  box.querySelectorAll("[data-r]").forEach(b => b.onclick = () => b.classList.toggle("on"));
+  const submit = async retry => {
+    const reasons = [...box.querySelectorAll("[data-r].on")].map(b => FB_REASONS[+b.dataset.r]);
+    const note = $("fbNote").value.trim().slice(0, 2000), remember = $("fbMem").checked;
+    closeModal();
+    m.rating = -1; m.feedback = { reasons, note, at:Date.now() };
+    updateMsg(m, true); persistChat();
+    toast("Thanks. This helps AIV X improve.");
+    if(improveOn()) Store.contribute(m.id, { owner:Store.uid, rating:-1, ratedAt:Date.now(), reasons, note, correction:note }).catch(() => {});
+    shareFeedback(m, reasons, note);
+    if(remember && (reasons.length || note)) learnLesson(m, reasons, note);
+    if(retry){
+      const i = S.chat.messages.indexOf(m), u = S.chat.messages[i - 1];
+      if(u && u.role === "user" && !S.busy){
+        u._retry = "They said: " + [reasons.join(", "), note].filter(Boolean).join(". ") + ".";
+        await regenerate(m);
+        delete u._retry; persistChat();
+      }
+    }
+  };
+  $("fbSend").onclick = () => submit(false);
+  $("fbRetry").onclick = () => submit(true);
+};
+// Send feedback to AIV-1's shared learning (anonymous id; only with Improve AIV X on; never Health and Fitness)
+async function shareFeedback(m, reasons, note){
+  try{
+    const app = S.openApp || S.mode || "aivx";
+    if(!improveOn() || TRAIN_SKIP_APPS.includes(app)) return;
+    const i = S.chat.messages.indexOf(m), um = S.chat.messages[i - 1];
+    const u = (await sha256("aivx:" + (Store.uid || "anon"))).slice(0, 16);
+    await api("/feedback", { u, reasons, note, app, q:String(um && um.content || "").slice(0, 400), a:splitThought(m.content || "").answer.slice(0, 800) });
+  }catch(e){}
+}
+async function learnLesson(m, reasons, note){
+  try{
+    const i = S.chat.messages.indexOf(m), u = S.chat.messages[i - 1];
+    const out = (await ask([{ role:"system", content:"Turn the user's feedback on an AI assistant's answer into ONE short instruction the assistant should follow in all future replies to this user (imperative, at most 18 words). If the feedback only applies to this one answer, such as a single factual mistake, reply exactly NONE." },
+      { role:"user", content:`The user asked: ${String(u && u.content || "").slice(0, 600)}\nThe assistant answered: ${splitThought(m.content || "").answer.slice(0, 1200)}\nWhat was wrong: ${reasons.join(", ") || "(not given)"}\nTheir note: ${note || "(none)"}` }], { model:"fast", max_tokens:60 })).trim().replace(/^["'-\s]+|["'\s]+$/g, "");
+    if(!out || /^NONE\b/i.test(out) || out.length > 200) return;
+    const text = "From your feedback: " + out;
+    const mems = S.profile.memories = S.profile.memories || [];
+    if(mems.some(x => x.text.toLowerCase() === text.toLowerCase())) return;
+    mems.push({ id:uid("mem_"), text, at:Date.now(), from:"feedback" });
+    await saveProfile();
+    toast("Saved to Memory: " + out.slice(0, 80));
+  }catch(e){}
+}
+
+/* ---------------- Training data (admin only) ---------------- */
+function isAdmin(){ return !!(S.user && ADMIN_EMAILS.map(x => x.toLowerCase()).includes(String(S.user.email || "").toLowerCase())); }
+Store.listTraining = async function(){
+  if(DEMO) return Object.entries(LSX.get("aivx_t_" + this.uid, {})).map(([id, v]) => Object.assign({ id }, v));
+  const q = await fb.firestore().collection("training").orderBy("at", "desc").limit(10000).get();
+  return q.docs.map(d => Object.assign({ id:d.id }, d.data()));
+};
+const RESTRICTED_ENGINE = /gemini|mistral|codestral|magistral|openrouter|github\//i;
+async function drawTraining(b){
+  b.innerHTML = `<div class="muted">Loading training data…</div>`;
+  let rows;
+  try{ rows = (await Store.listTraining()).filter(r => r.prompt && r.reply); }
+  catch(e){ b.innerHTML = `<div class="err-msg">Couldn't load training data: ${esc(e.code || e.message)}. Make sure the Firestore rules let your admin account read the training collection.</div>`; return; }
+  const up = rows.filter(r => r.rating > 0).length, down = rows.filter(r => r.rating < 0).length, fixed = rows.filter(r => r.rating < 0 && r.correction).length;
+  const restricted = rows.filter(r => RESTRICTED_ENGINE.test(r.engine || "")).length, unknown = rows.filter(r => !r.engine).length;
+  const reasons = {}; rows.forEach(r => (r.reasons || []).forEach(x => reasons[x] = (reasons[x] || 0) + 1));
+  const apps = {}; rows.forEach(r => apps[r.app || "aivx"] = (apps[r.app || "aivx"] || 0) + 1);
+  b.innerHTML = `<h4 style="margin:0 0 4px">Rules for everyone</h4>
+    <p class="muted small" style="margin:0 0 10px">AIV-1 learns these from everyone's thumbs-down feedback, once a day. A rule is only added when at least 3 different people report the same problem and it passes a safety check. Rules apply to every AIV-1 answer: in AIV X, in your apps, and through your API.</p>
+    <div id="gRules" class="memlist"><div class="muted small">Loading…</div></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><input class="input" id="gAdd" placeholder="Add your own rule for everyone"><button class="btn sm" id="gAddGo">Add</button></div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap"><button class="btn sm" id="gRefresh">Learn from feedback now</button><span class="small muted" id="gMsg"></span></div>
+    <label class="label">Admin key <span class="muted small">(the ADMIN_KEY secret in your Worker, saved on this device only)</span></label><input class="input" id="gKey" type="password" autocomplete="off">
+    <h4 style="margin:22px 0 4px">Your saved chats</h4>
+    <div class="set-row"><div class="lt">Saved chats<small>From people with Improve AIV X turned on.</small></div><b>${rows.length}</b></div>
+    <div class="set-row"><div class="lt">Thumbs up</div><b>${up}</b></div>
+    <div class="set-row"><div class="lt">Thumbs down<small>${fixed} include what the answer should have been.</small></div><b>${down}</b></div>
+    <div class="set-row"><div class="lt">Top problems</div><span class="small muted" style="text-align:right">${Object.entries(reasons).sort((a, c) => c[1] - a[1]).slice(0, 4).map(([k, v]) => esc(k) + " (" + v + ")").join("<br>") || "None yet"}</span></div>
+    <div class="set-row"><div class="lt">By app</div><span class="small muted" style="text-align:right">${Object.entries(apps).map(([k, v]) => esc(appById(k).name) + " (" + v + ")").join("<br>")}</span></div>
+    <label class="agree" style="margin-top:14px"><input type="checkbox" id="tOnlyGood" checked><span>Only use answers people liked, plus corrected thumbs-down answers</span></label>
+    <label class="agree"><input type="checkbox" id="tSafe" checked><span>Leave out answers written by Gemini, Mistral, OpenRouter, or GitHub models, whose terms may not allow training on them (${restricted})</span></label>
+    <div class="muted small" style="margin:6px 0 12px">${unknown} older chats don't record which model wrote them and are included.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary sm" id="tJsonl">Download fine-tuning file (.jsonl)</button><button class="btn sm" id="tCsv">Download feedback report (.csv)</button></div>
+    <p class="muted small" style="margin-top:12px">The .jsonl file is in the standard chat format that Together, Fireworks, Hugging Face, and OpenAI-style fine-tuning accept. Review it and remove anything personal before training.</p>`;
+  drawGlobalRules();
+  $("tJsonl").onclick = () => {
+    const onlyGood = $("tOnlyGood").checked, safe = $("tSafe").checked;
+    const pick = rows.filter(r => (!safe || !RESTRICTED_ENGINE.test(r.engine || "")) && (onlyGood ? (r.rating > 0 || (r.rating < 0 && r.correction)) : !(r.rating < 0 && !r.correction)));
+    if(!pick.length) return toast("No chats match these options yet.");
+    const lines = pick.map(r => JSON.stringify({ messages:[
+      { role:"system", content:"You are AIV X, the everyday AI assistant made by AI Verse. You are warm, sharp, honest, and genuinely useful." },
+      { role:"user", content:r.prompt }, { role:"assistant", content:r.rating < 0 && r.correction ? r.correction : r.reply }] }));
+    download("aivx-training-" + new Date().toISOString().slice(0, 10) + ".jsonl", lines.join("\n") + "\n", "application/jsonl");
+    toast("Downloaded " + pick.length + " examples");
+  };
+  $("tCsv").onclick = () => {
+    const bad = rows.filter(r => r.rating < 0);
+    if(!bad.length) return toast("No thumbs-down feedback yet.");
+    download("aivx-feedback-" + new Date().toISOString().slice(0, 10) + ".csv", toCSV([["Date", "App", "Model", "Question", "Answer", "Problems", "What it should have been"], ...bad.map(r => [new Date(r.ratedAt || r.at).toLocaleString(), r.app || "", r.engine || "", r.prompt.slice(0, 2000), r.reply.slice(0, 4000), (r.reasons || []).join("; "), r.note || ""])]), "text/csv");
+  };
+}
+
+async function adminRules(body){
+  const key = $("gKey").value.trim();
+  if(!key){ toast("Enter your admin key first."); $("gKey").focus(); throw new Error("no key"); }
+  LSX.set("aivx_admin_key", key);
+  return api("/rules/admin", Object.assign({ adminKey:key }, body));
+}
+function renderGlobalRules(list, last){
+  const box = $("gRules"); if(!box) return;
+  box.innerHTML = list.length ? list.map(r => `<div class="memrow" data-id="${esc(r.id)}"><span>${esc(r.text)}<br><span class="muted small">${r.source === "admin" ? "Added by you" : "Learned from " + r.users + " people"} · ${new Date(r.created).toLocaleDateString()}</span></span><button title="Remove">✕</button></div>`).join("")
+    : `<div class="muted small" style="padding:8px 0">No rules yet. They'll appear here as people give feedback.</div>`;
+  if(last && $("gMsg")) $("gMsg").textContent = "Last checked " + new Date(last.at).toLocaleString() + " · " + last.feedback + " feedback in the last 30 days";
+  box.querySelectorAll(".memrow button").forEach(x => x.onclick = async () => {
+    if(!confirm("Remove this rule for everyone? It won't be learned again.")) return;
+    try{ const d = await adminRules({ action:"remove", id:x.parentElement.dataset.id }); renderGlobalRules(d.rules); toast("Rule removed"); }catch(e){ if(e.message !== "no key") toast(e.message); }
+  });
+}
+async function drawGlobalRules(){
+  $("gKey").value = LSX.get("aivx_admin_key", "");
+  try{ const r = await fetch(AIV_API_URL + "/rules"); const d = await r.json(); renderGlobalRules(d.rules || [], d.lastRun); }
+  catch(e){ $("gRules").innerHTML = `<div class="muted small">Couldn't load the rules. Make sure the new Worker is deployed.</div>`; }
+  $("gAddGo").onclick = async () => {
+    const text = $("gAdd").value.trim(); if(!text) return;
+    try{ const d = await adminRules({ action:"add", text }); $("gAdd").value = ""; renderGlobalRules(d.rules); toast("Rule added for everyone"); }catch(e){ if(e.message !== "no key") toast(e.message); }
+  };
+  $("gRefresh").onclick = async () => {
+    $("gMsg").textContent = "Reading everyone's feedback…";
+    try{ const d = await adminRules({ action:"refresh" }); renderGlobalRules(d.rules || []); $("gMsg").textContent = d.note ? "No new rules: " + d.note : (d.added && d.added.length ? "Learned " + d.added.length + " new rule" + (d.added.length > 1 ? "s" : "") : "No new rules: no problem was reported by enough different people") + " · " + (d.feedback || 0) + " feedback checked"; }
+    catch(e){ $("gMsg").textContent = e.message === "no key" ? "" : "Couldn't update: " + e.message; }
+  };
+}
 </script>
 
 <script>
@@ -3672,7 +3888,7 @@ $("upBtn").onclick = () => openUpgrade();
 
 /* ---------------- SETTINGS (general, personalization, memory, plan, account) ---------------- */
 function openSettings(section = "general"){
-  const secs = [["general","General"],["personal","Personalization"],["memory","Memory"],["plan","Plan"],["account","Account"]];
+  const secs = [["general","General"],["personal","Personalization"],["memory","Memory"],["plan","Plan"],["account","Account"]].concat(isAdmin() ? [["training","Training data"]] : []);
   const m = modal(`<div class="mh2"><h3>Settings</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="set-wrap"><div class="set-nav">${secs.map(([k, v]) => `<button data-s="${k}" class="${k === section ? "on" : ""}">${v}</button>`).join("")}</div><div class="set-body" id="setBody"></div></div>`, true);
   m.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { m.querySelectorAll("[data-s]").forEach(x => x.classList.toggle("on", x === b)); drawSettings(b.dataset.s); });
@@ -3685,7 +3901,9 @@ function drawSettings(sec){
     const voices = ("speechSynthesis" in window) ? speechSynthesis.getVoices() : [];
     b.innerHTML = `<div class="set-row"><div class="lt">Theme</div><select class="input" id="sTheme" style="width:auto"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
       <div class="set-row"><div class="lt">Read-aloud voice</div><select class="input" id="sVoice" style="width:auto;max-width:220px"><option value="">Default</option>${voices.map(v => `<option ${v.name === st.voice ? "selected" : ""}>${esc(v.name)}</option>`).join("")}</select></div>
+      <div class="set-row"><div class="lt">Open the right app for you<small>When you ask for something one of your AI Verse apps does, like creating a picture, AIV X opens that app and does it there.</small></div><button class="switch ${st.autoApps !== false ? "on" : ""}" id="sAutoApps"></button></div>
       <div class="set-row"><div class="lt">Default model<small>You can switch anytime in the message box.</small></div><select class="input" id="sModel" style="width:auto">${MODELS.map(x => `<option value="${x.id}" ${S.model === x.id ? "selected" : ""}>${x.name}</option>`).join("")}</select></div>`;
+    $("sAutoApps").onclick = async () => { st.autoApps = st.autoApps === false; $("sAutoApps").classList.toggle("on", st.autoApps); await saveProfile(); };
     $("sTheme").value = st.theme || "system";
     $("sTheme").onchange = () => { st.theme = $("sTheme").value; applyTheme(); saveProfile(); };
     $("sVoice").onchange = () => { st.voice = $("sVoice").value; saveProfile(); };
@@ -3724,6 +3942,7 @@ function drawSettings(sec){
     if($("pUp")) $("pUp").onclick = () => openUpgrade();
     if($("pRemove")) $("pRemove").onclick = async () => { S.profile.proKey = ""; S.pro = false; await saveProfile(); renderUsage(); drawSettings("plan"); };
   }
+  if(sec === "training"){ drawTraining(b); return; }
   if(sec === "account"){
     const u = S.user;
     b.innerHTML = `<div class="set-row"><div class="lt">Signed in with<small>${esc(u.email || u.phone || "—")}</small></div><span>${esc({ "google.com":"Google", "apple.com":"Apple", phone:"Phone", password:"Email" }[u.provider] || u.provider || "")}</span></div>
