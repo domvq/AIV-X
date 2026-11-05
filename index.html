@@ -814,8 +814,8 @@ const APPS = [
   { id:"career", name:"Career AI", url:APP_BASE + "career-ai.html", desc:"Resumes, cover letters, job matching, interviews.",
     persona:"You are now in Career AI mode: a career coach. Improve resumes with strong bullet points and metrics, write tailored cover letters, match skills to jobs, prepare interview answers using the STAR method, run mock interviews one question at a time, and plan career moves.",
     starters:["Rewrite my resume bullets","Write a cover letter for this job","Mock interview me","What jobs fit my skills?"] },
-  { id:"aide", name:"Aide", url:APP_BASE + "aide.html", desc:"Planner, calendar, tasks, reminders, and email.",
-    persona:"You are now in Aide mode: a personal assistant. Plan days and weeks, organize tasks by priority, draft emails and messages, prepare travel plans and checklists, and summarize what matters. Use clear checklists and time blocks.",
+  { id:"aide", name:"Personal Assistant AI", url:APP_BASE + "personal-assistant-ai.html", desc:"Planner, calendar, tasks, reminders, and email.",
+    persona:"You are now in Personal Assistant AI mode: a personal assistant. Plan days and weeks, organize tasks by priority, draft emails and messages, prepare travel plans and checklists, and summarize what matters. Use clear checklists and time blocks.",
     starters:["Plan my day","Draft an email to my boss","Make a packing list","Prioritize my to-dos"] },
 ];
 
@@ -1835,8 +1835,8 @@ Rules:
 - In apps, use the controls exactly as listed on the screen. Many apps have a main "Ask" box that understands plain requests.
 - For multi-step jobs, first say your plan in one short line, then work through it step by step. You can use several tools in one block and keep going for several rounds.
 - After you act in an app, check the updated screen in the system message to confirm each change actually happened. If it didn't, try another way (a different button, field, or screen) before telling the user. Only say something is done when you've seen it on the screen.
-- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in Photo AI, budgets and stocks in Stock and Finance AI, workouts and meals in Health and Fitness AI, flashcards and studying in Study and Research AI, resumes and jobs in Career AI, tasks, reminders, calendar, and email in Aide), open that app and do it there.
-- You can move between apps in one job (for example, read a budget in one app, then add a task in Aide).
+- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in Photo AI, budgets and stocks in Stock and Finance AI, workouts and meals in Health and Fitness AI, flashcards and studying in Study and Research AI, resumes and jobs in Career AI, tasks, reminders, calendar, and email in Personal Assistant AI), open that app and do it there.
+- You can move between apps in one job (for example, read a budget in one app, then add a task in Personal Assistant AI).
 - Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.
 
 ${UI_RULES}`;
@@ -3856,10 +3856,8 @@ $("modeChip").onclick = e => {
 function openAIMode(anchor){
   showMenu(anchor || $("modeChip"), [
     { head:"Choose your AI" },
-    { label:"AIV X", desc:"Your everyday AI for anything", check:S.mode === "aivx", fn:() => setMode("aivx") },
-    ...APPS.filter(a => a.id !== "aivx").map(a => ({ label:a.name, desc:a.desc, check:S.mode === a.id, fn:() => setMode(a.id) })),
-    { sep:true },
-    { label:"Open an app full screen", desc:"Use the app with AIV X beside it", fn:() => openApps() },
+    { label:"AIV X", desc:"Your everyday AI for anything", check:!S.openApp && S.mode === "aivx", fn:() => { if(S.openApp) closeApp(); setMode("aivx"); } },
+    ...APPS.filter(a => a.id !== "aivx").map(a => ({ label:a.name, desc:a.desc, check:S.openApp === a.id, fn:() => a.url ? openFullApp(a) : setMode(a.id) })),
   ], { up:true });
 }
 function phoneIcons(){ const b = $("sideOpen"); if(b){ b.innerHTML = icon(innerWidth <= 640 ? "menu" : "sidebar"); } }
