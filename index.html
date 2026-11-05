@@ -1178,7 +1178,7 @@ function systemPrompt(extra = ""){
   const st = S.profile.settings;
   const name = S.profile.name;
   let p = `You are AIV X, the everyday AI assistant made by AI Verse (aiverse.it.com). You are warm, sharp, honest, and genuinely useful — like a brilliant friend who knows a lot about everything.
-Today is ${new Date().toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"})}.${name ? " The user's name is " + name + "." : ""}
+Today is ${new Date().toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"})}.${name ? " The user's name is " + name + " (use just their first name, and only now and then, the way a friend would)." : ""}
 
 How you respond:
 - Answer directly first, then add detail only if it helps. Match length to the question.
@@ -1233,7 +1233,7 @@ function historyFor(chat, upTo){
       if(m.atts && m.atts.some(a => a.kind === "image") && !(m._images && m._images.length)) text += "\n[The user shared an image earlier that is no longer available.]";
       return { role:"user", content:text };
     }
-    let t = m.content || "";
+    let t = stripActions(m.content || "");
     if(m.artifact) t += `\n[Created ${m.artifact.kind}: ${m.artifact.title}]`;
     if(m.actionsLog && m.actionsLog.length) t += "\n[Did in the app: " + m.actionsLog.slice(-8).join("; ") + "]";
     if(m.images && m.images.length) t += "\n[Generated an image]";
@@ -1629,7 +1629,24 @@ async function doChat(ai, userMsg, extra, contextBlock, opts = {}){
 
 /* ---------------- chat that can use the AI Verse apps ---------------- */
 const ACTION_RE = /```aiv-actions\s*([\s\S]*?)(```|$)/;
-function stripActions(t){ return String(t || "").replace(/```aiv-actions[\s\S]*?(```|$)/g, "").trim(); }
+// Models sometimes write the tool list without the aiv-actions fence: in a json block, or as bare JSON.
+const FENCED_JSON_ACTION_RE = /```(?:json|js|javascript)?[ \t]*\n?\s*(\[\s*\{\s*["']?do["']?\s*:[\s\S]*?)(```|$)/;
+const BARE_ACTION_RE = /\[\s*\{\s*["']?do["']?\s*:[\s\S]*?\}\s*\]/;
+function findActions(t){
+  t = String(t || "");
+  let m = t.match(ACTION_RE); if(m) return m[1];
+  m = t.match(FENCED_JSON_ACTION_RE); if(m) return m[1];
+  m = t.match(BARE_ACTION_RE); if(m) return m[0];
+  return null;
+}
+function stripActions(t){
+  return String(t || "")
+    .replace(/```aiv-actions[\s\S]*?(```|$)/g, "")
+    .replace(/```(?:json|js|javascript)?[ \t]*\n?\s*\[\s*\{\s*["']?do["']?\s*:[\s\S]*?(```|$)/g, "")
+    .replace(/\[\s*\{\s*["']?do["']?\s*:[\s\S]*?\}\s*\]/g, "")
+    .replace(/\[\s*\{\s*["']?do["']?\s*:?[^\]]*$/, "")
+    .replace(/\n{3,}/g, "\n\n").trim();
+}
 const DESTRUCTIVE = /\b(delete|remove|clear|reset|erase|wipe|sign ?out|log ?out|disconnect|forget)\b/i;
 function parseActions(raw){
   let s = String(raw || "").replace(/```[a-z-]*/gi, "").trim()
@@ -1680,7 +1697,9 @@ General tools:
 AI Verse app tools (the user's apps: ${apps}):
 - open {app id} · go {screen name} · click {button text exactly as shown} · type {field label or placeholder, value, submit} · check {field, on} · look {} (look at the app's screen again)
 Rules:
-- For simple questions, chat, or things you know well, just answer — no tools.
+- For simple questions, greetings, small talk, thanks, questions about you, or things you know well, just answer in plain words. No tools, and never show the user a tools block for these.
+- Only use the tools listed above, with these exact names. There is no "build" tool: to build a custom AI app, tell the user to press the Build button.
+- The tools block must be fenced exactly as shown (three backticks then aiv-actions). Never write a tool list as plain text or in a json block.
 - Before the block, say in a few words what you're about to do.
 - After tools run you'll get the results. Then either use more tools or give your answer. Cite web sources inline as [1], [2] with the numbers given.
 - In apps, use the controls exactly as listed on the screen. Many apps have a main "Ask" box that understands plain requests.
@@ -1732,9 +1751,10 @@ async function doAgentChat(ai, userMsg){
       onToken: t => { ai.content = prefix + stripActions(t); updateMsg(ai); } });
     visible = (prefix + stripActions(full)).trim();
     ai.content = visible;
-    const m = full.match(ACTION_RE);
-    if(!m) break;
-    let actions = parseActions(m[1]);
+    const found = findActions(full);
+    if(!found) break;
+    let actions = parseActions(found);
+    if(!actions && !ACTION_RE.test(full) && visible){ break; }   // stray, unreadable tool text outside a real tools block: just show the answer
     if(!actions){
       if(step < 8 && !retriedPlan){
         retriedPlan = true;
@@ -1768,6 +1788,7 @@ async function doAgentChat(ai, userMsg){
         catch(e){ notLinked = app; }
         continue;
       }
+      if(!["go", "click", "type", "check", "fill", "select", "scroll"].includes(d)){ results.push("\u0000" + `"${a.do}" isn't one of your tools. Don't use tools for this; answer the user directly in plain words.` + (/build|app/i.test(d) ? " If they want a custom AI app, tell them to press the Build button below the message box." : "")); continue; }
       if(d === "click" && DESTRUCTIVE.test(String(a.text || "")) && !DESTRUCTIVE.test(userText)){ results.push(`skipped "${a.text}" — ask the user to confirm first`); continue; }
       runnable.push(a);
     }
@@ -1855,7 +1876,7 @@ async function runGeneralTool(d, a, ai, userMsg){
       return R("Looked through your past chats", hits.length ? hits.slice(0, 6).map(h => h.text).join("\n\n") : "Nothing in past chats matched.");
     }
   }catch(e){ return R("A tool didn't work: " + friendlyError(e), "Tool error: " + friendlyError(e)); }
-  return R("Unknown tool", "Unknown tool " + d);
+  return R("Skipped a step it couldn't do", `"${d}" isn't one of your tools. Don't use tools for this; answer the user directly in plain words.` + (/build|app/.test(d) ? " If they want a custom AI app, tell them to press the Build button below the message box." : ""));
 }
 async function makeArtifact(kind, request, userMsg){
   const ctx = convoContext(userMsg);
