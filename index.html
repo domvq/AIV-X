@@ -303,6 +303,8 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 @keyframes pulse{50%{opacity:.4}}
 .cbtn,.toolpill,.modelsel,.send{flex:none;white-space:nowrap}
 #workspace.split .cbtn.build .lbl,#workspace.split #modelName,#workspace.split #micBtn{display:none}
+#workspace.split #voiceBtn,#workspace.appmode #micBtn{display:none}
+@media (max-width:520px){.cbtn.build .lbl,#modelName{display:none}.cbtn.build{padding:0 10px}.crow{gap:2px;padding:6px 6px 8px}.cbtn{min-width:34px;padding:0 8px}.toolpill{min-width:0;max-width:120px;overflow:hidden;text-overflow:ellipsis}}
 #workspace.split .cbtn.build{padding:0 10px}
 .disclaimer{text-align:center;font-size:12px;color:var(--muted);padding-top:8px}
 
@@ -434,6 +436,82 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
   .thread{padding:10px 14px 24px}
   .m.user .bubble{max-width:90%}
 }
+
+/* ---- interactive answers ---- */
+.aivui{border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0;background:var(--panel)}
+.ui-title{font-weight:600;margin-bottom:10px}
+.ui-chart{position:relative;height:260px}
+.ui-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.ui-wait{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}
+.ui-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ui-chip{border:1px solid var(--line2);border-radius:999px;padding:8px 14px;font-size:14px;background:var(--bg2)}
+.ui-chip:hover{border-color:var(--text2);background:var(--bg3)}
+.ui-form{display:grid;gap:10px}
+.ui-field{display:grid;gap:5px;font-size:13px;color:var(--text2)}
+.ui-field .input{padding:9px 12px;font-size:14px}
+.ui-check{display:flex;gap:8px;align-items:center;font-size:14px}
+.ui-form .btn{justify-self:start}
+.ui-q{padding:10px 0;border-top:1px solid var(--line)}
+.ui-q:first-of-type{border-top:0}
+.ui-q .qq{font-weight:500;margin-bottom:8px}
+.ui-opt{display:block;width:100%;text-align:left;border:1px solid var(--line2);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;background:var(--bg2)}
+.ui-opt:hover{border-color:var(--text2)}
+.ui-opt.right{border-color:var(--text);background:var(--bg3);font-weight:600}
+.ui-opt.wrong{opacity:.55;text-decoration:line-through}
+.ui-q .qx{font-size:13px;color:var(--text2);margin-top:6px}
+.ui-score{margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tblwrap{margin:12px 0}
+.tblwrap table{margin:0 !important}
+.tbltools{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.tbltools button{font-size:12px;color:var(--muted);padding:4px 8px;border-radius:8px}
+.tbltools button:hover{background:var(--bg3);color:var(--text)}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--text)}
+.actions .iconbtn.on{color:var(--text);background:var(--bg3)}
+/* ---- voice mode ---- */
+.voice{position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+.vm-top{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.vm-nat{font-weight:400;font-size:13px;color:var(--text2);display:flex;gap:6px;align-items:center}
+.vm-orb{width:150px;height:150px;border-radius:50%;background:var(--text);display:flex;align-items:center;justify-content:center;transition:transform .3s}
+.vm-orb span{width:56px;height:56px;border-radius:50%;background:var(--bg)}
+.voice[data-state="listening"] .vm-orb{animation:vmPulse 1.4s ease-in-out infinite}
+.voice[data-state="thinking"] .vm-orb{animation:vmSpin 1.2s linear infinite;opacity:.7}
+.voice[data-state="speaking"] .vm-orb{animation:vmTalk .5s ease-in-out infinite alternate}
+.voice[data-state="idle"] .vm-orb{opacity:.45}
+@keyframes vmPulse{50%{transform:scale(1.08)}}
+@keyframes vmSpin{50%{transform:scale(.9)}}
+@keyframes vmTalk{to{transform:scale(1.12)}}
+.vm-status{color:var(--text2);font-size:15px;text-align:center;max-width:420px}
+.vm-said{min-height:60px;max-width:560px;text-align:center;font-size:17px}
+.vm-said .aiv{color:var(--text2)}
+.vm-bot{position:absolute;bottom:28px}
+/* ---- video ---- */
+.vid-stage{padding:18px;max-width:900px;margin:0 auto}
+.vid-frame{position:relative;background:#000;border-radius:14px;overflow:hidden}
+.vid-frame canvas{display:block;width:100%;height:auto}
+.vid-frame.portrait{max-width:360px;margin:0 auto}
+.vid-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.15)}
+.vid-bar div{height:100%;width:0;background:#fff}
+.vid-ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.vid-ctrl label{display:flex;gap:6px;align-items:center}
+.vid-scenes{display:grid;gap:10px}
+.vid-sc{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:start;border:1px solid var(--line);border-radius:12px;padding:8px}
+.vid-sc img{width:120px;border-radius:8px;display:block}
+.vid-ed{outline:none;border-radius:6px;padding:2px 4px;margin:2px -4px;font-size:14px}
+.vid-ed:focus{background:var(--bg3)}
+@media (max-width:640px){.vid-sc{grid-template-columns:80px 1fr}.vid-sc img{width:80px}.vm-orb{width:120px;height:120px}}
+
+/* ---- AIV Code runs ---- */
+.runs{display:grid;gap:6px;margin:10px 0}
+.run{border:1px solid var(--line);border-radius:10px;background:var(--bg2);font-size:13px}
+.run summary{cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:8px;color:var(--text2)}
+.run .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.run.ok .dot{background:var(--text)}
+.run.bad .dot{background:transparent;border:2px solid var(--text)}
+.run.bad summary{color:var(--text);font-weight:500}
+.run pre{margin:0;padding:10px 12px;border-top:1px solid var(--line);white-space:pre-wrap;word-break:break-word;max-height:260px;overflow:auto;font-size:12.5px;background:transparent}
+.runbox{margin:-4px 0 12px}
+.zipbar{margin:8px 0}
 </style>
 </head>
 <body>
@@ -493,7 +571,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
       </div>
 
       <div class="auth-err" id="authErr"></div>
-      <div class="auth-legal">AIV X can make mistakes — check important info. It isn't a substitute for a lawyer, doctor, or financial advisor, and isn't for emergencies. Built with Llama.</div>
+      <div class="auth-legal">AIV X can make mistakes — check important info. It isn't a substitute for a lawyer, doctor, or financial advisor, and isn't for emergencies. AIV X uses chats to help improve its AI. You can turn this off anytime in Settings. Built with Llama.</div>
     </div>
   </div>
 </div>
@@ -559,6 +637,7 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
               <div class="sp"></div>
               <button class="modelsel" id="modelBtn"><span id="modelName">Auto</span><span data-i="chev"></span></button>
               <button class="cbtn" id="micBtn" title="Dictate"><span data-i="mic"></span></button>
+              <button class="cbtn" id="voiceBtn" title="Voice mode"><span data-i="wave"></span></button>
               <button class="send" id="sendBtn" title="Send" disabled><span data-i="up"></span></button>
             </div>
           </div>
@@ -638,15 +717,16 @@ const APPS = [
 ];
 
 const MODELS = [
-  { id:"auto",  name:"Auto",     desc:"Best for most things" },
-  { id:"fast",  name:"Fast",     desc:"Quick answers" },
-  { id:"think", name:"Thinking", desc:"Reasons step by step first" },
+  { id:"auto",  name:"AIV-1",          desc:"Best for most things. Searches, checks facts, sees photos" },
+  { id:"fast",  name:"AIV-1 Fast",     desc:"Quick answers" },
+  { id:"think", name:"AIV-1 Thinking", desc:"Reasons step by step for harder problems" },
 ];
 
 const TOOLS = {
   search:   { name:"Web search",    desc:"Find real-time news and info", place:"Search the web" },
   research: { name:"Deep research", desc:"Get a detailed report with sources", place:"What should I research?" },
   image:    { name:"Create image",  desc:"Visualize anything", place:"Describe an image" },
+  video:    { name:"Create video",  desc:"Short narrated videos from your idea", place:"Describe the video you want" },
   doc:      { name:"Document",      desc:"Write and edit documents", place:"What should the document be?" },
   sheet:    { name:"Spreadsheet",   desc:"Create and edit tables", place:"What should the spreadsheet track?" },
   slides:   { name:"Presentation",  desc:"Create slide decks", place:"What is the presentation about?" },
@@ -685,6 +765,11 @@ const ICONS = {
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
   pin:'<path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3Z"/>',
   expand:'<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
+  up2:'<path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3Zm0 0 4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2.3l-1.3 7A2 2 0 0 1 17.7 21H7"/>',
+  down2:'<path d="M17 14V3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-3Zm0 0-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.3-7A2 2 0 0 1 6.3 3H17"/>',
+  wave:'<path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/>',
+  video:'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/>',
+  chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
 };
 function icon(name){ return '<svg class="i" viewBox="0 0 24 24">' + (ICONS[name] || '') + '</svg>'; }
 /* AIV X brand mark: the AIV logo + a larger slashed X */
@@ -956,7 +1041,7 @@ function authShow(step){
 }
 document.querySelectorAll("[data-back]").forEach(b => b.onclick = () => authShow("authMain"));
 /* ---- agreement to the Terms and Privacy Policy (required to sign in) ---- */
-const TERMS_VERSION = "2026-11-04";
+const TERMS_VERSION = "2026-11-04.2";
 function agreed(){
   if($("agree").checked){ LSX.set("aivx_agreed", TERMS_VERSION); $("agreeRow").classList.remove("need"); return true; }
   $("agreeRow").classList.add("need");
@@ -1022,7 +1107,7 @@ function defaultProfile(u){
     name: u.name || (u.email ? u.email.split("@")[0] : "") || "",
     email: u.email || "", phone: u.phone || "", provider: u.provider || "",
     createdAt: Date.now(),
-    settings: { memoryOn:true, learnOn:true, chatHistoryOn:true, aboutMe:"", style:"", theme:"system", voice:"" },
+    settings: { memoryOn:true, learnOn:true, chatHistoryOn:true, aboutMe:"", style:"", theme:"system", voice:"", improve:true, naturalVoice:false },
     memories: [], aiBuilds: 0, usage: { date:today(), count:0 }, proKey:"", projects:[]
   };
 }
@@ -1042,7 +1127,7 @@ async function saveProfile(){
 async function api(path, body){
   const res = await fetch(AIV_API_URL + path, {
     method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify(Object.assign({}, body, { key: S.profile && S.profile.proKey || undefined, appKey: AIVX_APP_KEY }))
+    body: JSON.stringify(Object.assign({}, body, { key: S.profile && S.profile.proKey || undefined, appKey: AIVX_APP_KEY, train: !(S.profile && S.profile.settings && S.profile.settings.improve === false) }))
   });
   const data = await res.json().catch(() => ({}));
   if(!res.ok) throw new Error(data.error || ("Request failed (" + res.status + ")"));
@@ -1052,16 +1137,16 @@ async function ask(messages, opts = {}){
   const d = await api("/chat", { messages, model: opts.model || "auto", max_tokens: opts.max_tokens || 1024 });
   return d.reply || "";
 }
-async function streamChat(messages, { model = "auto", onToken, signal, max_tokens = 2048 } = {}){
+async function streamChat(messages, { model = "auto", onToken, signal, max_tokens = 2048, onStatus, onMeta } = {}){
   const res = await fetch(AIV_API_URL + "/chat", {
     method:"POST", headers:{ "Content-Type":"application/json" }, signal,
-    body: JSON.stringify({ messages, model, stream:true, max_tokens, key: S.profile.proKey || undefined, appKey: AIVX_APP_KEY })
+    body: JSON.stringify({ messages, model, stream:true, max_tokens, key: S.profile.proKey || undefined, appKey: AIVX_APP_KEY, train: S.profile.settings.improve !== false })
   });
   if(!res.ok){ const d = await res.json().catch(() => ({})); throw new Error(d.error || ("Request failed (" + res.status + ")")); }
   const ct = res.headers.get("content-type") || "";
   if(!ct.includes("event-stream")){ const d = await res.json(); onToken(d.reply || "", true); return d.reply || ""; }
   const reader = res.body.getReader(), dec = new TextDecoder();
-  let buf = "", full = "";
+  let buf = "", full = "", streamErr = "";
   while(true){
     const { done, value } = await reader.read();
     if(done) break;
@@ -1074,11 +1159,14 @@ async function streamChat(messages, { model = "auto", onToken, signal, max_token
       if(p === "[DONE]") continue;
       try{
         const j = JSON.parse(p);
+        if(j.aiv){ if(j.aiv.status && onStatus) onStatus(j.aiv.status); if(j.aiv.done && onMeta) onMeta(j.aiv); continue; }
+        if(j.error){ streamErr = (j.error.message || j.error); continue; }
         const t = j.response ?? (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) ?? "";
         if(t){ full += t; onToken(full); }
       }catch(e){}
     }
   }
+  if(streamErr && !full) throw new Error(streamErr);
   return full;
 }
 
@@ -1165,9 +1253,10 @@ function renderMarkdown(text, sources){
   div.querySelectorAll("pre > code").forEach(code => {
     const pre = code.parentElement;
     const lang = ((code.className.match(/language-([\w-]+)/) || [])[1] || "").toLowerCase();
+    if(/^aiv-(chart|buttons|form|quiz)$/.test(lang)){ const ph = document.createElement("div"); ph.className = "aivui"; ph.dataset.kind = lang.slice(4); ph.dataset.spec = code.textContent; pre.replaceWith(ph); return; }
     try{ if(window.hljs) hljs.highlightElement(code); }catch(e){}
     const bar = document.createElement("div"); bar.className = "codebar";
-    bar.innerHTML = `<span>${esc(lang || "code")}</span><span>${(lang === "html") ? '<button data-act="run">▶ Preview</button>' : ''}<button data-act="copy">Copy</button></span>`;
+    bar.innerHTML = `<span>${esc(lang || "code")}</span><span>${(lang === "html") ? '<button data-act="run">▶ Preview</button>' : ''}${/^(js|javascript|py|python|python3)$/.test(lang) ? '<button data-act="exec">▶ Run</button>' : ''}<button data-act="copy">Copy</button></span>`;
     pre.insertBefore(bar, code);
   });
   if(sources && sources.length){
@@ -1181,6 +1270,7 @@ document.addEventListener("click", e => {
   const b = e.target.closest(".codebar button"); if(!b) return;
   const code = b.closest("pre").querySelector("code").innerText;
   if(b.dataset.act === "copy"){ navigator.clipboard.writeText(code); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1500); }
+  if(b.dataset.act === "exec"){ const lang = ((b.closest("pre").querySelector("code").className.match(/language-([\w-]+)/) || [])[1] || "").toLowerCase(); runInline(b, code, lang); }
   if(b.dataset.act === "run"){ openArtifact({ id:uid("tmp_"), kind:"build", title:"HTML preview", html:code }, "preview"); }
 });
 function splitThought(text){
@@ -1228,7 +1318,7 @@ function attHTML(a){
   const ext = (a.name.split(".").pop() || "FILE").slice(0,4).toUpperCase();
   return `<div class="att"><div class="fi">${esc(ext)}</div><div class="nm" title="${esc(a.name)}">${esc(a.name)}</div></div>`;
 }
-const KIND_EMO = { assistant:"AI", build:"APP", doc:"DOC", sheet:"SHEET", slides:"SLIDES", image:"IMG" };
+const KIND_EMO = { assistant:"AI", build:"APP", doc:"DOC", sheet:"SHEET", slides:"SLIDES", image:"IMG", video:"VIDEO" };
 function msgEl(m){
   const el = document.createElement("div");
   el.className = "m " + (m.role === "user" ? "user" : "ai");
@@ -1248,13 +1338,15 @@ function msgEl(m){
     if(sp.answer) html += `<div class="md body ${m.pending ? "cursor" : ""}">${renderMarkdown(sp.answer, m.sources)}</div>`;
     (m.images || []).forEach(im => { const src = im.src || (S.libMap[im.lib] && S.libMap[im.lib].src); if(src) html += `<img class="genimg" src="${src}" alt="${esc(im.prompt || "Generated image")}">`; });
     if(m.artifact){ const k = m.artifact; html += `<div class="artifact-card" data-lib="${esc(k.lib)}"><div class="ic">${KIND_EMO[k.kind] || "FILE"}</div><div><div class="tt">${esc(k.title)}</div><div class="st">${m.pending ? "Building…" : "Click to open"}</div></div></div>`; }
+    if(m.runs && m.runs.length && !m.pending) html += runsHTML(m.runs);
     if(m.sources && m.sources.length) html += `<div class="sources">${m.sources.map((s, i) => `<a class="src" href="${esc(s.url)}" target="_blank" rel="noopener"><span class="h">[${i+1}] ${esc(hostOf(s.url))}</span><span class="tt">${esc(s.title)}</span></a>`).join("")}</div>`;
     if(m.error) html += `<div class="err-msg">${esc(m.error)}</div>`;
     if(!m.pending){
-      html += `<div class="actions"><button class="iconbtn" data-a="copy" title="Copy"><span data-i="copy"></span></button><button class="iconbtn" data-a="speak" title="Read aloud"><span data-i="speaker"></span></button><button class="iconbtn" data-a="regen" title="Regenerate"><span data-i="redo"></span></button></div>`;
+      html += `<div class="actions"><button class="iconbtn" data-a="copy" title="Copy"><span data-i="copy"></span></button><button class="iconbtn" data-a="speak" title="Read aloud"><span data-i="speaker"></span></button><button class="iconbtn" data-a="regen" title="Regenerate"><span data-i="redo"></span></button><button class="iconbtn ${m.rating > 0 ? "on" : ""}" data-a="good" title="Good response"><span data-i="up2"></span></button><button class="iconbtn ${m.rating < 0 ? "on" : ""}" data-a="bad" title="Bad response"><span data-i="down2"></span></button></div>`;
       if(m.memNote) html += `<div class="memchip"><span data-i="memory"></span>${esc(m.memNote)} <button data-a="mem">Manage</button></div>`;
     }
     el.innerHTML = html;
+    try{ hydrateUI(el, m); }catch(e){ console.warn(e); }
     el.querySelectorAll(".genimg").forEach(i => i.onclick = () => lightbox(i.src));
     const ac = el.querySelector(".artifact-card"); if(ac) ac.onclick = () => { const it = S.libMap[ac.dataset.lib]; if(it) openArtifact(it); };
   }
@@ -1281,6 +1373,8 @@ function msgAction(m, a, btn){
   if(a === "copy"){ navigator.clipboard.writeText(splitThought(m.content || "").answer || m.content || ""); btn.innerHTML = icon("check"); setTimeout(() => btn.innerHTML = icon("copy"), 1400); }
   if(a === "speak") speak(splitThought(m.content || "").answer);
   if(a === "regen") regenerate(m);
+  if(a === "good") rateMessage(m, 1);
+  if(a === "bad") rateMessage(m, -1);
   if(a === "edit"){
     if(S.busy) return;
     const i = S.chat.messages.indexOf(m);
@@ -1458,20 +1552,21 @@ async function send(textOverride){
 
 async function runAssistant(ai, userMsg, tool){
   S.busy = true; S.abort = new AbortController(); setSending(true);
-  const cost = tool === "research" ? 3 : 1;
+  const cost = tool === "research" || tool === "video" ? 3 : 1;
   bump(cost);
   try{
     if(tool === "image") await doImage(ai, userMsg);
     else if(tool === "search") await doSearch(ai, userMsg);
     else if(tool === "research") await doResearch(ai, userMsg);
+    else if(tool === "video") await doVideo(ai, userMsg);
     else if(tool === "link") await doLink(ai, userMsg);
     else if(tool === "doc") await doDoc(ai, userMsg);
     else if(tool === "sheet") await doSheet(ai, userMsg);
     else if(tool === "slides") await doSlides(ai, userMsg);
     else if(tool === "build") await doAssistant(ai, userMsg);
     else if(tool === "app") await doBuild(ai, userMsg);
-    else if(tool !== "code") await doAgentChat(ai, userMsg);
-    else await doChat(ai, userMsg, tool === "code" ? "The user wants help with code. Write complete, working, well-commented code in fenced blocks with the language tag. For web UIs prefer a single self-contained HTML file (the user can press Preview). Explain briefly how to run it." : "");
+    else if(tool === "code") await doCode(ai, userMsg);
+    else await doAgentChat(ai, userMsg);
   }catch(e){
     if(e.name === "AbortError"){ if(!ai.content) ai.content = "_Stopped._"; }
     else { ai.error = friendlyError(e); refund(cost); }
@@ -1483,6 +1578,7 @@ async function runAssistant(ai, userMsg, tool){
   await persistChat();
   autoTitle(S.chat);
   learnFrom(userMsg, ai);
+  contribute(userMsg, ai);
 }
 function friendlyError(e){
   const m = String(e.message || e);
@@ -1512,7 +1608,7 @@ async function regenerate(m){
 }
 
 /* ---------------- plain chat (with streaming) ---------------- */
-async function doChat(ai, userMsg, extra, contextBlock){
+async function doChat(ai, userMsg, extra, contextBlock, opts = {}){
   const idx = S.chat.messages.indexOf(ai);
   const hist = historyFor(S.chat, idx);
   if(contextBlock){
@@ -1520,11 +1616,13 @@ async function doChat(ai, userMsg, extra, contextBlock){
     const add = "\n\n" + contextBlock;
     if(Array.isArray(last.content)) last.content[0].text += add; else last.content += add;
   }
-  const msgs = [{ role:"system", content:systemPrompt(extra) }, ...hist];
+  const msgs = [{ role:"system", content:systemPrompt((extra ? extra + "\n\n" : "") + UI_RULES) }, ...hist];
   ai.status = S.model === "think" ? "Thinking" : (userMsg._images && userMsg._images.length ? "Looking at your image" : "Thinking");
   updateMsg(ai);
   await streamChat(msgs, {
-    model: S.model, signal: S.abort.signal, max_tokens: S.model === "think" ? 4096 : 2048,
+    model: opts.model || aivModel(S.model), signal: S.abort.signal, max_tokens: opts.maxTokens || (S.model === "think" ? 4096 : 2048),
+    onStatus: s => { ai.status = s; updateMsg(ai); },
+    onMeta: d => { if(d.sources && d.sources.length && !(ai.sources && ai.sources.length)) ai.sources = d.sources; },
     onToken: full => { ai.content = full; updateMsg(ai); }
   });
 }
@@ -1574,6 +1672,7 @@ General tools:
 - search {q} — search the web. Use it for anything current (news, prices, laws, schedules, people, products) or anything you're not sure of. Search more than once if the first results aren't enough.
 - read {url} — read a web page, such as a link from search results or one the user gave you.
 - image {prompt} — create an image from a detailed description.
+- video {request} — make a short narrated video (AI-generated scenes with captions) the user can watch and download.
 - document {request} — write a document in the side panel (reports, letters, plans, essays — long writing the user will keep or edit).
 - spreadsheet {request} — make a spreadsheet in the side panel (budgets, trackers, tables to edit).
 - slides {request} — make a presentation in the side panel.
@@ -1585,7 +1684,12 @@ Rules:
 - Before the block, say in a few words what you're about to do.
 - After tools run you'll get the results. Then either use more tools or give your answer. Cite web sources inline as [1], [2] with the numbers given.
 - In apps, use the controls exactly as listed on the screen. Many apps have a main "Ask" box that understands plain requests.
-- Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.`;
+- For multi-step jobs, first say your plan in one short line, then work through it step by step. You can use several tools in one block and keep going for several rounds.
+- After you act in an app, check the updated screen in the system message to confirm each change actually happened. If it didn't, try another way (a different button, field, or screen) before telling the user. Only say something is done when you've seen it on the screen.
+- You can move between apps in one job (for example, read a budget in one app, then add a task in Aide).
+- Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.
+
+${UI_RULES}`;
 }
 function appBlock(c){
   const app = appById(c.app);
@@ -1612,7 +1716,7 @@ async function doAgentChat(ai, userMsg){
   const base = historyFor(S.chat, S.chat.messages.indexOf(ai));
   const userText = userMsg.content || "";
   let msgs = null, visible = "", log = [], retriedPlan = false;
-  for(let step = 0; step < 6; step++){
+  for(let step = 0; step < 10; step++){
     let block = "";
     if(S.openApp && Link.ready && Link.app === S.openApp){
       if(step === 0){ ai.status = "Looking at " + appById(S.openApp).name; updateMsg(ai); }
@@ -1622,7 +1726,9 @@ async function doAgentChat(ai, userMsg){
     if(!msgs) msgs = [{ role:"system", content:sys }, ...base]; else msgs[0] = { role:"system", content:sys };
     const prefix = visible ? visible + "\n\n" : "";
     ai.status = "Thinking"; updateMsg(ai);
-    const full = await streamChat(msgs, { model:S.model, signal:S.abort.signal, max_tokens:2048,
+    const full = await streamChat(msgs, { model:aivModel(S.model), signal:S.abort.signal, max_tokens:2500,
+      onStatus: s => { ai.status = s; updateMsg(ai); },
+      onMeta: d => { if(d.sources && d.sources.length && !(ai.sources && ai.sources.length)) ai.sources = d.sources.slice(); },
       onToken: t => { ai.content = prefix + stripActions(t); updateMsg(ai); } });
     visible = (prefix + stripActions(full)).trim();
     ai.content = visible;
@@ -1630,7 +1736,7 @@ async function doAgentChat(ai, userMsg){
     if(!m) break;
     let actions = parseActions(m[1]);
     if(!actions){
-      if(step < 4 && !retriedPlan){
+      if(step < 8 && !retriedPlan){
         retriedPlan = true;
         msgs.push({ role:"assistant", content:full.slice(0, 6000) });
         msgs.push({ role:"user", content:'Your aiv-actions block was not valid JSON, so nothing ran. Send it again: one ```aiv-actions block containing only a JSON array, using double quotes, for example [{"do":"go","screen":"tasks"}]. No other text.' });
@@ -1644,7 +1750,7 @@ async function doAgentChat(ai, userMsg){
     retriedPlan = false;
     const results = [], runnable = [];
     let notLinked = null;
-    for(const a of actions.slice(0, 8)){
+    for(const a of actions.slice(0, 12)){
       const d = String(a.do || "").toLowerCase();
       if(GENERAL_TOOLS.includes(d)){
         ai.status = TOOL_STATUS[d] || "Working"; updateMsg(ai);
@@ -1694,8 +1800,8 @@ async function doAgentChat(ai, userMsg){
 }
 
 /* ---------------- general tools the chat can use on its own ---------------- */
-const GENERAL_TOOLS = ["search", "read", "image", "document", "spreadsheet", "slides", "recall"];
-const TOOL_STATUS = { search:"Searching the web", read:"Reading the page", image:"Creating an image", document:"Writing the document", spreadsheet:"Building the spreadsheet", slides:"Designing the slides", recall:"Looking through your chats" };
+const GENERAL_TOOLS = ["search", "read", "image", "video", "document", "spreadsheet", "slides", "recall"];
+const TOOL_STATUS = { search:"Searching the web", read:"Reading the page", image:"Creating an image", video:"Making a video", document:"Writing the document", spreadsheet:"Building the spreadsheet", slides:"Designing the slides", recall:"Looking through your chats" };
 function convoContext(userMsg){
   const turns = S.chat.messages.filter(m => !m.pending && m.content).slice(-6).map(m => (m.role === "user" ? "User: " : "Assistant: ") + splitThought(m.content).answer.slice(0, 1200)).join("\n");
   return turns + (userMsg && userMsg.ctx ? "\n\nAttached files:\n" + userMsg.ctx.slice(0, 12000) : "");
@@ -1720,12 +1826,17 @@ async function runGeneralTool(d, a, ai, userMsg){
     }
     if(d === "image"){
       const prompt = String(a.prompt || a.q || userMsg.content || "").slice(0, 2000);
-      const r = await api("/image", { prompt });
+      const r = await api("/image", { prompt, size:imageSize(prompt) });
       const src = await resizeImage(r.image, 1024, 0.86);
       const item = { id:uid("l_"), kind:"image", title:prompt.slice(0, 60), prompt, src, at:Date.now(), chat:S.chat.id };
       await addLib(item);
       ai.images = (ai.images || []).concat([{ lib:item.id, prompt }]);
       return R("Created an image", "Image created and shown to the user.");
+    }
+    if(d === "video"){
+      const item = await doVideo(ai, userMsg, String(a.request || a.q || a.prompt || userMsg.content || ""), true);
+      ai.artifact = { lib:item.id, kind:"video", title:item.title };
+      return R("Made a video: " + item.title, `Created the video "${item.title}" with ${item.scenes.length} scenes and opened it in the side panel. Tell the user briefly; they can press Play or Download there.`);
     }
     if(d === "document" || d === "spreadsheet" || d === "slides"){
       const item = await makeArtifact(d, String(a.request || a.q || userMsg.content || ""), userMsg);
@@ -1778,7 +1889,7 @@ async function doImage(ai, userMsg){
         { role:"user", content:"Earlier prompts: " + S.chat.messages.flatMap(m => (m.images || []).map(i => i.prompt)).slice(-3).join(" | ") + "\nLatest request: " + prompt }], { model:"fast", max_tokens:200 });
     }catch(e){}
   }
-  const d = await api("/image", { prompt });
+  const d = await api("/image", { prompt, size:imageSize(userMsg.content + " " + prompt) });
   const src = await resizeImage(d.image, 1024, 0.86);
   const item = { id:uid("l_"), kind:"image", title:(userMsg.content || "Image").slice(0, 60), prompt, src, at:Date.now(), chat:S.chat.id };
   await addLib(item);
@@ -1800,33 +1911,6 @@ async function doSearch(ai, userMsg){
   const block = "WEB SEARCH RESULTS (cite them inline like [1], [2] matching these numbers; if they don't answer the question, say so):\n" +
     ai.sources.map((s, i) => `[${i+1}] ${s.title} — ${s.url}\n${s.snippet}`).join("\n\n");
   await doChat(ai, userMsg, "", block);
-}
-
-/* ---------------- deep research ---------------- */
-async function doResearch(ai, userMsg){
-  const topic = userMsg.content;
-  ai.steps = [{ text:"Planning the research" }]; updateMsg(ai);
-  let queries = [topic];
-  try{
-    const plan = await ask([{ role:"system", content:'You plan web research. Reply with JSON only: {"queries":["...","...","...","..."]} — 4 diverse, specific search queries that together cover the topic.' }, { role:"user", content:topic }], { model:"auto", max_tokens:300 });
-    const j = JSON.parse(plan.slice(plan.indexOf("{"), plan.lastIndexOf("}") + 1));
-    if(Array.isArray(j.queries) && j.queries.length) queries = j.queries.slice(0, 5);
-  }catch(e){}
-  ai.steps[0].done = true;
-  ai.steps.push({ text:`Searching ${queries.length} angles` }); updateMsg(ai);
-  const results = await Promise.all(queries.map(q => api("/search", { q }).then(r => r.results || []).catch(() => [])));
-  const seen = new Set(), sources = [];
-  results.flat().forEach(s => { if(s && s.url && !seen.has(s.url)){ seen.add(s.url); sources.push(s); } });
-  ai.sources = sources.slice(0, 12);
-  ai.steps[1].done = true; ai.steps[1].text = `Found ${ai.sources.length} sources`;
-  ai.steps.push({ text:"Reading the top sources" }); updateMsg(ai);
-  const reads = await Promise.all(ai.sources.slice(0, 4).map(s => api("/fetch", { url:s.url }).then(d => d.text.slice(0, 5000)).catch(() => "")));
-  ai.steps[2].done = true;
-  ai.steps.push({ text:"Writing your report" }); updateMsg(ai);
-  if(S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError");
-  const block = "RESEARCH SOURCES (cite inline as [n]):\n" + ai.sources.map((s, i) => `[${i+1}] ${s.title} — ${s.url}\n${s.snippet}${reads[i] ? "\nPage text: " + reads[i] : ""}`).join("\n\n");
-  await doChat(ai, userMsg, "Write a thorough, well-organized research report: a 2-3 sentence summary first, then sections with ## headings, tables where useful, inline citations [n] for every factual claim, a 'Key takeaways' list, and 'Open questions' at the end. Only use the sources provided; say where evidence is thin.", block);
-  ai.steps[3].done = true;
 }
 
 /* ---------------- read a link ---------------- */
@@ -2236,12 +2320,12 @@ async function addLib(item){
   try{ await Store.saveLib(item); }catch(e){ console.warn(e); toast("Couldn't save to your library."); }
 }
 function openLibrary(filter = "all"){
-  const kinds = { all:"All", assistant:"AI apps", image:"Images", build:"Apps", doc:"Docs", sheet:"Sheets", slides:"Slides" };
+  const kinds = { all:"All", assistant:"AI apps", image:"Images", video:"Videos", build:"Apps", doc:"Docs", sheet:"Sheets", slides:"Slides" };
   const items = S.library.filter(x => filter === "all" || x.kind === filter);
   const box = modal(`<div class="mh2"><h3>Library</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb"><div class="seg" style="display:inline-flex;margin-bottom:16px;flex-wrap:wrap">${Object.entries(kinds).map(([k, v]) => `<button data-f="${k}" class="${k === filter ? "on" : ""}">${v}</button>`).join("")}</div>
-    ${items.length ? `<div class="grid">${items.map(x => `<div class="card" data-id="${x.id}"><div class="th">${x.kind === "image" ? `<img src="${x.src}" alt="">` : (KIND_EMO[x.kind] || "FILE")}</div><div class="cb"><span title="${esc(x.title)}">${esc(x.title)}</span><button class="iconbtn" data-del title="Delete" style="width:28px;height:28px">${icon("x")}</button></div></div>`).join("")}</div>`
-      : `<div class="muted" style="text-align:center;padding:40px 0">Images, apps, documents, spreadsheets, and slides you create will appear here.</div>`}</div>`, true);
+    ${items.length ? `<div class="grid">${items.map(x => `<div class="card" data-id="${x.id}"><div class="th">${x.kind === "image" ? `<img src="${x.src}" alt="">` : x.kind === "video" && x.scenes && x.scenes[0] ? `<img src="${x.scenes[0].src}" alt="">` : (KIND_EMO[x.kind] || "FILE")}</div><div class="cb"><span title="${esc(x.title)}">${esc(x.title)}</span><button class="iconbtn" data-del title="Delete" style="width:28px;height:28px">${icon("x")}</button></div></div>`).join("")}</div>`
+      : `<div class="muted" style="text-align:center;padding:40px 0">Images, videos, apps, documents, spreadsheets, and slides you create will appear here.</div>`}</div>`, true);
   box.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { closeModal(); openLibrary(b.dataset.f); });
   box.querySelectorAll(".card").forEach(c => {
     const it = S.libMap[c.dataset.id];
@@ -2270,7 +2354,9 @@ function openArtifact(item, view, live){
 }
 function drawCanvas(){
   const it = CV.item, body = $("cvBody");
-  if(CV.view === "preview"){
+  if(CV.view === "video"){
+    drawVideoPanel(it, body);
+  }else if(CV.view === "preview"){
     body.innerHTML = `<iframe id="cvFrame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" title="${esc(it.title)}"></iframe>`;
     $("cvFrame").srcdoc = injectBridge(it.html || "<p style='font-family:sans-serif;padding:20px;color:#888'>Building…</p>", it.store || {});
   }else if(CV.view === "setup"){
@@ -2445,6 +2531,809 @@ window.addEventListener("message", async e => {
 
 <script>
 /* =====================================================================
+   AIV X — UPGRADES: interactive answers, voice mode, video, deep research,
+   and "Improve AIV X" training contributions
+   ===================================================================== */
+const CHART_JS = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js";
+async function pool(items, limit, fn){
+  const out = new Array(items.length); let i = 0;
+  await Promise.all(Array.from({ length:Math.min(limit, items.length) }, async () => { while(i < items.length){ const k = i++; try{ out[k] = await fn(items[k], k); }catch(e){ out[k] = null; } } }));
+  return out;
+}
+function looseJSON(s){
+  s = String(s || "").trim().replace(/^```\w*|```$/g, "");
+  try{ return JSON.parse(s); }catch(e){}
+  const a = Math.min(...["{", "["].map(c => s.indexOf(c)).filter(x => x >= 0));
+  const b = Math.max(s.lastIndexOf("}"), s.lastIndexOf("]"));
+  if(!isFinite(a) || b <= a) return null;
+  try{ return JSON.parse(s.slice(a, b + 1).replace(/,\s*([}\]])/g, "$1")); }catch(e){ return null; }
+}
+
+/* ---------------- Improve AIV X (training contributions) ---------------- */
+const TRAIN_SKIP_APPS = ["fitness"];          // health data is never collected for training
+function improveOn(){ return !!(S.profile && S.profile.settings && S.profile.settings.improve !== false); }
+Store.contribute = async function(id, data){
+  if(DEMO){ const all = LSX.get("aivx_t_" + this.uid, {}); all[id] = Object.assign(all[id] || {}, data); LSX.set("aivx_t_" + this.uid, all); return; }
+  await fb.firestore().collection("training").doc(id).set(data, { merge:true });
+};
+const _storeWipe = Store.wipe;
+Store.wipe = async function(){
+  try{
+    if(DEMO) LSX.del("aivx_t_" + this.uid);
+    else { const q = await fb.firestore().collection("training").where("owner", "==", this.uid).get(); for(const d of q.docs) await d.ref.delete(); }
+  }catch(e){ console.warn("training wipe", e); }
+  return _storeWipe.call(this);
+};
+async function contribute(userMsg, ai){
+  try{
+    if(!improveOn() || !ai || ai.error || !ai.content || !userMsg) return;
+    if(TRAIN_SKIP_APPS.includes(S.openApp) || TRAIN_SKIP_APPS.includes(S.mode)) return;
+    const answer = splitThought(ai.content).answer;
+    if(!answer || answer === "_Stopped._") return;
+    await Store.contribute(ai.id, {
+      owner:Store.uid, v:1, at:Date.now(),
+      app:S.openApp || S.mode || "aivx", tool:userMsg.tool || "chat", model:S.model,
+      prompt:String(userMsg.content || "").slice(0, 8000),
+      hadFiles:!!(userMsg.atts && userMsg.atts.length),
+      reply:answer.slice(0, 16000),
+    });
+  }catch(e){ console.warn("contribute", e); }
+}
+async function rateMessage(m, val){
+  m.rating = m.rating === val ? 0 : val;
+  updateMsg(m, true); persistChat();
+  if(improveOn()) try{ await Store.contribute(m.id, { owner:Store.uid, rating:m.rating, ratedAt:Date.now() }); }catch(e){}
+  if(m.rating) toast(m.rating > 0 ? "Thanks for the feedback" : "Thanks. This helps AIV X improve.");
+}
+
+/* ---------------- Interactive answers ---------------- */
+const UI_RULES = `INTERACTIVE ANSWERS — when it genuinely helps, you may include interactive blocks: a fenced code block with one of these exact tags, containing valid JSON only (double quotes).
+- aiv-chart — numbers that are clearer as a chart (trends, comparisons, breakdowns):
+\`\`\`aiv-chart
+{"type":"bar","title":"Monthly spending","labels":["Rent","Food","Travel"],"series":[{"name":"USD","data":[1200,450,200]}],"x":"Category","y":"USD"}
+\`\`\`
+  type is one of bar, line, area, pie, doughnut, scatter (for scatter, data items are [x,y]). Use real numbers you know or were given; never invent data you'd present as fact.
+- aiv-buttons — quick choices the user can tap (tapping sends that option as their reply):
+\`\`\`aiv-buttons
+{"prompt":"What should we do next?","options":["Make it shorter","Add examples","Turn it into a checklist"]}
+\`\`\`
+- aiv-form — when you need several details from the user at once:
+\`\`\`aiv-form
+{"title":"Your plan","fields":[{"name":"days","label":"Days per week","type":"number"},{"name":"goal","label":"Goal","type":"select","options":["Strength","Endurance"]}],"submit":"Make my plan"}
+\`\`\`
+  field types: text, number, date, select, textarea, checkbox.
+- aiv-quiz — when the user wants to practice or test themselves:
+\`\`\`aiv-quiz
+{"title":"Quick check","questions":[{"q":"...","options":["A","B","C","D"],"answer":0,"explain":"..."}]}
+\`\`\`
+Markdown tables automatically get sort, copy, chart, and spreadsheet controls, so use tables for data.
+Use at most two interactive blocks per reply, always together with a short written answer. Don't use them for simple chat.`;
+
+function themeRGB(){
+  const c = getComputedStyle(document.body).color.match(/\d+/g) || [240, 240, 240];
+  return c.slice(0, 3).join(",");
+}
+function shade(i, n){ const rgb = themeRGB(); const al = n <= 1 ? 0.9 : 0.95 - (i * 0.75 / Math.max(1, n - 1)); return `rgba(${rgb},${al.toFixed(2)})`; }
+async function drawChart(box, spec){
+  await loadScript(CHART_JS);
+  const type0 = String(spec.type || "bar").toLowerCase();
+  const type = type0 === "area" ? "line" : ["bar","line","pie","doughnut","scatter"].includes(type0) ? type0 : "bar";
+  const series = (Array.isArray(spec.series) ? spec.series : spec.data ? [{ name:spec.title || "Value", data:spec.data }] : []).slice(0, 8);
+  const round = type === "pie" || type === "doughnut";
+  const rgb = themeRGB();
+  const labels = (spec.labels || []).map(String);
+  const datasets = series.map((s, i) => {
+    const data = (s.data || []).map(v => type === "scatter" ? (Array.isArray(v) ? { x:+v[0], y:+v[1] } : v) : +v);
+    const col = shade(i, series.length);
+    return {
+      label:String(s.name || "Series " + (i + 1)), data,
+      backgroundColor: round ? data.map((_, k) => shade(k, data.length)) : (type0 === "area" ? `rgba(${rgb},${(0.18 - i * 0.03).toFixed(2)})` : col),
+      borderColor: round ? getComputedStyle(document.body).backgroundColor : col,
+      borderWidth: round ? 2 : (type === "line" ? 2 : 0), fill: type0 === "area", tension:0.3, pointRadius: type === "line" ? 2 : 3, borderRadius: type === "bar" ? 4 : 0,
+    };
+  });
+  const canvas = document.createElement("canvas");
+  box.innerHTML = `<div class="ui-title">${esc(spec.title || "Chart")}</div><div class="ui-chart"></div><div class="ui-row"><button class="btn sm" data-c="png">Download image</button><button class="btn sm" data-c="sheet">Open as spreadsheet</button></div>`;
+  box.querySelector(".ui-chart").appendChild(canvas);
+  const grid = `rgba(${rgb},0.12)`, tick = `rgba(${rgb},0.7)`;
+  const chart = new Chart(canvas, { type, data:{ labels, datasets }, options:{
+    responsive:true, maintainAspectRatio:false, animation:{ duration:500 },
+    plugins:{ legend:{ display: round || datasets.length > 1, labels:{ color:tick, boxWidth:12 } } },
+    scales: round ? {} : {
+      x:{ grid:{ color:grid }, ticks:{ color:tick }, title:{ display:!!spec.x, text:spec.x || "", color:tick } },
+      y:{ grid:{ color:grid }, ticks:{ color:tick }, title:{ display:!!spec.y, text:spec.y || "", color:tick }, beginAtZero:true } },
+  } });
+  box.querySelector('[data-c="png"]').onclick = () => { const a = document.createElement("a"); a.href = chart.toBase64Image("image/png", 1); a.download = slug(spec.title || "chart") + ".png"; a.click(); };
+  box.querySelector('[data-c="sheet"]').onclick = () => openRowsAsSheet(spec.title || "Chart data", [["Label", ...datasets.map(d => d.label)], ...labels.map((l, k) => [l, ...datasets.map(d => String(d.data[k] ?? ""))])]);
+}
+async function openRowsAsSheet(title, rows){
+  const item = { id:uid("l_"), kind:"sheet", rows, title:String(title).slice(0, 80), at:Date.now(), chat:S.chat && S.chat.id };
+  await addLib(item); openArtifact(item, "sheet");
+}
+function drawButtons(box, spec){
+  const opts = (spec.options || []).map(String).slice(0, 8);
+  box.innerHTML = (spec.prompt ? `<div class="ui-title">${esc(spec.prompt)}</div>` : "") + `<div class="ui-chips">${opts.map((o, i) => `<button class="ui-chip" data-i="${i}">${esc(o)}</button>`).join("")}</div>`;
+  box.querySelectorAll(".ui-chip").forEach(b => b.onclick = () => { if(S.busy) return toast("AIV X is still answering."); send(opts[+b.dataset.i]); });
+}
+function drawForm(box, spec){
+  const fields = (spec.fields || []).slice(0, 12).map((f, i) => Object.assign({ name:"f" + i, label:"Field", type:"text" }, f));
+  box.innerHTML = `<div class="ui-title">${esc(spec.title || "A few details")}</div><form class="ui-form">${fields.map((f, i) => {
+    const id = "uf" + uid("");
+    const t = String(f.type).toLowerCase();
+    let inp;
+    if(t === "select") inp = `<select class="input" id="${id}">${(f.options || []).map(o => `<option>${esc(String(o))}</option>`).join("")}</select>`;
+    else if(t === "textarea") inp = `<textarea class="input" id="${id}" placeholder="${esc(f.placeholder || "")}"></textarea>`;
+    else if(t === "checkbox") inp = `<input type="checkbox" id="${id}">`;
+    else inp = `<input class="input" id="${id}" type="${["number","date","email","time"].includes(t) ? t : "text"}" placeholder="${esc(f.placeholder || "")}">`;
+    return `<label class="${t === "checkbox" ? "ui-check" : "ui-field"}" data-k="${i}" data-id="${id}"><span>${esc(f.label)}</span>${inp}</label>`;
+  }).join("")}<button class="btn primary sm" type="submit">${esc(spec.submit || "Send")}</button></form>`;
+  box.querySelector("form").onsubmit = e => {
+    e.preventDefault();
+    if(S.busy) return toast("AIV X is still answering.");
+    const lines = [...box.querySelectorAll("[data-k]")].map(l => {
+      const f = fields[+l.dataset.k], el = document.getElementById(l.dataset.id);
+      const v = el.type === "checkbox" ? (el.checked ? "Yes" : "No") : el.value.trim();
+      return v ? `${f.label}: ${v}` : null;
+    }).filter(Boolean);
+    if(!lines.length) return toast("Fill in at least one field.");
+    box.querySelector("button[type=submit]").disabled = true;
+    send((spec.title ? spec.title + "\n" : "") + lines.join("\n"));
+  };
+}
+function drawQuiz(box, spec){
+  const qs = (spec.questions || []).slice(0, 20);
+  let score = 0, done = 0;
+  box.innerHTML = `<div class="ui-title">${esc(spec.title || "Quiz")}</div>` + qs.map((q, i) => `<div class="ui-q" data-q="${i}"><div class="qq">${i + 1}. ${esc(q.q || q.question || "")}</div>${(q.options || []).map((o, k) => `<button class="ui-opt" data-k="${k}">${esc(String(o))}</button>`).join("")}<div class="qx hidden"></div></div>`).join("") + `<div class="ui-score hidden"></div>`;
+  box.querySelectorAll(".ui-q").forEach(div => {
+    const q = qs[+div.dataset.q];
+    div.querySelectorAll(".ui-opt").forEach(b => b.onclick = () => {
+      if(div.dataset.answered) return; div.dataset.answered = 1; done++;
+      const ans = typeof q.answer === "number" ? q.answer : (q.options || []).indexOf(q.answer);
+      const ok = +b.dataset.k === ans; if(ok) score++;
+      b.classList.add(ok ? "right" : "wrong");
+      const r = div.querySelector(`.ui-opt[data-k="${ans}"]`); if(r) r.classList.add("right");
+      const x = div.querySelector(".qx"); x.classList.remove("hidden"); x.textContent = (ok ? "Correct. " : "Not quite. ") + (q.explain || "");
+      if(done === qs.length){ const s = box.querySelector(".ui-score"); s.classList.remove("hidden"); s.innerHTML = `Score: <b>${score} / ${qs.length}</b> <button class="btn sm">Quiz me on what I missed</button>`; s.querySelector("button").onclick = () => !S.busy && send(`I scored ${score}/${qs.length} on "${spec.title || "the quiz"}". Quiz me again, focusing on what I got wrong.`); }
+    });
+  });
+}
+function tableRows(t){ return [...t.rows].map(r => [...r.cells].map(c => c.innerText.trim())); }
+function enhanceTable(t){
+  if(t.closest(".tblwrap")) return;
+  const wrap = document.createElement("div"); wrap.className = "tblwrap";
+  t.parentNode.insertBefore(wrap, t); wrap.appendChild(t);
+  const bar = document.createElement("div"); bar.className = "tbltools";
+  bar.innerHTML = `<button data-t="copy">Copy</button><button data-t="csv">Download CSV</button><button data-t="sheet">Open as spreadsheet</button><button data-t="chart">Chart it</button>`;
+  wrap.appendChild(bar);
+  const title = (() => { let p = wrap.previousElementSibling; while(p && !/^H\d$/.test(p.tagName)) p = p.previousElementSibling; return p ? p.innerText : "Table"; })();
+  bar.onclick = e => {
+    const b = e.target.closest("button"); if(!b) return;
+    const rows = tableRows(t);
+    if(b.dataset.t === "copy"){ navigator.clipboard.writeText(rows.map(r => r.join("\t")).join("\n")); toast("Table copied"); }
+    if(b.dataset.t === "csv") download(slug(title) + ".csv", toCSV(rows), "text/csv");
+    if(b.dataset.t === "sheet") openRowsAsSheet(title, rows);
+    if(b.dataset.t === "chart"){
+      const head = rows[0] || [], body = rows.slice(1);
+      const num = v => parseFloat(String(v).replace(/[$,%\s]/g, "").replace(/[^\d.\-]/g, ""));
+      const cols = head.map((_, j) => j).filter(j => j > 0 && body.length && body.every(r => !isNaN(num(r[j]))));
+      if(!cols.length) return toast("This table has no number columns to chart.");
+      let box = wrap.querySelector(".aivui"); if(!box){ box = document.createElement("div"); box.className = "aivui"; wrap.appendChild(box); }
+      drawChart(box, { type: body.length > 8 ? "line" : "bar", title, labels:body.map(r => r[0]), series:cols.map(j => ({ name:head[j], data:body.map(r => num(r[j])) })), x:head[0] }).catch(() => toast("Couldn't draw the chart."));
+    }
+  };
+  [...(t.rows[0] ? t.rows[0].cells : [])].forEach((th, j) => {
+    th.classList.add("sortable"); th.title = "Sort";
+    th.onclick = () => {
+      const dir = th.dataset.dir === "asc" ? "desc" : "asc"; th.dataset.dir = dir;
+      const tb = t.tBodies[0] || t; const rows = [...tb.rows].filter(r => r.parentNode.tagName !== "THEAD" && r !== t.rows[0]);
+      const val = r => { const s = (r.cells[j] && r.cells[j].innerText.trim()) || ""; const n = parseFloat(s.replace(/[$,%\s]/g, "")); return isNaN(n) ? s.toLowerCase() : n; };
+      rows.sort((a, b) => { const x = val(a), y = val(b); return (x > y ? 1 : x < y ? -1 : 0) * (dir === "asc" ? 1 : -1); }).forEach(r => tb.appendChild(r));
+    };
+  });
+}
+function hydrateUI(el, m){
+  el.querySelectorAll(".md.body table").forEach(t => { if(!m.pending) enhanceTable(t); });
+  el.querySelectorAll(".aivui[data-kind]").forEach(box => {
+    const kind = box.dataset.kind;
+    if(m.pending){ box.innerHTML = `<div class="ui-wait"><span class="orb"></span>Building ${kind === "chart" ? "chart" : kind === "quiz" ? "quiz" : kind === "form" ? "form" : "options"}…</div>`; return; }
+    const spec = looseJSON(box.dataset.spec);
+    if(!spec){ box.innerHTML = `<div class="muted small">This interactive block couldn't be shown.</div>`; return; }
+    try{
+      if(kind === "chart") drawChart(box, spec).catch(() => box.innerHTML = `<div class="muted small">Couldn't load the chart.</div>`);
+      else if(kind === "buttons") drawButtons(box, spec);
+      else if(kind === "form") drawForm(box, spec);
+      else if(kind === "quiz") drawQuiz(box, spec);
+    }catch(e){ box.innerHTML = `<div class="muted small">This interactive block couldn't be shown.</div>`; }
+  });
+}
+
+/* ---------------- Voice mode (free: uses the browser's own speech when available) ---------------- */
+const VM = { on:false, sr:null, rec:null, audio:null, interrupt:false, state:"idle" };
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+function speechText(t){
+  return String(t || "").replace(/```[\s\S]*?```/g, " ").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\[\d+\]/g, "").replace(/https?:\/\/\S+/g, "").replace(/[#*_`>|~]/g, "").replace(/\n{2,}/g, ". ").replace(/\s+/g, " ").trim();
+}
+function openVoice(){
+  if(VM.on) return;
+  if(!SpeechRec && !(navigator.mediaDevices && window.MediaRecorder)) return toast("Voice mode isn't supported in this browser.");
+  const ov = document.createElement("div"); ov.id = "voice"; ov.className = "voice";
+  const nat = !!S.profile.settings.naturalVoice;
+  ov.innerHTML = `<div class="vm-top"><span>Voice mode</span><label class="vm-nat" title="Natural voice uses AIV X's speech model. Off uses your device's voice, which is unlimited."><input type="checkbox" id="vmNat" ${nat ? "checked" : ""}> Natural voice</label></div>
+    <button class="vm-orb" id="vmOrb" aria-label="Talk"><span></span></button>
+    <div class="vm-status" id="vmStatus">Starting…</div>
+    <div class="vm-said" id="vmSaid"></div>
+    <div class="vm-bot"><button class="btn" id="vmEnd">End voice mode</button></div>`;
+  document.body.appendChild(ov);
+  VM.on = true;
+  $("vmEnd").onclick = closeVoice;
+  $("vmNat").onchange = () => { S.profile.settings.naturalVoice = $("vmNat").checked; saveProfile(); };
+  $("vmOrb").onclick = () => {
+    if(VM.state === "listening"){ if(VM.sr) VM.sr.stop(); if(VM.rec && VM.rec.state === "recording") VM.rec.stop(); }
+    else if(VM.state === "speaking"){ VM.interrupt = true; speechSynthesis.cancel(); if(VM.audio){ VM.audio.pause(); VM.audio.onended && VM.audio.onended(); } }
+    else if(VM.state === "thinking"){ if(S.abort) S.abort.abort(); }
+    else vmLoop();
+  };
+  vmLoop();
+}
+function closeVoice(){
+  VM.on = false; VM.interrupt = true;
+  try{ VM.sr && VM.sr.abort(); }catch(e){}
+  try{ VM.rec && VM.rec.state === "recording" && VM.rec.stop(); }catch(e){}
+  try{ speechSynthesis.cancel(); }catch(e){}
+  if(VM.audio) VM.audio.pause();
+  const ov = $("voice"); if(ov) ov.remove();
+}
+function vmSet(state, text){ VM.state = state; const ov = $("voice"); if(!ov) return; ov.dataset.state = state; $("vmStatus").textContent = text; }
+function vmSaid(who, text){ const b = $("vmSaid"); if(b) b.innerHTML = `<div class="${who}">${esc(text.length > 280 ? text.slice(0, 280) + "…" : text)}</div>`; }
+function listenSR(){
+  return new Promise((resolve, reject) => {
+    const r = new SpeechRec(); VM.sr = r;
+    r.lang = navigator.language || "en-US"; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+    let final = "", interim = "";
+    r.onresult = e => { interim = ""; for(let i = e.resultIndex; i < e.results.length; i++){ const t = e.results[i][0].transcript; if(e.results[i].isFinal) final += t; else interim += t; } vmSaid("you", (final + " " + interim).trim()); };
+    r.onerror = e => { if(e.error === "no-speech" || e.error === "aborted") resolve(""); else reject(new Error(e.error)); };
+    r.onend = () => { VM.sr = null; resolve((final || interim).trim()); };
+    try{ r.start(); }catch(e){ reject(e); }
+  });
+}
+async function listenRec(){
+  const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const an = ac.createAnalyser(); an.fftSize = 1024; ac.createMediaStreamSource(stream).connect(an);
+  const buf = new Float32Array(an.fftSize);
+  const rec = new MediaRecorder(stream); VM.rec = rec; const chunks = [];
+  rec.ondataavailable = e => chunks.push(e.data);
+  const stopped = new Promise(res => rec.onstop = res);
+  rec.start();
+  let heard = false, quietSince = 0; const t0 = Date.now();
+  const tick = setInterval(() => {
+    an.getFloatTimeDomainData(buf); let s = 0; for(const v of buf) s += v * v; const rms = Math.sqrt(s / buf.length);
+    if(rms > 0.03){ heard = true; quietSince = 0; } else if(heard && !quietSince) quietSince = Date.now();
+    const now = Date.now();
+    if((heard && quietSince && now - quietSince > 1300) || (!heard && now - t0 > 9000) || now - t0 > 30000) if(rec.state === "recording") rec.stop();
+  }, 100);
+  await stopped; clearInterval(tick); stream.getTracks().forEach(t => t.stop()); ac.close(); VM.rec = null;
+  if(!heard || !VM.on) return "";
+  const blob = new Blob(chunks, { type:rec.mimeType || "audio/webm" });
+  const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(",")[1]); fr.readAsDataURL(blob); });
+  vmSet("thinking", "Transcribing…");
+  const d = await api("/transcribe", { audio:b64 });
+  return d.text || "";
+}
+function speakBrowser(text){
+  return new Promise(resolve => {
+    if(!("speechSynthesis" in window)) return resolve();
+    speechSynthesis.cancel();
+    const parts = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
+    const chunks = []; let cur = "";
+    parts.forEach(p => { if((cur + p).length > 220){ if(cur) chunks.push(cur); cur = p; } else cur += p; }); if(cur) chunks.push(cur);
+    const v = S.profile.settings.voice && speechSynthesis.getVoices().find(x => x.name === S.profile.settings.voice);
+    let i = 0;
+    const next = () => {
+      if(VM.interrupt || i >= chunks.length) return resolve();
+      const u = new SpeechSynthesisUtterance(chunks[i++]); if(v) u.voice = v;
+      u.onend = next; u.onerror = () => resolve();
+      speechSynthesis.speak(u);
+    };
+    next();
+  });
+}
+async function speakNatural(text){
+  const parts = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
+  const chunks = []; let cur = "";
+  parts.forEach(p => { if((cur + p).length > 500){ if(cur) chunks.push(cur); cur = p; } else cur += p; }); if(cur) chunks.push(cur);
+  let nextReq = api("/speak", { text:chunks[0] });
+  for(let i = 0; i < chunks.length; i++){
+    const d = await nextReq;
+    if(i + 1 < chunks.length) nextReq = api("/speak", { text:chunks[i + 1] }).catch(() => null);
+    if(!d || !d.audio || VM.interrupt) return;
+    await new Promise(res => { const a = new Audio(d.audio); VM.audio = a; a.onended = a.onerror = () => { VM.audio = null; res(); }; a.play().catch(res); });
+    if(VM.interrupt) return;
+  }
+}
+async function vmSpeak(text){
+  VM.interrupt = false;
+  if(S.profile.settings.naturalVoice){
+    try{ await speakNatural(text); return; }catch(e){ toast("Natural voice isn't available right now, so your device's voice is used."); }
+  }
+  await speakBrowser(text);
+}
+async function vmLoop(){
+  while(VM.on){
+    vmSet("listening", SpeechRec ? "Listening… tap the circle when you're done" : "Listening… just talk, then pause");
+    vmSaid("you", "");
+    let text = "";
+    try{ text = SpeechRec ? await listenSR() : await listenRec(); }
+    catch(e){
+      if(SpeechRec && /network|not-allowed|service/.test(e.message) && navigator.mediaDevices && window.MediaRecorder){ try{ text = await listenRec(); }catch(e2){} }
+      if(!text){ vmSet("idle", /not-allowed|Permission/i.test(String(e.message)) ? "Microphone access is blocked. Allow it in your browser, then tap the circle." : "Couldn't hear you. Tap the circle to try again."); return; }
+    }
+    if(!VM.on) return;
+    if(!text.trim()){ vmSet("idle", "Tap the circle to talk."); return; }
+    vmSaid("you", text);
+    vmSet("thinking", "Thinking… tap to stop");
+    const before = S.chat ? S.chat.messages.length : 0;
+    await send(text);
+    if(!VM.on) return;
+    const last = S.chat && S.chat.messages[S.chat.messages.length - 1];
+    if(!last || S.chat.messages.length === before || last.role !== "assistant"){ vmSet("idle", "Tap the circle to talk."); return; }
+    if(last.error){ vmSet("idle", last.error); return; }
+    const say = speechText(splitThought(last.content || "").answer) || (last.images && last.images.length ? "Here's your image." : last.artifact ? "It's ready in the side panel." : "Done.");
+    vmSaid("aiv", say);
+    vmSet("speaking", "Speaking… tap to interrupt");
+    await vmSpeak(say);
+  }
+}
+
+/* ---------------- Image helpers ---------------- */
+function imageSize(text){
+  const t = String(text || "").toLowerCase();
+  if(/\b(portrait|vertical|phone wallpaper|story|stories|reel|tiktok|poster|9:16|tall)\b/.test(t)) return "portrait";
+  if(/\b(landscape|wide|banner|header|cover photo|desktop wallpaper|16:9|panorama|thumbnail)\b/.test(t)) return "landscape";
+  return "square";
+}
+
+/* ---------------- Video (free: AI scenes + in-browser rendering) ---------------- */
+const VIDEO_SYS = `You plan short narrated videos made of AI-generated scenes. Reply with JSON only:
+{"title":"...","aspect":"landscape","style":"one visual style shared by every scene (lighting, colors, medium)","scenes":[{"visual":"a detailed description of what this shot shows","caption":"on-screen text, at most 8 words","narration":"one or two spoken sentences"}]}
+Make 4 or 5 scenes that tell a clear story from start to finish. Use "portrait" only if the user asks for a vertical, phone, TikTok, Reels, or Shorts video. Never include real people's names, logos, or copyrighted characters.`;
+const VIDEO_AUDIO = {};
+async function doVideo(ai, userMsg, request, quiet){
+  const req = request || userMsg.content || "A short video";
+  const steps = [];
+  const say = (i, text, done) => {
+    if(quiet){ ai.status = text; updateMsg(ai); return; }
+    steps[i] = { text, done:!!done }; ai.steps = steps; updateMsg(ai);
+  };
+  say(0, "Planning the scenes");
+  const plan = looseJSON(await ask([{ role:"system", content:VIDEO_SYS }, { role:"user", content:"Conversation so far:\n" + convoContext(userMsg).slice(-3000) + "\n\nMake this video: " + req }], { model:"auto", max_tokens:1500 }));
+  if(!plan || !Array.isArray(plan.scenes) || !plan.scenes.length) throw new Error("Couldn't plan the video. Try describing it a little differently.");
+  const scenes = plan.scenes.slice(0, 5).map(s => ({ visual:String(s.visual || s.prompt || ""), caption:String(s.caption || "").slice(0, 80), narration:String(s.narration || "").slice(0, 400) }));
+  const aspect = plan.aspect === "portrait" ? "portrait" : "landscape";
+  say(0, `Planned ${scenes.length} scenes`, true);
+  say(1, `Creating scene 1 of ${scenes.length}`);
+  let made = 0;
+  await pool(scenes, 2, async sc => {
+    if(S.abort && S.abort.signal.aborted) return;
+    const r = await api("/image", { prompt:(plan.style ? plan.style + ". " : "") + sc.visual + ". Cinematic, high detail, no text.", size:aspect });
+    sc.src = await resizeImage(r.image, 832, 0.8);
+    made++; say(1, `Creating scene ${Math.min(made + 1, scenes.length)} of ${scenes.length}`);
+  });
+  if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError");
+  const ok = scenes.filter(s => s.src);
+  if(!ok.length) throw new Error("Couldn't create the video's scenes right now. Try again in a moment.");
+  say(1, `Created ${ok.length} scenes`, true);
+  const item = { id:uid("l_"), kind:"video", title:String(plan.title || req).slice(0, 80), aspect, scenes:ok.map(({ src, caption, narration }) => ({ src, caption, narration })), at:Date.now(), chat:S.chat.id };
+  await addLib(item);
+  ai.artifact = { lib:item.id, kind:"video", title:item.title };
+  if(!quiet){
+    const secs = Math.round(ok.reduce((n, s) => n + sceneDur(s), 0));
+    ai.content = `Your video **${item.title}** is ready: ${ok.length} scenes, about ${secs} seconds. Press Play to watch it, or Download to save it as a video file. You can edit the captions and narration in the panel.`;
+  }
+  openArtifact(item, "video");
+  return item;
+}
+function sceneDur(sc){ return sc.audioDur ? Math.max(3, sc.audioDur + 0.7) : Math.max(3.5, String(sc.narration || "").split(/\s+/).filter(Boolean).length / 2.6 + 1); }
+function loadImg(src){ return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+function wrapText(ctx, text, maxW){
+  const words = String(text).split(/\s+/), lines = []; let cur = "";
+  words.forEach(w => { const t = cur ? cur + " " + w : w; if(ctx.measureText(t).width > maxW && cur){ lines.push(cur); cur = w; } else cur = t; });
+  if(cur) lines.push(cur); return lines.slice(0, 3);
+}
+function drawScene(ctx, W, H, img, p, dir, alpha){
+  const z = 1.04 + 0.1 * p;
+  const s = Math.max(W / img.width, H / img.height) * z;
+  const w = img.width * s, h = img.height * s;
+  const pan = (dir ? 1 : -1) * (p - 0.5) * (w - W) * 0.6;
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(img, (W - w) / 2 + pan, (H - h) / 2, w, h);
+  ctx.globalAlpha = 1;
+}
+function drawCaption(ctx, W, H, text, alpha){
+  if(!text) return;
+  const fs = Math.round(Math.min(W, H) * 0.058);
+  ctx.font = `600 ${fs}px Inter, system-ui, sans-serif`;
+  const lines = wrapText(ctx, text, W * 0.84);
+  const bh = lines.length * fs * 1.3 + fs;
+  const g = ctx.createLinearGradient(0, H - bh * 1.6, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `rgba(0,0,0,${0.75 * alpha})`);
+  ctx.fillStyle = g; ctx.fillRect(0, H - bh * 1.6, W, bh * 1.6);
+  ctx.fillStyle = `rgba(255,255,255,${alpha})`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  lines.forEach((l, i) => ctx.fillText(l, W / 2, H - bh + fs * 0.6 + i * fs * 1.3));
+}
+async function renderVideo(item, canvas, opts = {}){
+  const W = canvas.width, H = canvas.height, ctx = canvas.getContext("2d");
+  const imgs = await Promise.all(item.scenes.map(s => loadImg(s.src)));
+  const durs = item.scenes.map(sceneDur), starts = []; let tot = 0; durs.forEach(d => { starts.push(tot); tot += d; });
+  const job = { stop:false, total:tot }; opts.job && Object.assign(opts.job, job);
+  let actx, dest, rec, chunks = [], stream;
+  if(opts.record){
+    stream = canvas.captureStream(30);
+    if(opts.audio && opts.audio.some(Boolean)){
+      actx = new (window.AudioContext || window.webkitAudioContext)(); dest = actx.createMediaStreamDestination();
+      dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+    }
+    const mime = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+    rec = new MediaRecorder(stream, mime ? { mimeType:mime, videoBitsPerSecond:5_000_000 } : { videoBitsPerSecond:5_000_000 });
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    rec.start(250);
+  }
+  const t0 = performance.now() / 1000 + 0.05;
+  if(actx) opts.audio.forEach((buf, i) => { if(!buf) return; const src = actx.createBufferSource(); src.buffer = buf; src.connect(dest); src.start(actx.currentTime + 0.05 + starts[i] + 0.3); });
+  let spoken = -1;
+  await new Promise(resolve => {
+    const frame = () => {
+      if((opts.job && opts.job.stop) || !canvas.isConnected && !opts.record){ resolve(); return; }
+      const t = performance.now() / 1000 - t0;
+      if(t >= tot){ resolve(); return; }
+      let i = starts.findIndex((s, k) => t >= s && t < s + durs[k]); if(i < 0) i = 0;
+      const local = t - starts[i], p = local / durs[i];
+      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+      drawScene(ctx, W, H, imgs[i], p, i % 2, 1);
+      const fade = 0.7;
+      if(i + 1 < imgs.length && local > durs[i] - fade) drawScene(ctx, W, H, imgs[i + 1], 0, (i + 1) % 2, (local - (durs[i] - fade)) / fade);
+      const capA = Math.min(1, local / 0.4, (durs[i] - local) / 0.4);
+      drawCaption(ctx, W, H, item.scenes[i].caption, Math.max(0, capA));
+      ctx.font = `600 ${Math.round(Math.min(W, H) * 0.028)}px Inter, system-ui, sans-serif`; ctx.textAlign = "right"; ctx.textBaseline = "top"; ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.fillText("AIV X", W - 18, 16);
+      if(t < 0.5){ ctx.fillStyle = `rgba(0,0,0,${1 - t / 0.5})`; ctx.fillRect(0, 0, W, H); }
+      if(tot - t < 0.6){ ctx.fillStyle = `rgba(0,0,0,${1 - (tot - t) / 0.6})`; ctx.fillRect(0, 0, W, H); }
+      if(opts.speakLive && spoken !== i){ spoken = i; try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(item.scenes[i].narration || ""); u.rate = 1.02; speechSynthesis.speak(u); }catch(e){} }
+      opts.onProgress && opts.onProgress(t / tot);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+  if(opts.speakLive) try{ speechSynthesis.cancel(); }catch(e){}
+  if(rec){
+    await new Promise(r => { rec.onstop = r; rec.stop(); });
+    stream.getTracks().forEach(t => t.stop()); if(actx) actx.close();
+    return new Blob(chunks, { type:rec.mimeType || "video/webm" });
+  }
+}
+async function videoNarration(item){
+  const cache = VIDEO_AUDIO[item.id] = VIDEO_AUDIO[item.id] || [];
+  const actx = new (window.AudioContext || window.webkitAudioContext)();
+  await pool(item.scenes, 2, async (sc, i) => {
+    if(cache[i] && cache[i].text === sc.narration) return;
+    if(!sc.narration) return;
+    const d = await api("/speak", { text:sc.narration });
+    const bytes = Uint8Array.from(atob(d.audio.split(",")[1]), c => c.charCodeAt(0));
+    cache[i] = { text:sc.narration, buf:await actx.decodeAudioData(bytes.buffer) };
+  });
+  actx.close();
+  item.scenes.forEach((sc, i) => { sc.audioDur = cache[i] && cache[i].text === sc.narration ? cache[i].buf.duration : 0; });
+  return item.scenes.map((sc, i) => cache[i] && cache[i].text === sc.narration ? cache[i].buf : null);
+}
+function drawVideoPanel(it, body){
+  const portrait = it.aspect === "portrait";
+  body.innerHTML = `<div class="vid-stage">
+    <div class="vid-frame ${portrait ? "portrait" : ""}"><canvas id="vidCanvas" width="${portrait ? 720 : 1280}" height="${portrait ? 1280 : 720}"></canvas><div class="vid-bar"><div id="vidProg"></div></div></div>
+    <div class="vid-ctrl"><button class="btn primary sm" id="vidPlay">Play</button><button class="btn sm" id="vidDl">Download video</button>
+      <label class="small muted"><input type="checkbox" id="vidVoice" checked> Narration</label><span class="small muted" id="vidMsg"></span></div>
+    <div class="vid-scenes">${it.scenes.map((s, i) => `<div class="vid-sc" data-i="${i}"><img src="${s.src}" alt=""><div><div class="small muted">Scene ${i + 1}</div>
+      <div class="vid-ed" contenteditable="true" data-f="caption" title="On-screen caption">${esc(s.caption)}</div>
+      <div class="vid-ed muted" contenteditable="true" data-f="narration" title="Narration">${esc(s.narration)}</div></div></div>`).join("")}</div></div>`;
+  const cv = $("vidCanvas"); const job = {};
+  const poster = async () => { const img = await loadImg(it.scenes[0].src); const c = cv.getContext("2d"); c.fillStyle = "#000"; c.fillRect(0, 0, cv.width, cv.height); drawScene(c, cv.width, cv.height, img, 0, 0, 1); drawCaption(c, cv.width, cv.height, it.title, 1); };
+  poster();
+  const prog = p => { const b = $("vidProg"); if(b) b.style.width = (p * 100).toFixed(1) + "%"; };
+  let playing = false;
+  $("vidPlay").onclick = async () => {
+    if(playing){ job.stop = true; return; }
+    playing = true; job.stop = false; $("vidPlay").textContent = "Stop";
+    await renderVideo(it, cv, { speakLive:$("vidVoice").checked, onProgress:prog, job });
+    playing = false; if($("vidPlay")) $("vidPlay").textContent = "Play"; prog(0);
+  };
+  $("vidDl").onclick = async () => {
+    if(playing) return;
+    if(!window.MediaRecorder || !cv.captureStream) return toast("Video download isn't supported in this browser. Try Chrome, Edge, or Safari.");
+    playing = true; $("vidDl").disabled = true; $("vidPlay").disabled = true;
+    let audio = null;
+    if($("vidVoice").checked){
+      $("vidMsg").textContent = "Recording narration…";
+      try{ audio = await videoNarration(it); if(!audio.some(Boolean)) throw 0; }
+      catch(e){ audio = null; it.scenes.forEach(s => s.audioDur = 0); toast("Natural voice isn't available right now, so the video is saved without narration."); }
+    }
+    $("vidMsg").textContent = "Rendering… keep this tab open";
+    try{
+      const blob = await renderVideo(it, cv, { record:true, audio, onProgress:p => { prog(p); $("vidMsg").textContent = "Rendering… " + Math.round(p * 100) + "% · keep this tab open"; }, job:{} });
+      download(slug(it.title) + (blob.type.includes("mp4") ? ".mp4" : ".webm"), blob);
+      $("vidMsg").textContent = "Saved " + (blob.type.includes("mp4") ? "MP4" : "WebM") + " video";
+    }catch(e){ $("vidMsg").textContent = "Couldn't render the video: " + e.message; }
+    playing = false; prog(0); if($("vidDl")){ $("vidDl").disabled = false; $("vidPlay").disabled = false; }
+  };
+  body.querySelectorAll(".vid-ed").forEach(ed => ed.onblur = () => {
+    const i = +ed.closest(".vid-sc").dataset.i, f = ed.dataset.f, v = ed.innerText.trim();
+    if(it.scenes[i][f] !== v){ it.scenes[i][f] = v; it.at = Date.now(); addLib(it); if(i === 0 && f === "caption") poster(); }
+  });
+}
+
+/* ---------------- Deep research v2 (free: multi-round search, reading, notes) ---------------- */
+async function doResearch(ai, userMsg){
+  const topic = userMsg.content;
+  const stop = () => { if(S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError"); };
+  const step = t => { ai.steps.push({ text:t }); updateMsg(ai); return ai.steps[ai.steps.length - 1]; };
+  ai.steps = []; let st = step("Planning the research");
+  let plan = looseJSON(await ask([{ role:"system", content:'You plan thorough web research. Reply with JSON only: {"goal":"one sentence describing what the final report must answer","queries":["...", "..."]} with 6 diverse, specific search queries that together cover the topic: background, latest developments, data and statistics, expert or official sources, criticisms or risks, and practical implications.' }, { role:"user", content:"Conversation so far:\n" + convoContext(userMsg).slice(-2500) + "\n\nResearch topic: " + topic }], { model:"auto", max_tokens:500 })) || {};
+  const goal = String(plan.goal || topic);
+  let queries = (Array.isArray(plan.queries) && plan.queries.length ? plan.queries : [topic]).map(String).slice(0, 6);
+  st.done = true; st.text = `Planned ${queries.length} searches`; stop();
+
+  const sources = [], seen = new Set();
+  const notes = [];
+  const gather = async (qs, readN, label) => {
+    let s = step(`Searching ${qs.length} angles${label || ""}`);
+    const res = await pool(qs, 3, q => api("/search", { q, count:8 }).then(r => (r.results || []).map((x, k) => Object.assign(x, { rank:k }))));
+    const fresh = [];
+    res.flat().filter(Boolean).forEach(x => { const key = (x.url || "").replace(/[#?].*$/, "").replace(/\/$/, ""); if(!x.url || seen.has(key)) return; seen.add(key); fresh.push(x); });
+    const words = goal.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+    fresh.forEach(x => { const t = (x.title + " " + x.snippet).toLowerCase(); x.score = words.filter(w => t.includes(w)).length * 2 - x.rank * 0.5 + (/\.(gov|edu|org)\b/.test(x.url) ? 1.5 : 0); });
+    fresh.sort((a, b) => b.score - a.score);
+    s.done = true; s.text = `Found ${fresh.length} new sources${label || ""}`; stop();
+    const pick = fresh.slice(0, readN);
+    s = step(`Reading ${pick.length} sources`);
+    let read = 0;
+    await pool(pick, 4, async x => {
+      const d = await api("/fetch", { url:x.url }).catch(() => null);
+      const text = d && d.text ? d.text.slice(0, 14000) : x.snippet;
+      read++; s.text = `Reading sources (${read} of ${pick.length})`; updateMsg(ai);
+      if(!text || text.length < 20) return;
+      const n = await ask([{ role:"system", content:"You extract research notes. From the page below, list the facts that help answer the research goal: specific numbers, dates, findings, definitions, and named sources. Use short bullet points (max 12), each self-contained. Include at most one short direct quote. If nothing on the page is relevant, reply exactly NOT RELEVANT." },
+        { role:"user", content:`Research goal: ${goal}\n\nPage: ${x.title} (${x.url})\n\n${text}` }], { model:"auto", max_tokens:700 }).catch(() => "");
+      if(n && !/^\s*NOT RELEVANT/i.test(n)){ sources.push({ title:d && d.title || x.title, url:x.url, snippet:x.snippet }); notes.push({ n:sources.length, text:n.trim() }); }
+    });
+    s.done = true; s.text = `Read ${pick.length} sources, kept notes from ${notes.length}`; stop();
+  };
+  await gather(queries, 8);
+
+  st = step("Checking for gaps");
+  const follow = looseJSON(await ask([{ role:"system", content:'You review research notes for gaps. Reply with JSON only: {"gaps":["what is still missing"],"queries":["up to 3 new, specific search queries to fill the gaps"]}. Use empty arrays if the notes already answer the goal well.' },
+    { role:"user", content:`Goal: ${goal}\n\nNotes so far:\n` + notes.map(n => `[${n.n}] ${n.text.slice(0, 900)}`).join("\n\n").slice(0, 24000) }], { model:"auto", max_tokens:400 }).catch(() => "")) || {};
+  const more = (Array.isArray(follow.queries) ? follow.queries : []).map(String).filter(Boolean).slice(0, 3);
+  st.done = true; st.text = more.length ? `Found ${more.length} gaps to fill` : "No major gaps found"; stop();
+  if(more.length) await gather(more, 4, " (round 2)");
+
+  if(!notes.length) throw new Error("Couldn't find enough readable sources on this topic. Try rephrasing it.");
+  notes.sort((a, b) => a.n - b.n);
+  ai.sources = sources;
+  st = step("Writing your report");
+  const block = `RESEARCH GOAL: ${goal}\n\nRESEARCH NOTES (each from source [n]; cite them inline as [n]):\n` + notes.map(n => `[${n.n}] ${sources[n.n - 1].title} — ${sources[n.n - 1].url}\n${n.text}`).join("\n\n");
+  await doChat(ai, userMsg, `Write a thorough, well-organized research report from the notes:
+- Start with a 3-4 sentence executive summary that directly answers the goal.
+- Then sections with ## headings. Use a Markdown table for comparisons or numbers, and one aiv-chart block if there is real numeric data worth seeing.
+- Cite every factual claim inline as [n] using the source numbers. Never cite a number that isn't in the notes.
+- Point out where sources disagree or evidence is thin.
+- End with "## Key takeaways" (bullets) and "## Open questions".
+Only use the notes provided.`, block.slice(0, 90000), { maxTokens:6000, model:"agent" });
+  st.done = true;
+  const md = splitThought(ai.content).answer;
+  if(md && md.length > 400){
+    const docMd = "# " + (topic.length > 80 ? topic.slice(0, 77) + "…" : topic) + "\n\n" + md + "\n\n## Sources\n" + sources.map((s, i) => `${i + 1}. [${s.title}](${s.url})`).join("\n");
+    const item = { id:uid("l_"), kind:"doc", content:docMd, title:("Research: " + topic).slice(0, 80), at:Date.now(), chat:S.chat.id };
+    await addLib(item);
+    ai.artifact = { lib:item.id, kind:"doc", title:item.title };
+  }
+}
+</script>
+
+<script>
+/* =====================================================================
+   AIV-1 + AIV CODE — model names, live status, and the write → run → fix loop
+   ===================================================================== */
+function aivModel(m){ return m === "think" ? "aiv-1-think" : m === "fast" ? "aiv-1-fast" : "aiv-1"; }
+const PYODIDE_URL = window.AIV_PYODIDE || "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
+const CODE_EXT = { js:"js", javascript:"js", mjs:"js", jsx:"jsx", ts:"ts", typescript:"ts", tsx:"tsx", py:"py", python:"py", python3:"py", html:"html", htm:"html", css:"css", json:"json", sql:"sql", sh:"sh", bash:"sh", java:"java", c:"c", cpp:"cpp", "c++":"cpp", cs:"cs", go:"go", rust:"rs", rs:"rs", php:"php", rb:"rb", ruby:"rb", swift:"swift", kotlin:"kt", kt:"kt", yaml:"yml", yml:"yml", md:"md", markdown:"md", txt:"txt", xml:"xml" };
+function codeBlocks(md){
+  const out = [], re = /```([\w+#.-]*)[^\n]*\n([\s\S]*?)```/g; let m;
+  while((m = re.exec(String(md || "")))){
+    const lang = (m[1] || "").toLowerCase();
+    if(/^aiv-/.test(lang)) continue;
+    const code = m[2].replace(/\n$/, "");
+    const nm = code.match(/^\s*(?:\/\/|#|<!--|--|\/\*)\s*file(?:name)?:\s*([\w.\/\- ]+?)\s*(?:-->|\*\/)?\s*$/im);
+    out.push({ lang, code, name:nm ? nm[1].trim() : "" });
+  }
+  return out;
+}
+function runKind(b){
+  const l = b.lang;
+  if(["py","python","python3"].includes(l)) return "py";
+  if(["html","htm"].includes(l)) return /<\w/.test(b.code) ? "html" : null;
+  if(["js","javascript","mjs"].includes(l)){
+    if(/\brequire\(|from\s+['"](fs|path|http|https|os|child_process|express|net|crypto|readline)['"]|process\.(argv|env|exit|stdin)|module\.exports|__dirname/.test(b.code)) return "node";
+    return /\b(document|window)\.|\blocalStorage\b|\balert\(/.test(b.code) ? "dom" : "js";
+  }
+  return null;
+}
+function runWorker(src, ms, type){
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(new Blob([src], { type:"text/javascript" }));
+    const w = new Worker(url, type ? { type } : undefined);
+    const out = [], errs = []; let finished = false;
+    const finish = extra => { if(finished) return; finished = true; clearTimeout(t); setTimeout(() => { w.terminate(); URL.revokeObjectURL(url); resolve(Object.assign({ out, errs }, extra)); }, 0); };
+    const t = setTimeout(() => finish({ timeout:true }), ms);
+    w.onmessage = e => { const d = e.data || {}; if(d.t === "log") out.push(d.s); if(d.t === "err") errs.push(d.e); if(d.t === "done") setTimeout(() => finish({}), 250); };
+    w.onerror = e => { e.preventDefault(); errs.push((e.message || "Error") + (e.lineno ? " (line " + Math.max(1, e.lineno - 2) + ")" : "")); finish({}); };
+  });
+}
+const JS_PRELUDE = `const __p=(k)=>(...a)=>postMessage({t:"log",s:(k?k+": ":"")+a.map(x=>{try{return typeof x==="string"?x:JSON.stringify(x)}catch(e){return String(x)}}).join(" ")});console.log=__p("");console.info=__p("");console.debug=__p("");console.warn=__p("warning");console.error=__p("error");console.table=__p("");console.assert=(c,...a)=>{if(!c)postMessage({t:"err",e:"Assertion failed: "+a.join(" ")})};self.addEventListener("unhandledrejection",e=>postMessage({t:"err",e:String(e.reason&&e.reason.stack||e.reason)}));`;
+async function runJS(code){
+  const isModule = /^\s*(import|export)\s/m.test(code);
+  const src = isModule
+    ? JS_PRELUDE + "\n" + code + "\n;setTimeout(()=>postMessage({t:'done'}),30);"
+    : JS_PRELUDE + "\n(async()=>{\n" + code + "\n})().then(()=>setTimeout(()=>postMessage({t:'done'}),30)).catch(e=>{postMessage({t:'err',e:String(e&&e.stack||e)});postMessage({t:'done'})});";
+  const r = await runWorker(src, 6000, isModule ? "module" : undefined);
+  if(r.timeout && !r.errs.length) r.errs.push("Timed out after 6 seconds (possible infinite loop, or code waiting forever).");
+  return r;
+}
+function runHTML(html, ms = 1800){
+  return new Promise(resolve => {
+    const id = uid("run_");
+    const cap = `<script>(function(){var P=function(t,e){parent.postMessage({__aivrun:"${id}",t:t,e:e},"*")};window.addEventListener("error",function(e){if(e.message&&e.message!=="Script error.")P("err",e.message+(e.lineno?" (line "+e.lineno+")":""))});window.addEventListener("unhandledrejection",function(e){P("err",String(e.reason&&e.reason.message||e.reason))});var ce=console.error;console.error=function(){P("log","error: "+[].slice.call(arguments).join(" "));ce.apply(console,arguments)};var cl=console.log;console.log=function(){P("log",[].slice.call(arguments).map(function(x){try{return typeof x==="string"?x:JSON.stringify(x)}catch(e){return String(x)}}).join(" "));cl.apply(console,arguments)};window.alert=function(m){P("log","alert: "+m)};window.confirm=function(){return true};window.prompt=function(){return ""}})();<\/script>`;
+    const doc = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + cap) : cap + html;
+    const f = document.createElement("iframe");
+    f.setAttribute("sandbox", "allow-scripts allow-forms");
+    f.style.cssText = "position:fixed;left:-10000px;top:0;width:1024px;height:768px;opacity:0;pointer-events:none";
+    const out = [], errs = [];
+    const onMsg = e => { const d = e.data; if(!d || d.__aivrun !== id) return; (d.t === "err" ? errs : out).push(d.e); };
+    window.addEventListener("message", onMsg);
+    f.onload = () => setTimeout(done, ms);
+    const hard = setTimeout(done, ms + 4000);
+    let fin = false;
+    function done(){ if(fin) return; fin = true; clearTimeout(hard); window.removeEventListener("message", onMsg); f.remove(); resolve({ out, errs }); }
+    f.srcdoc = doc; document.body.appendChild(f);
+  });
+}
+const PY = { w:null, n:0, cb:{} };
+function pyWorker(){
+  if(PY.w) return PY.w;
+  const src = `importScripts(${JSON.stringify(PYODIDE_URL + "pyodide.js")});
+const ready = loadPyodide({ indexURL:${JSON.stringify(PYODIDE_URL)} });
+onmessage = async e => {
+  const { id, code } = e.data; const out = [];
+  try{
+    const py = await ready;
+    py.setStdout({ batched:s => out.push(s) }); py.setStderr({ batched:s => out.push("stderr: " + s) });
+    try{ await py.loadPackagesFromImports(code); }catch(x){ out.push("note: couldn't load a package: " + x.message); }
+    const g = py.globals.get("dict")();
+    await py.runPythonAsync("import builtins\\nbuiltins.input = lambda *a: ''", { globals:g });
+    await py.runPythonAsync(code, { globals:g });
+    postMessage({ id, out, errs:[] });
+  }catch(err){ postMessage({ id, out, errs:[String(err.message || err)] }); }
+};`;
+  PY.w = new Worker(URL.createObjectURL(new Blob([src], { type:"text/javascript" })));
+  PY.w.onmessage = e => { const c = PY.cb[e.data.id]; if(c){ delete PY.cb[e.data.id]; c(e.data); } };
+  PY.w.onerror = e => { e.preventDefault(); Object.values(PY.cb).forEach(c => c({ out:[], errs:["Python couldn't start: " + (e.message || "the Python engine failed to load")], fatal:true })); PY.cb = {}; PY.w = null; };
+  return PY.w;
+}
+function runPy(code){
+  return new Promise(resolve => {
+    const id = ++PY.n, first = !PY.loaded;
+    const t = setTimeout(() => { delete PY.cb[id]; if(PY.w){ PY.w.terminate(); PY.w = null; PY.loaded = false; } resolve({ out:[], errs:[first ? "The Python engine took too long to load." : "Timed out after 15 seconds (possible infinite loop, or code waiting forever)."], timeout:true, fatal:first }); }, first ? 60000 : 15000);
+    PY.cb[id] = d => { clearTimeout(t); if(!d.fatal) PY.loaded = true; resolve(d); };
+    pyWorker().postMessage({ id, code });
+  });
+}
+function cantTest(err){
+  return /ModuleNotFoundError|No module named|URLError|ConnectionError|OSError: \[Errno|Failed to fetch|NetworkError|net::|CORS|couldn't start|took too long to load|FileNotFoundError|No such file/i.test(err);
+}
+async function runBlock(b){
+  const kind = runKind(b);
+  const res = { lang:b.lang, name:b.name, kind };
+  if(!kind){ res.skip = "This language can't run in the browser, so it was reviewed instead of run."; return res; }
+  if(kind === "node"){ res.skip = "This code needs Node.js, so it was reviewed instead of run."; return res; }
+  let r;
+  if(kind === "py") r = await runPy(b.code);
+  else if(kind === "js") r = await runJS(b.code);
+  else if(kind === "dom") r = await runHTML("<!DOCTYPE html><html><head></head><body><script>\n" + b.code.replace(/<\/script/gi, "<\\/script") + "\n<\/script></body></html>");
+  else r = await runHTML(b.code);
+  res.out = (r.out || []).join("\n").slice(0, 4000);
+  res.errs = (r.errs || []).map(String);
+  res.ok = !res.errs.length;
+  if(!res.ok && res.errs.every(cantTest)){ res.untestable = true; res.ok = null; }
+  return res;
+}
+function runsHTML(runs){
+  return `<div class="runs">${runs.map((r, i) => {
+    const label = r.skip ? "Reviewed, not run" : r.ok ? "Ran with no errors" : r.untestable ? "Couldn't fully test here" : "Error when run";
+    const cls = r.skip ? "skip" : r.ok ? "ok" : r.untestable ? "skip" : "bad";
+    const body = r.skip || [r.errs && r.errs.length ? "Error:\n" + r.errs.join("\n") : "", r.out ? "Output:\n" + r.out : (r.ok ? "(no output)" : "")].filter(Boolean).join("\n\n");
+    return `<details class="run ${cls}"><summary><span class="dot"></span>${esc(r.name || (r.lang || "code"))}: ${label}</summary><pre>${esc(body)}</pre></details>`;
+  }).join("")}</div>`;
+}
+const CODE_RULES = "The user is in Code mode. You are AIV Code. Your code will be run automatically in a sandbox (JavaScript in a web worker, HTML in a hidden page, Python with Pyodide), and any errors will be sent back to you to fix.\n" +
+  "- Write complete, runnable code in fenced blocks with the language tag. For several files, start each block with a comment like // file: name.ext\n" +
+  "- When the code can run on its own, end it with a small self-test or example that prints results (no input(), no network, no files) so the run proves it works.\n" +
+  "- For web UIs, prefer one self-contained HTML file (the user can press Preview).\n- Then explain briefly how to run it.";
+async function doCode(ai, userMsg){
+  const base = historyFor(S.chat, S.chat.messages.indexOf(ai));
+  const msgs = [{ role:"system", content:systemPrompt(CODE_RULES) }, ...base];
+  const steps = ai.steps = [];
+  const step = (t, done) => { steps.push({ text:t, done:!!done }); updateMsg(ai, true); return steps[steps.length - 1]; };
+  let st = step("Writing the code");
+  for(let round = 0; round < 4; round++){
+    const full = await streamChat(msgs, { model:"aiv-1-code", signal:S.abort.signal, max_tokens:8000,
+      onStatus: s => { ai.status = s; st.text = s; updateMsg(ai); },
+      onToken: t => { ai.content = t; updateMsg(ai); } });
+    ai.content = full;
+    st.done = true; st.text = round ? `Fixed the code (round ${round})` : "Wrote and reviewed the code";
+    const blocks = codeBlocks(splitThought(full).answer).filter(b => b.code.trim().length > 0);
+    const testable = blocks.filter(b => runKind(b) && runKind(b) !== "node");
+    if(!blocks.length){ break; }
+    if(!testable.length){ ai.runs = await Promise.all(blocks.slice(0, 6).map(runBlock)); step("Reviewed (this code can't run in the browser)", true); break; }
+    st = step(round ? "Running it again" : "Running the code to test it");
+    if(S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError");
+    const runs = [];
+    for(const b of blocks.slice(0, 6)) runs.push(await runBlock(b));
+    ai.runs = runs; st.done = true;
+    const bad = runs.filter(r => r.ok === false);
+    if(!bad.length){
+      st.text = runs.some(r => r.untestable) ? "Ran it — parts need internet, files, or packages the sandbox doesn't have" : "Ran it — no errors";
+      updateMsg(ai, true); break;
+    }
+    st.text = `Found ${bad.length === 1 ? "an error" : bad.length + " errors"} when running it`;
+    if(round === 3){ step("Still has an error after 3 fixes — see the details below", true); break; }
+    msgs.push({ role:"assistant", content:full.slice(0, 30000) });
+    msgs.push({ role:"user", content:"[Test run results] I ran your code in a sandbox and it failed:\n\n" + bad.map(r => `${r.name || r.lang} (${r.kind === "py" ? "Python/Pyodide" : r.kind === "js" ? "JavaScript web worker" : "browser page"}):\n${r.errs.join("\n")}${r.out ? "\nOutput before the error:\n" + r.out.slice(0, 1500) : ""}`).join("\n\n") +
+      "\n\nFind the cause and reply with the complete corrected answer: every code block in full, same format, then a short note on what you fixed. If the failure comes from something the sandbox can't do (internet, files, user input), change only the self-test so it avoids that." });
+    st = step(`Fixing the error (round ${round + 1})`);
+  }
+  if(!ai.content) ai.content = "Done.";
+}
+function addZipBar(el, m){
+  if(m.pending || m.role !== "assistant") return;
+  const blocks = codeBlocks(splitThought(m.content || "").answer);
+  if(blocks.length < 2 || el.querySelector(".zipbar")) return;
+  const bar = document.createElement("div"); bar.className = "zipbar";
+  bar.innerHTML = `<button class="btn sm">Download all ${blocks.length} files (.zip)</button>`;
+  const anchor = el.querySelector(".actions"); el.insertBefore(bar, anchor || null);
+  bar.querySelector("button").onclick = async () => {
+    try{
+      await loadScript(CDN.jszip);
+      const zip = new JSZip(), used = {};
+      blocks.forEach((b, i) => {
+        let n = b.name || ((CODE_EXT[b.lang] === "html" ? "index" : CODE_EXT[b.lang] === "css" ? "styles" : CODE_EXT[b.lang] === "py" ? "main" : "file" + (i + 1)) + "." + (CODE_EXT[b.lang] || "txt"));
+        n = n.replace(/^\/+/, "").replace(/\.\.\//g, "");
+        if(used[n]){ const k = n.lastIndexOf("."); n = k > 0 ? n.slice(0, k) + "-" + (i + 1) + n.slice(k) : n + "-" + (i + 1); }
+        used[n] = 1; zip.file(n, b.code + "\n");
+      });
+      download(slug(S.chat && S.chat.title || "code") + ".zip", await zip.generateAsync({ type:"blob" }));
+    }catch(e){ toast("Couldn't make the zip file."); }
+  };
+}
+const _hydrateUI = hydrateUI;
+hydrateUI = function(el, m){ _hydrateUI(el, m); try{ addZipBar(el, m); }catch(e){} };
+async function runInline(btn, code, lang){
+  const pre = btn.closest("pre");
+  let box = pre.nextElementSibling;
+  if(!box || !box.classList.contains("runbox")){ box = document.createElement("div"); box.className = "runbox"; pre.after(box); }
+  box.innerHTML = `<div class="ui-wait"><span class="orb"></span>${/^py/.test(lang) ? "Running Python (the first run loads Python, about 10 seconds)…" : "Running…"}</div>`;
+  const r = await runBlock({ lang, code, name:"" });
+  box.innerHTML = runsHTML([r]); box.querySelector("details").open = true;
+}
+</script>
+
+<script>
+/* =====================================================================
    MENUS + MODALS
    ===================================================================== */
 let menuEl = null;
@@ -2498,7 +3387,7 @@ $("plusBtn").onclick = e => {
     { label:"Add photos & files", desc:"PDF, Word, Excel, slides, audio, code", fn:() => $("fileInput").click() },
     { label:"Take a photo", fn:() => $("camInput").click() },
     { sep:true },
-    ...["image","search","research","doc","sheet","slides","app","code","link"].map(k => ({ label:TOOLS[k].name, desc:TOOLS[k].desc, check:S.tool === k, fn:() => setTool(k) })),
+    ...["image","video","search","research","doc","sheet","slides","app","code","link"].map(k => ({ label:TOOLS[k].name, desc:TOOLS[k].desc, check:S.tool === k, fn:() => setTool(k) })),
     { sep:true },
     { label:"Work in a project", desc:"Chats with shared instructions", fn:() => pickProject() },
   ], { up:true });
@@ -2540,6 +3429,8 @@ $("micBtn").onclick = async () => {
     rec.start(); $("micBtn").classList.add("rec"); $("micBtn").innerHTML = icon("stop");
   }catch(e){ toast("Microphone access was blocked."); }
 };
+
+$("voiceBtn").onclick = () => openVoice();
 
 /* ---------------- BUILD modal ---------------- */
 function openBuild(){
@@ -2791,6 +3682,7 @@ function drawSettings(sec){
     b.innerHTML = `<div class="set-row"><div class="lt">Reference saved memories<small>AIV X uses what it remembers to personalize answers.</small></div>${sw(st.memoryOn)}</div>
       <div class="set-row"><div class="lt">Learn from my chats<small>AIV X saves useful facts you share — like your work, goals, and preferences.</small></div>${sw(st.learnOn)}</div>
       <div class="set-row"><div class="lt">Reference recent chats<small>New chats can pick up where your recent conversations left off.</small></div>${sw(st.chatHistoryOn !== false)}</div>
+      <div class="set-row"><div class="lt">Improve AIV X for everyone<small>Lets AI Verse use your chats and feedback to train and improve AIV X's AI, and lets AIV X use free AI providers that may also learn from requests. Health and Fitness AI chats and your uploaded files are never used. Turning this off stops future use.</small></div>${sw(st.improve !== false)}</div>
       ${S.profile.memStatus ? `<div class="muted small" style="margin-top:10px">Last memory check: ${esc(S.profile.memStatus.result)} · ${new Date(S.profile.memStatus.at).toLocaleString()}</div>` : ""}
       <div style="display:flex;gap:8px;margin-top:16px"><input class="input" id="mAdd" placeholder="Add something for AIV X to remember"><button class="btn" id="mAddGo">Add</button></div>
       <div class="memlist">${mems.length ? [...mems].reverse().map(x => `<div class="memrow" data-id="${x.id}"><span>${esc(x.text)}</span><button title="Delete">✕</button></div>`).join("") : '<div class="muted small" style="padding:10px 0">Nothing saved yet. As you chat, AIV X will remember helpful details here. You can delete anything anytime.</div>'}</div>
@@ -2799,6 +3691,7 @@ function drawSettings(sec){
     s[0].onclick = async () => { st.memoryOn = !st.memoryOn; s[0].classList.toggle("on", st.memoryOn); await saveProfile(); };
     s[1].onclick = async () => { st.learnOn = !st.learnOn; s[1].classList.toggle("on", st.learnOn); await saveProfile(); };
     s[2].onclick = async () => { st.chatHistoryOn = st.chatHistoryOn === false; s[2].classList.toggle("on", st.chatHistoryOn); await saveProfile(); };
+    s[3].onclick = async () => { st.improve = st.improve === false; s[3].classList.toggle("on", st.improve); await saveProfile(); toast(st.improve ? "Thanks for helping improve AIV X" : "Your chats won't be used to improve AIV X"); };
     b.querySelectorAll(".memrow button").forEach(x => x.onclick = async () => { const id = x.parentElement.dataset.id; S.profile.memories = mems.filter(mm => mm.id !== id); await saveProfile(); drawSettings("memory"); });
     $("mAddGo").onclick = async () => { const t = $("mAdd").value.trim(); if(!t) return; mems.push({ id:uid("mem_"), text:t.slice(0, 300), at:Date.now() }); await saveProfile(); drawSettings("memory"); };
     $("mAdd").onkeydown = e => { if(e.key === "Enter") $("mAddGo").click(); };
@@ -2839,12 +3732,14 @@ function applyTheme(){
 
 function askConsent(){
   const m = modal(`<div class="mh2"><h3>Our Terms and Privacy Policy</h3></div>
-    <div class="mb"><p class="muted" style="margin-bottom:14px">To keep using AIV X, please review and agree to our <a href="terms.html" target="_blank" rel="noopener">Terms of Use</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+    <div class="mb"><p class="muted" style="margin-bottom:10px">We updated our <a href="terms.html" target="_blank" rel="noopener">Terms of Use</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. To keep using AIV X, please review and agree to them.</p>
+    <p class="muted small" style="margin-bottom:14px">What's new: AIV X now uses chats and feedback to help train and improve its AI, and runs on several free AI providers. Health and Fitness AI chats and uploaded files are never used. You can choose below, and change it anytime in Settings &gt; Memory.</p>
+    <label class="agree" style="margin:0 0 10px"><input type="checkbox" id="cImprove" checked><span>Use my chats to improve AIV X.</span></label>
     <label class="agree" id="cAgreeRow" style="margin:0"><input type="checkbox" id="cAgree"><span>I'm 18 or older and agree to the Terms of Use and Privacy Policy.</span></label></div>
     <div class="mf"><button class="btn" id="cOut">Log out</button><button class="btn primary" id="cOk" disabled>Agree and continue</button></div>`);
   m.onclick = null;
   $("cAgree").onchange = () => $("cOk").disabled = !$("cAgree").checked;
-  $("cOk").onclick = async () => { S.profile.consent = { version:TERMS_VERSION, at:Date.now(), age18:true }; LSX.set("aivx_agreed", TERMS_VERSION); closeModal(); await saveProfile(); };
+  $("cOk").onclick = async () => { S.profile.settings.improve = $("cImprove").checked; S.profile.consent = { version:TERMS_VERSION, at:Date.now(), age18:true, improve:$("cImprove").checked }; LSX.set("aivx_agreed", TERMS_VERSION); closeModal(); await saveProfile(); };
   $("cOut").onclick = async () => { closeModal(); await Auth.signOut(); };
 }
 /* ---------------- sidebar + top bar ---------------- */
