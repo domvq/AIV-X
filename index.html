@@ -614,6 +614,14 @@ th.sortable:hover{color:var(--text)}
 #buildBtn{display:none!important}
 /* phones and tablets: typing never zooms the page (iOS zooms text boxes under 16px) */
 @media (pointer:coarse),(max-width:900px){input,textarea,select,[contenteditable]{font-size:16px!important}}
+.appsuggest{display:flex;align-items:center;gap:12px;justify-content:space-between;border:1px solid var(--line2);border-radius:14px;padding:12px 14px;margin:12px 0;background:var(--panel)}
+.appsuggest small{display:block;color:var(--text2);font-size:13px;margin-top:2px}
+.loopgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.loopcell{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:2px}
+.loopcell b{font-size:22px}
+.loopcell small{color:var(--text2);font-size:12px}
+.practice{border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0;font-size:14px}
+.practice .pa{white-space:pre-wrap;background:var(--bg2);border-radius:8px;padding:8px;margin-top:4px;max-height:220px;overflow:auto}
 </style>
 </head>
 <body>
@@ -1326,7 +1334,7 @@ How you respond:
         }).join("\n");
     }
   }
-  p += "\n\nHOW YOU IMPROVE (say this accurately if asked; don't claim you retrain yourself): you don't change your own model during a chat. You remember facts and preferences about this user in Memory, including lessons from their thumbs-down feedback. AI Verse uses thumbs up and down, and chats from people who have Improve AIV X turned on, to train and improve future versions of AIV X. The user can give feedback with the thumbs buttons under any answer.";
+  p += "\n\nHOW YOU IMPROVE (say this accurately if asked; never claim you retrain yourself mid-chat): you don't change during a conversation, but AIV X has a nightly learning loop. It learns from examples (answers people liked guide new answers), from preferences (thumbs-down feedback becomes rules for everyone, and better-vs-worse answer pairs are saved), and from practice (AIV-1 re-answers questions people disliked, a judge scores them, and AI Verse approves the good ones). The saved examples and pairs can then be used to fine-tune the model, which updates its weights. You also remember facts and preferences about this user in Memory. The user can help with the thumbs buttons under any answer.";
   p += "\n\nIf the user asks what you remember about them, tell them plainly from the MEMORY section above (or say you don't have anything saved yet), and mention they can manage it in Settings > Memory.";
   if(extra) p += "\n\n" + extra;
   return p;
@@ -1668,6 +1676,7 @@ async function send(textOverride){
   const images = S.pending.filter(p => p.kind === "image").map(p => p.data);
   const userMsg = { id:uid("m_"), role:"user", content:text, atts, ctx: ctx ? ctx.slice(0, 40000) : "", _images:images, tool, at:Date.now() };
   const routed = autoRoute(text, tool, images.length); if(routed) userMsg.routed = routed.id;
+  else if(!tool){ const g = goalApp(text); if(g && S.openApp !== g.id) userMsg.goal = g.id; }
   chat.messages.push(userMsg);
   S.pending = []; renderPending();
   $("input").value = ""; autoGrow(); updateSend();
@@ -1696,7 +1705,11 @@ async function runAssistant(ai, userMsg, tool){
     else if(tool === "build") await doAssistant(ai, userMsg);
     else if(tool === "app") await doBuild(ai, userMsg);
     else if(tool === "code") await doCode(ai, userMsg);
-    else await doAgentChat(ai, userMsg, userMsg._retry ? "FEEDBACK ON YOUR LAST TRY: the user didn't like your previous answer to this message. " + userMsg._retry + " Give a better answer that fixes this. Don't apologize at length or mention this note." : undefined);
+    else {
+      if(userMsg.goal) ai.suggestApp = userMsg.goal;
+      const hints = [userMsg.goal ? goalHint(appById(userMsg.goal)) : "", userMsg._retry ? "FEEDBACK ON YOUR LAST TRY: the user didn't like your previous answer to this message. " + userMsg._retry + " Give a better answer that fixes this. Don't apologize at length or mention this note." : ""].filter(Boolean);
+      await doAgentChat(ai, userMsg, hints.length ? hints.join("\n\n") : undefined);
+    }
   }catch(e){
     if(e.name === "AbortError"){ if(!ai.content) ai.content = "_Stopped._"; }
     else { ai.error = friendlyError(e); refund(cost); }
@@ -1839,6 +1852,7 @@ Rules:
 - In apps, use the controls exactly as listed on the screen. Many apps have a main "Ask" box that understands plain requests.
 - For multi-step jobs, first say your plan in one short line, then work through it step by step. You can use several tools in one block and keep going for several rounds.
 - After you act in an app, check the updated screen in the system message to confirm each change actually happened. If it didn't, try another way (a different button, field, or screen) before telling the user. Only say something is done when you've seen it on the screen.
+- When the user shares a goal or wants a plan (losing weight, saving money, studying for an exam, finding a job, setting plans or routines), build the plan right here first, then recommend the matching app to keep going.
 - When the user asks you to make or do something one of their apps is built for (pictures and photo edits in AI Photo, budgets and stocks in AI Stock and Finance, workouts and meals in AI Health and Fitness, flashcards and studying in AI Study and Research, resumes and jobs in AI Career, tasks, reminders, calendar, and email in AI Personal Assistant), open that app and do it there.
 - You can move between apps in one job (for example, read a budget in one app, then add a task in AI Personal Assistant).
 - Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.
@@ -3556,7 +3570,8 @@ function repeats(a, b){
 const FB_REASONS = ["Wrong or made-up info", "Didn't do what I asked", "Showed code or symbols I didn't want", "Too long", "Too short or vague", "Repeated itself", "Used the wrong app or tool", "Unsafe or offensive"];
 const _rateMessage = rateMessage;
 rateMessage = async function(m, val){
-  if(val > 0 || m.rating === -1) return _rateMessage(m, val);
+  if(val > 0){ await _rateMessage(m, val); if(m.rating === 1) shareFeedback(m, [], "", 1); return; }
+  if(m.rating === -1) return _rateMessage(m, val);
   const box = modal(`<div class="mh2"><h3>What went wrong?</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb"><div class="ui-chips" id="fbR">${FB_REASONS.map((r, i) => `<button class="ui-chip" data-r="${i}">${esc(r)}</button>`).join("")}</div>
     <label class="label">What should it have said or done? <span class="muted small">(optional)</span></label>
@@ -3579,6 +3594,9 @@ rateMessage = async function(m, val){
       const i = S.chat.messages.indexOf(m), u = S.chat.messages[i - 1];
       if(u && u.role === "user" && !S.busy){
         u._retry = "They said: " + [reasons.join(", "), note].filter(Boolean).join(". ") + ".";
+        // keep the worse answer, so "worse → better" pairs can train the model later (preference learning)
+        if(improveOn()) Store.contribute(m.id, { owner:Store.uid, rejected:splitThought(m.content || "").answer.slice(0, 16000), rating:0, retried:true }).catch(() => {});
+        m.rating = 0;
         await regenerate(m);
         delete u._retry; persistChat();
       }
@@ -3588,13 +3606,13 @@ rateMessage = async function(m, val){
   $("fbRetry").onclick = () => submit(true);
 };
 // Send feedback to AIV-1's shared learning (anonymous id; only with Improve AIV X on; never Health and Fitness)
-async function shareFeedback(m, reasons, note){
+async function shareFeedback(m, reasons, note, rating){
   try{
     const app = S.openApp || S.mode || "aivx";
     if(!improveOn() || TRAIN_SKIP_APPS.includes(app)) return;
     const i = S.chat.messages.indexOf(m), um = S.chat.messages[i - 1];
     const u = (await sha256("aivx:" + (Store.uid || "anon"))).slice(0, 16);
-    await api("/feedback", { u, reasons, note, app, q:String(um && um.content || "").slice(0, 400), a:splitThought(m.content || "").answer.slice(0, 800) });
+    await api("/feedback", { u, reasons, note, app, rating:rating || -1, q:String(um && um.content || "").slice(0, 400), a:splitThought(m.content || "").answer.slice(0, rating > 0 ? 1500 : 800) });
   }catch(e){}
 }
 async function learnLesson(m, reasons, note){
@@ -3625,11 +3643,16 @@ async function drawTraining(b){
   let rows;
   try{ rows = (await Store.listTraining()).filter(r => r.prompt && r.reply); }
   catch(e){ b.innerHTML = `<div class="err-msg">Couldn't load training data: ${esc(e.code || e.message)}. Make sure the Firestore rules let your admin account read the training collection.</div>`; return; }
-  const up = rows.filter(r => r.rating > 0).length, down = rows.filter(r => r.rating < 0).length, fixed = rows.filter(r => r.rating < 0 && r.correction).length;
+  const isDown = r => r.rating < 0 || r.retried || (r.reasons && r.reasons.length);
+  const up = rows.filter(r => r.rating > 0).length, down = rows.filter(isDown).length, fixed = rows.filter(r => isDown(r) && r.correction).length;
   const restricted = rows.filter(r => RESTRICTED_ENGINE.test(r.engine || "")).length, unknown = rows.filter(r => !r.engine).length;
   const reasons = {}; rows.forEach(r => (r.reasons || []).forEach(x => reasons[x] = (reasons[x] || 0) + 1));
   const apps = {}; rows.forEach(r => apps[r.app || "aivx"] = (apps[r.app || "aivx"] || 0) + 1);
-  b.innerHTML = `<h4 style="margin:0 0 4px">Rules for everyone</h4>
+  b.innerHTML = `<h4 style="margin:0 0 4px">Learning loop</h4>
+    <p class="muted small" style="margin:0 0 10px">Every night AIV X runs a learning loop: it learns from answers people liked (examples), from thumbs-down feedback (rules and better-vs-worse pairs), and from practice, where it re-answers questions people disliked and a judge keeps only strong answers. You approve practice answers before they're used. Download the files below to fine-tune a model, which is the step that changes its weights.</p>
+    <div class="loopgrid" id="gLoop"><div class="muted small">Loading…</div></div>
+    <div id="gPractice"></div>
+    <h4 style="margin:20px 0 4px">Rules for everyone</h4>
     <p class="muted small" style="margin:0 0 10px">AIV-1 learns these from everyone's thumbs-down feedback, once a day. A rule is only added when at least 3 different people report the same problem and it passes a safety check. Rules apply to every AIV-1 answer: in AIV X, in your apps, and through your API.</p>
     <div id="gRules" class="memlist"><div class="muted small">Loading…</div></div>
     <div style="display:flex;gap:8px;margin-top:10px"><input class="input" id="gAdd" placeholder="Add your own rule for everyone"><button class="btn sm" id="gAddGo">Add</button></div>
@@ -3644,21 +3667,28 @@ async function drawTraining(b){
     <label class="agree" style="margin-top:14px"><input type="checkbox" id="tOnlyGood" checked><span>Only use answers people liked, plus corrected thumbs-down answers</span></label>
     <label class="agree"><input type="checkbox" id="tSafe" checked><span>Leave out answers written by Gemini, Mistral, OpenRouter, or GitHub models, whose terms may not allow training on them (${restricted})</span></label>
     <div class="muted small" style="margin:6px 0 12px">${unknown} older chats don't record which model wrote them and are included.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary sm" id="tJsonl">Download fine-tuning file (.jsonl)</button><button class="btn sm" id="tCsv">Download feedback report (.csv)</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary sm" id="tJsonl">Download fine-tuning file (.jsonl)</button><button class="btn sm" id="tPairs">Download preference pairs (.jsonl)</button><button class="btn sm" id="tCsv">Download feedback report (.csv)</button></div>
     <p class="muted small" style="margin-top:12px">The .jsonl file is in the standard chat format that Together, Fireworks, Hugging Face, and OpenAI-style fine-tuning accept. Review it and remove anything personal before training.</p>`;
   drawGlobalRules();
   $("tJsonl").onclick = () => {
     const onlyGood = $("tOnlyGood").checked, safe = $("tSafe").checked;
-    const pick = rows.filter(r => (!safe || !RESTRICTED_ENGINE.test(r.engine || "")) && (onlyGood ? (r.rating > 0 || (r.rating < 0 && r.correction)) : !(r.rating < 0 && !r.correction)));
+    const pick = rows.filter(r => (!safe || !RESTRICTED_ENGINE.test(r.engine || "")) && (onlyGood ? (r.rating > 0 || (r.correction && (r.rating < 0 || r.retried))) : !(r.rating < 0 && !r.correction)));
     if(!pick.length) return toast("No chats match these options yet.");
     const lines = pick.map(r => JSON.stringify({ messages:[
       { role:"system", content:"You are AIV X, the everyday AI assistant made by AI Verse. You are warm, sharp, honest, and genuinely useful." },
-      { role:"user", content:r.prompt }, { role:"assistant", content:r.rating < 0 && r.correction ? r.correction : r.reply }] }));
+      { role:"user", content:r.prompt }, { role:"assistant", content:r.correction && (r.rating < 0 || r.retried) ? r.correction : r.reply }] }));
     download("aivx-training-" + new Date().toISOString().slice(0, 10) + ".jsonl", lines.join("\n") + "\n", "application/jsonl");
     toast("Downloaded " + pick.length + " examples");
   };
+  $("tPairs").onclick = async () => {
+    const pairs = rows.filter(r => r.rejected && r.reply && r.rejected !== r.reply && r.rating !== -1 && (!$("tSafe").checked || !RESTRICTED_ENGINE.test(r.engine || ""))).map(r => ({ prompt:r.prompt, chosen:r.reply, rejected:r.rejected }));
+    try{ const key = $("gKey").value.trim(); if(key){ const d = await api("/rules/admin", { adminKey:key, action:"export" }); (d.approved || []).filter(p => p.rejected).forEach(p => pairs.push({ prompt:p.q, chosen:p.a, rejected:p.rejected })); } }catch(e){}
+    if(!pairs.length) return toast("No better-vs-worse pairs yet. They come from Try again after a thumbs-down, and from approved practice answers.");
+    download("aivx-preference-pairs-" + new Date().toISOString().slice(0, 10) + ".jsonl", pairs.map(p => JSON.stringify(p)).join("\n") + "\n", "application/jsonl");
+    toast("Downloaded " + pairs.length + " pairs");
+  };
   $("tCsv").onclick = () => {
-    const bad = rows.filter(r => r.rating < 0);
+    const bad = rows.filter(isDown);
     if(!bad.length) return toast("No thumbs-down feedback yet.");
     download("aivx-feedback-" + new Date().toISOString().slice(0, 10) + ".csv", toCSV([["Date", "App", "Model", "Question", "Answer", "Problems", "What it should have been"], ...bad.map(r => [new Date(r.ratedAt || r.at).toLocaleString(), r.app || "", r.engine || "", r.prompt.slice(0, 2000), r.reply.slice(0, 4000), (r.reasons || []).join("; "), r.note || ""])]), "text/csv");
   };
@@ -3669,6 +3699,26 @@ async function adminRules(body){
   if(!key){ toast("Enter your admin key first."); $("gKey").focus(); throw new Error("no key"); }
   LSX.set("aivx_admin_key", key);
   return api("/rules/admin", Object.assign({ adminKey:key }, body));
+}
+function renderLoop(loop){
+  const box = $("gLoop"); if(!box) return;
+  const L = loop || {};
+  const cell = (n, t, d) => `<div class="loopcell"><b>${n}</b><span>${t}</span><small>${d}</small></div>`;
+  box.innerHTML = cell(L.examples ?? 0, "Examples", "Liked answers it learns from") + cell(L.rules ?? 0, "Rules", "From everyone's feedback") + cell(L.pending ?? 0, "Practice", "Waiting for your approval") +
+    `<div class="muted small" style="grid-column:1/-1">${L.at ? "Last run " + new Date(L.at).toLocaleString() + " · " + (L.practiced || 0) + " new practice answers" : "Hasn't run yet. Click Learn from feedback now, or add the daily Cron Trigger."}</div>`;
+}
+async function drawPractice(){
+  const box = $("gPractice"); if(!box) return;
+  const key = $("gKey").value.trim(); if(!key){ box.innerHTML = ""; return; }
+  try{
+    const d = await api("/rules/admin", { adminKey:key, action:"practice" });
+    const list = d.pending || [];
+    box.innerHTML = list.length ? `<div class="label" style="margin-top:12px">Practice answers to review (${list.length})</div>` + list.map(p => `<div class="practice" data-id="${esc(p.id)}"><div class="small muted">Question</div><div>${esc(p.q)}</div><div class="small muted" style="margin-top:6px">People said: ${esc(p.complaint)}</div><div class="small muted" style="margin-top:6px">New answer (judge score ${p.score}/10)</div><div class="pa">${esc(p.a.slice(0, 900))}${p.a.length > 900 ? "…" : ""}</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn primary sm" data-pa="approve">Approve</button><button class="btn sm" data-pa="reject">Reject</button></div></div>`).join("") : "";
+    box.querySelectorAll("[data-pa]").forEach(b => b.onclick = async () => {
+      const id = b.closest(".practice").dataset.id;
+      try{ await api("/rules/admin", { adminKey:key, action:b.dataset.pa, id }); toast(b.dataset.pa === "approve" ? "Approved. It's now an example AIV X learns from." : "Rejected"); drawPractice(); }catch(e){ toast(e.message); }
+    });
+  }catch(e){ box.innerHTML = ""; }
 }
 function renderGlobalRules(list, last){
   const box = $("gRules"); if(!box) return;
@@ -3682,18 +3732,62 @@ function renderGlobalRules(list, last){
 }
 async function drawGlobalRules(){
   $("gKey").value = LSX.get("aivx_admin_key", "");
-  try{ const r = await fetch(AIV_API_URL + "/rules"); const d = await r.json(); renderGlobalRules(d.rules || [], d.lastRun); }
+  try{ const r = await fetch(AIV_API_URL + "/rules"); const d = await r.json(); renderGlobalRules(d.rules || [], d.lastRun); renderLoop(d.loop); }
   catch(e){ $("gRules").innerHTML = `<div class="muted small">Couldn't load the rules. Make sure the new Worker is deployed.</div>`; }
+  drawPractice(); $("gKey").onchange = () => drawPractice();
   $("gAddGo").onclick = async () => {
     const text = $("gAdd").value.trim(); if(!text) return;
     try{ const d = await adminRules({ action:"add", text }); $("gAdd").value = ""; renderGlobalRules(d.rules); toast("Rule added for everyone"); }catch(e){ if(e.message !== "no key") toast(e.message); }
   };
   $("gRefresh").onclick = async () => {
     $("gMsg").textContent = "Reading everyone's feedback…";
-    try{ const d = await adminRules({ action:"refresh" }); renderGlobalRules(d.rules || []); $("gMsg").textContent = d.note ? "No new rules: " + d.note : (d.added && d.added.length ? "Learned " + d.added.length + " new rule" + (d.added.length > 1 ? "s" : "") : "No new rules: no problem was reported by enough different people") + " · " + (d.feedback || 0) + " feedback checked"; }
+    try{ const d = await adminRules({ action:"refresh" }); renderGlobalRules(d.rules || []); if(d.loop) renderLoop(d.loop); drawPractice(); $("gMsg").textContent = d.note ? "No new rules: " + d.note : (d.added && d.added.length ? "Learned " + d.added.length + " new rule" + (d.added.length > 1 ? "s" : "") : "No new rules: no problem was reported by enough different people") + " · " + (d.feedback || 0) + " feedback checked"; }
     catch(e){ $("gMsg").textContent = e.message === "no key" ? "" : "Couldn't update: " + e.message; }
   };
 }
+
+/* ---------------- Goals: build the plan here, then suggest the right app ---------------- */
+const GOAL_ROUTES = [
+  ["fitness", /\b(los+(e|ing)|drop|shed|burn)\b[\s\S]{0,25}\b(weight|fat|pounds|lbs|kilos|belly)\b|\bweight ?loss\b|\b(get(ting)? (fit|in shape|stronger|toned)|build(ing)? muscle|gain (muscle|weight)|bulk(ing)?|tone up|eat (healthier|better|clean)|meal prep|diet|calorie|macros|work ?outs?|exercise|gym|cardio|run(ning)? (a|my first) (5k|10k|marathon|half)|training plan|sleep better|healthier)\b/i],
+  ["finance", /\b(save|saving|savings) (money|up|for)\b|\b(budget(ing)?|pay (off|down) (my )?(debt|loans?|credit card)|debt|invest(ing|ment)?|retire(ment)?|emergency fund|net worth|stocks?|portfolio|spending|financial (plan|goals?)|money goals?)\b/i],
+  ["study", /\b(stud(y|ying)|exams?|finals|midterms?|test prep|homework|learn(ing)? (to|about|how)|nremt|mcat|sat|act|gre|lsat|certification|recert|flashcards?|research (paper|project|proposal))\b/i],
+  ["career", /\b(job (hunt|search|offer|application)|(need|want|get|find|looking for|land) (a |my )?(new |first |better )?job|resume|résumé|cover letter|interview|career|promotion|raise|switch(ing)? careers?|linkedin)\b/i],
+  ["aide", /\b(set(ting)? (up )?(plans?|goals?|reminders?|a schedule|routines?|habits?)|make (a )?plans?|plan(ning)? (my|the|a|for|out)|schedule|routine|organi[sz]e|to-?do|productiv\w*|habits?|time management|get my life together|stay on track|deadlines?|appointments?|calendar|trip|vacation|travel plans?|morning routine)\b/i],
+  ["photo", /\b(photo|picture|image|selfie|headshot)s?\b[\s\S]{0,30}\b(edit|fix|improve|enhance|retouch|background)\b/i],
+];
+function goalApp(text){
+  const t = String(text || "");
+  if(!t || t.length > 1500 || /```/.test(t)) return null;
+  for(const [id, re] of GOAL_ROUTES){
+    const app = APPS.find(a => a.id === id && a.url);
+    if(app && re.test(t)) return app;
+  }
+  return null;
+}
+const APP_PITCH = {
+  fitness:"log workouts and meals, track your weight and progress, and adjust the plan as you go",
+  finance:"track your budget, spending, savings goals, and investments in one place",
+  study:"turn it into flashcards, quizzes, and a study schedule that adapts to you",
+  career:"build your resume, match jobs, write cover letters, and practice interviews",
+  aide:"turn the plan into tasks, calendar events, and reminders so you stay on track",
+  photo:"edit it with AI: remove backgrounds, retouch, change styles, and more",
+};
+function goalHint(app){
+  return `GOAL FOR ${app.name.toUpperCase()}: this request is a goal or plan that ${app.name} (one of the user's apps) is built for. Build a concrete, personalized plan right here in the chat: clear steps, a simple schedule or table, and specific numbers where they help. Use what you know about the user; if one key detail is missing, make a sensible assumption, say it, and offer to adjust (you may add an aiv-form block to collect a few details). Keep safety in mind (for weight loss, suggest gradual, sustainable changes and checking with a doctor for medical conditions). End with one short sentence recommending they open ${app.name} to ${APP_PITCH[app.id] || "keep going"} — a button to open it is shown under your answer, so don't write a link.`;
+}
+const _hydrateUI2 = hydrateUI;
+hydrateUI = function(el, m){
+  _hydrateUI2(el, m);
+  try{
+    if(m.suggestApp && !m.pending && !m.error && S.openApp !== m.suggestApp && !el.querySelector(".appsuggest")){
+      const app = appById(m.suggestApp);
+      const card = document.createElement("div"); card.className = "appsuggest";
+      card.innerHTML = `<div><b>Continue in ${esc(app.name)}</b><small>${esc((APP_PITCH[app.id] || app.desc).replace(/^./, c => c.toUpperCase()))}.</small></div><button class="btn primary sm">Open</button>`;
+      card.querySelector("button").onclick = () => openFullApp(app, { keepChat:true });
+      el.insertBefore(card, el.querySelector(".actions") || null);
+    }
+  }catch(e){}
+};
 </script>
 
 <script>
