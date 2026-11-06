@@ -1,0 +1,22 @@
+:root{--bg:#fff;--text:#0a0a0b;--text2:#3f3f46;--muted:#71717a;--line:#e4e4e7;--card:#fafafa}
+@media (prefers-color-scheme: dark){:root{--bg:#0a0a0b;--text:#f4f4f5;--text2:#d4d4d8;--muted:#a1a1aa;--line:#26262b;--card:#111113}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.65}
+.wrap{max-width:860px;margin:0 auto;padding:28px 20px 64px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:40px}
+.brand{font-weight:700;letter-spacing:.16em;color:var(--text);text-decoration:none}
+.cta{display:inline-block;background:var(--text);color:var(--bg);text-decoration:none;font-weight:600;border-radius:999px;padding:11px 22px;font-size:15px}
+.cta.ghost{background:none;color:var(--text);border:1px solid var(--line)}
+.crumbs{font-size:13px;color:var(--muted);margin-bottom:10px}.crumbs a{color:var(--muted)}
+h1{font-size:clamp(30px,5vw,44px);line-height:1.12;letter-spacing:-.02em;margin-bottom:16px}
+.lead{font-size:19px;color:var(--text2);margin-bottom:26px;max-width:720px}
+h2{font-size:24px;letter-spacing:-.01em;margin:48px 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--card)}
+.card h3{font-size:16px;margin-bottom:4px}.card p{font-size:15px;color:var(--text2)}
+ol.steps{padding-left:22px}ol.steps li{margin:8px 0;color:var(--text2)}
+details{border-bottom:1px solid var(--line);padding:14px 0}summary{cursor:pointer;font-weight:600}details p{color:var(--text2);margin-top:8px}
+.band{border:1px solid var(--line);border-radius:18px;padding:26px;margin-top:48px;text-align:center;background:var(--card)}
+.band p{color:var(--text2);margin:8px 0 18px}
+.related{display:flex;flex-wrap:wrap;gap:8px}.related a{border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:14px;color:var(--text2);text-decoration:none}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}footer a{color:var(--muted)}
