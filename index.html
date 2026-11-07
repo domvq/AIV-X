@@ -622,6 +622,8 @@ th.sortable:hover{color:var(--text)}
 .loopcell small{color:var(--text2);font-size:12px}
 .practice{border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0;font-size:14px}
 .practice .pa{white-space:pre-wrap;background:var(--bg2);border-radius:8px;padding:8px;margin-top:4px;max-height:220px;overflow:auto}
+.guestbtn{display:block;width:100%;margin-top:14px;padding:10px;text-align:center;font-size:15px;color:var(--text2)}
+.guestbtn:hover{color:var(--text)}
 </style>
 </head>
 <body>
@@ -641,7 +643,6 @@ th.sortable:hover{color:var(--text)}
   </div>
   <div class="auth-form">
     <div class="auth-card">
-      <div id="demoBanner" class="demo-banner hidden">Demo mode: sign-in and memory are saved in this browser only. Add your Firebase config to turn on real accounts.</div>
 
       <div id="authMain">
         <h2>Welcome to AIV X</h2>
@@ -652,6 +653,7 @@ th.sortable:hover{color:var(--text)}
         <div class="or">or</div>
         <input class="input" id="authEmail" type="email" placeholder="Email address" autocomplete="email">
         <button class="btn primary" id="authEmailGo" style="width:100%;margin-top:10px;padding:12px">Continue with email</button>
+        <button class="linkbtn guestbtn" id="authGuest">Continue as guest</button>
       </div>
 
       <div id="authEmailStep" class="hidden">
@@ -796,6 +798,8 @@ const FIREBASE_CONFIG = {
 
 // 3) Free plan limit and where "Get AIV Pro" sends people
 const FREE_DAILY_LIMIT = 20;
+// Guests (Continue as guest) get this many messages in total, then need a free account
+const GUEST_LIMIT = 10;
 
 // 3b) Accounts that can see and download the training data (Settings > Training data)
 const ADMIN_EMAILS = ["domhasaball@gmail.com"];
@@ -946,26 +950,27 @@ let fb = null;   // firebase namespace when live
 
 const Store = {
   uid: null,
+  local: false,   // guests: everything stays in this browser
   // ---- user profile, settings, memories, usage ----
   async loadUser(){
-    if(DEMO) return LSX.get("aivx_u_" + this.uid, null);
+    if(DEMO || this.local) return LSX.get("aivx_u_" + this.uid, null);
     const d = await fb.firestore().collection("users").doc(this.uid).get();
     return d.exists ? d.data() : null;
   },
   async saveUser(data){
-    if(DEMO){ LSX.set("aivx_u_" + this.uid, data); return; }
+    if(DEMO || this.local){ LSX.set("aivx_u_" + this.uid, data); return; }
     await fb.firestore().collection("users").doc(this.uid).set(data, { merge: true });
   },
   // ---- chats ----
   async listChats(){
-    if(DEMO) return LSX.get("aivx_c_" + this.uid, []);
+    if(DEMO || this.local) return LSX.get("aivx_c_" + this.uid, []);
     const q = await fb.firestore().collection("users").doc(this.uid).collection("chats").orderBy("updatedAt", "desc").limit(200).get();
     return q.docs.map(d => d.data());
   },
   async saveChat(chat){
     const clean = JSON.parse(JSON.stringify(chat));
     clean.messages = clean.messages.slice(-200).map(m => { delete m._images; return m; });
-    if(DEMO){
+    if(DEMO || this.local){
       const all = LSX.get("aivx_c_" + this.uid, []).filter(c => c.id !== chat.id);
       all.unshift(clean);
       if(!LSX.set("aivx_c_" + this.uid, all.slice(0, 150))) toast("Browser storage is full — delete some chats or images.");
@@ -974,17 +979,17 @@ const Store = {
     await fb.firestore().collection("users").doc(this.uid).collection("chats").doc(chat.id).set(clean);
   },
   async deleteChat(id){
-    if(DEMO){ LSX.set("aivx_c_" + this.uid, LSX.get("aivx_c_" + this.uid, []).filter(c => c.id !== id)); return; }
+    if(DEMO || this.local){ LSX.set("aivx_c_" + this.uid, LSX.get("aivx_c_" + this.uid, []).filter(c => c.id !== id)); return; }
     await fb.firestore().collection("users").doc(this.uid).collection("chats").doc(id).delete();
   },
   // ---- library (images, builds, docs, sheets, slides) ----
   async listLibrary(){
-    if(DEMO) return LSX.get("aivx_l_" + this.uid, []);
+    if(DEMO || this.local) return LSX.get("aivx_l_" + this.uid, []);
     const q = await fb.firestore().collection("users").doc(this.uid).collection("library").orderBy("at", "desc").limit(300).get();
     return q.docs.map(d => d.data());
   },
   async saveLib(item){
-    if(DEMO){
+    if(DEMO || this.local){
       const all = LSX.get("aivx_l_" + this.uid, []).filter(x => x.id !== item.id);
       all.unshift(item);
       if(!LSX.set("aivx_l_" + this.uid, all.slice(0, 200))) toast("Browser storage is full — delete some library items.");
@@ -993,12 +998,12 @@ const Store = {
     await fb.firestore().collection("users").doc(this.uid).collection("library").doc(item.id).set(item);
   },
   async deleteLib(id){
-    if(DEMO){ LSX.set("aivx_l_" + this.uid, LSX.get("aivx_l_" + this.uid, []).filter(x => x.id !== id)); return; }
+    if(DEMO || this.local){ LSX.set("aivx_l_" + this.uid, LSX.get("aivx_l_" + this.uid, []).filter(x => x.id !== id)); return; }
     await fb.firestore().collection("users").doc(this.uid).collection("library").doc(id).delete();
   },
   // ---- AI Verse app data (synced with the apps through aiv-connect.js) ----
   async getAppData(app){
-    if(DEMO) return LSX.get("aivx_app_" + this.uid + "_" + app, null);
+    if(DEMO || this.local) return LSX.get("aivx_app_" + this.uid + "_" + app, null);
     const ref = fb.firestore().collection("users").doc(this.uid).collection("apps").doc(app);
     const m = await ref.get();
     if(!m.exists) return null;
@@ -1009,14 +1014,14 @@ const Store = {
   },
   async setAppData(app, at, data){
     data = String(data || "");
-    if(DEMO){ LSX.set("aivx_app_" + this.uid + "_" + app, { at, data }); return; }
+    if(DEMO || this.local){ LSX.set("aivx_app_" + this.uid + "_" + app, { at, data }); return; }
     const CH = 300000, n = Math.max(1, Math.ceil(data.length / CH));
     const ref = fb.firestore().collection("users").doc(this.uid).collection("apps").doc(app);
     await Promise.all(Array.from({ length:n }, (_, i) => ref.collection("chunks").doc(String(i)).set({ s:data.slice(i * CH, (i + 1) * CH) })));
     await ref.set({ at, n, size:data.length, app });
   },
   async wipe(){
-    if(DEMO){ ["aivx_u_","aivx_c_","aivx_l_"].forEach(p => LSX.del(p + this.uid)); return; }
+    if(DEMO || this.local){ ["aivx_u_","aivx_c_","aivx_l_"].forEach(p => LSX.del(p + this.uid)); return; }
     const u = fb.firestore().collection("users").doc(this.uid);
     const apps = await u.collection("apps").get();
     for(const d of apps.docs){ const ch = await d.ref.collection("chunks").get(); for(const c of ch.docs) await c.ref.delete(); await d.ref.delete(); }
@@ -1037,10 +1042,11 @@ const Auth = {
   confirmation: null,
 
   async init(onChange){
+    const relay = u => onChange(u || Auth.guestUser());
     if(DEMO){
-      $("demoBanner").classList.remove("hidden");
-      this._onChange = onChange;
-      onChange(LSX.get("aivx_session", null));
+
+      this._onChange = relay;
+      relay(LSX.get("aivx_session", null));
       return;
     }
     await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
@@ -1048,9 +1054,9 @@ const Auth = {
     await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
     fb = window.firebase;
     fb.initializeApp(FIREBASE_CONFIG);
-    this._onChange = onChange;
+    this._onChange = relay;
     fb.auth().onAuthStateChanged(u => {
-      if(!u) return onChange(null);
+      if(!u) return relay(null);
       const p = (u.providerData[0] && u.providerData[0].providerId) || "password";
       onChange({ uid:u.uid, name:u.displayName || "", email:u.email || "", phone:u.phoneNumber || "", photo:u.photoURL || "", provider:p });
     });
@@ -1073,6 +1079,15 @@ const Auth = {
     $("authErr").textContent = map[e.code] || e.message || String(e);
   },
 
+  // ---- guests ----
+  guestUser(){
+    if(!LSX.get("aivx_guest_on", false)) return null;
+    let g = LSX.get("aivx_guest", null);
+    if(!g){ g = { uid:"guest_" + uid(""), at:Date.now() }; LSX.set("aivx_guest", g); }
+    return { uid:g.uid, name:"", email:"", phone:"", photo:"", provider:"guest", guest:true };
+  },
+  guest(){ LSX.set("aivx_guest_on", true); this._onChange(null); },
+  leaveGuest(){ LSX.del("aivx_guest_on"); this._onChange(null); },
   // demo helpers
   async demoSignIn(user){ LSX.set("aivx_session", user); this._onChange(user); },
 
@@ -1145,6 +1160,7 @@ const Auth = {
     }
   },
   async signOut(){
+    if(S.user && S.user.guest){ LSX.del("aivx_guest_on"); this._onChange(null); return; }
     if(DEMO){ LSX.del("aivx_session"); this._onChange(null); return; }
     await fb.auth().signOut();
   }
@@ -1166,6 +1182,7 @@ function agreed(){
   return false;
 }
 $("agree").checked = LSX.get("aivx_agreed", "") === TERMS_VERSION;
+$("authGuest").onclick = () => { if(!agreed()) return; Auth.guest(); };
 $("agree").onchange = () => { if($("agree").checked){ $("agreeRow").classList.remove("need"); $("authErr").textContent = ""; } };
 document.querySelector('[data-prov="google"]').onclick = () => { if(agreed()) Auth.google(); };
 // Apple sign-in is ready in Auth.apple(); add its button back once Apple is set up in Firebase.
@@ -1533,23 +1550,33 @@ function speak(text){
    USAGE LIMITS
    ===================================================================== */
 function usageCount(){ const u = S.profile.usage || {}; return u.date === today() ? u.count : 0; }
+function guestUses(){ return LSX.get("aivx_guest_uses", 0); }
 function canUse(){
   if(S.pro) return true;
+  if(S.user && S.user.guest){ if(guestUses() < GUEST_LIMIT) return true; openGuestWall(); return false; }
   if(usageCount() < FREE_DAILY_LIMIT) return true;
   openUpgrade(`You've used all ${FREE_DAILY_LIMIT} free messages for today.`);
   return false;
 }
 function bump(n = 1){
   if(S.pro) return;
+  if(S.user && S.user.guest){ LSX.set("aivx_guest_uses", guestUses() + n); renderUsage(); return; }
   S.profile.usage = { date:today(), count:usageCount() + n };
   renderUsage(); saveProfile();
 }
 function refund(n = 1){
   if(S.pro) return;
+  if(S.user && S.user.guest){ LSX.set("aivx_guest_uses", Math.max(0, guestUses() - n)); renderUsage(); return; }
   S.profile.usage = { date:today(), count:Math.max(0, usageCount() - n) };
   renderUsage(); saveProfile();
 }
 function renderUsage(){
+  if(S.user && S.user.guest){
+    const c = guestUses(), pct = Math.min(100, c / GUEST_LIMIT * 100);
+    $("usage").innerHTML = `<span>${Math.max(0, GUEST_LIMIT - c)} of ${GUEST_LIMIT} guest messages left</span><span class="bar"><i style="width:${pct}%"></i></span><button class="linkbtn small" id="usageUp">Sign up free</button>`;
+    $("usageUp").onclick = () => openGuestWall(true);
+    $("mePlan").textContent = "Guest"; $("upBtn").classList.add("hidden"); return;
+  }
   if(S.pro){ $("usage").innerHTML = `<span>AIV Pro · unlimited</span>`; $("mePlan").textContent = "AIV Pro"; $("upBtn").classList.add("hidden"); return; }
   const c = usageCount(), pct = Math.min(100, c / FREE_DAILY_LIMIT * 100);
   $("usage").innerHTML = `<span>${c}/${FREE_DAILY_LIMIT} today</span><span class="bar"><i style="width:${pct}%"></i></span><button class="linkbtn small" id="usageUp">Upgrade</button>`;
@@ -2724,13 +2751,13 @@ function looseJSON(s){
 const TRAIN_SKIP_APPS = ["fitness"];          // health data is never collected for training
 function improveOn(){ return !!(S.profile && S.profile.settings && S.profile.settings.improve !== false); }
 Store.contribute = async function(id, data){
-  if(DEMO){ const all = LSX.get("aivx_t_" + this.uid, {}); all[id] = Object.assign(all[id] || {}, data); LSX.set("aivx_t_" + this.uid, all); return; }
+  if(DEMO || this.local){ const all = LSX.get("aivx_t_" + this.uid, {}); all[id] = Object.assign(all[id] || {}, data); LSX.set("aivx_t_" + this.uid, all); return; }
   await fb.firestore().collection("training").doc(id).set(data, { merge:true });
 };
 const _storeWipe = Store.wipe;
 Store.wipe = async function(){
   try{
-    if(DEMO) LSX.del("aivx_t_" + this.uid);
+    if(DEMO || this.local) LSX.del("aivx_t_" + this.uid);
     else { const q = await fb.firestore().collection("training").where("owner", "==", this.uid).get(); for(const d of q.docs) await d.ref.delete(); }
   }catch(e){ console.warn("training wipe", e); }
   return _storeWipe.call(this);
@@ -3633,7 +3660,7 @@ async function learnLesson(m, reasons, note){
 /* ---------------- Training data (admin only) ---------------- */
 function isAdmin(){ return !!(S.user && ADMIN_EMAILS.map(x => x.toLowerCase()).includes(String(S.user.email || "").toLowerCase())); }
 Store.listTraining = async function(){
-  if(DEMO) return Object.entries(LSX.get("aivx_t_" + this.uid, {})).map(([id, v]) => Object.assign({ id }, v));
+  if(DEMO || this.local) return Object.entries(LSX.get("aivx_t_" + this.uid, {})).map(([id, v]) => Object.assign({ id }, v));
   const q = await fb.firestore().collection("training").orderBy("at", "desc").limit(10000).get();
   return q.docs.map(d => Object.assign({ id:d.id }, d.data()));
 };
@@ -3905,6 +3932,7 @@ $("voiceBtn").onclick = () => openVoice();
 
 /* ---------------- BUILD modal ---------------- */
 function openBuild(){
+  if(S.user && S.user.guest){ openGuestWall(true, "Create a free account to build your own AI app. Your first one is free."); return; }
   if(!S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS){
     openUpgrade("You've built your free AI app. Get AIV Pro to build more.");
     return;
@@ -4187,6 +4215,15 @@ function drawSettings(sec){
     if($("pRemove")) $("pRemove").onclick = async () => { S.profile.proKey = ""; S.pro = false; await saveProfile(); renderUsage(); drawSettings("plan"); };
   }
   if(sec === "training"){ drawTraining(b); return; }
+  if(sec === "account" && S.user.guest){
+    b.innerHTML = `<div class="set-row"><div class="lt">You're using AIV X as a guest<small>${Math.max(0, GUEST_LIMIT - guestUses())} of ${GUEST_LIMIT} guest messages left. Your chats are saved only in this browser.</small></div><button class="btn primary sm" id="gUp">Create free account</button></div>
+      <div class="set-row"><div class="lt">Why create an account?<small>20 messages every day, memory and chats on all your devices, your own AI app, and the AI Verse apps synced to your account. Your guest chats move into your new account.</small></div></div>
+      <div class="set-row"><div class="lt">Terms and privacy</div><span><a href="terms.html" target="_blank" rel="noopener">Terms</a> · <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></span></div>
+      <div style="margin-top:18px"><button class="btn sm" id="gOut">Leave guest mode</button></div>`;
+    $("gUp").onclick = () => { closeModal(); openGuestWall(true); };
+    $("gOut").onclick = () => { closeModal(); Auth.leaveGuest(); };
+    return;
+  }
   if(sec === "account"){
     const u = S.user;
     b.innerHTML = `<div class="set-row"><div class="lt">Signed in with<small>${esc(u.email || u.phone || "—")}</small></div><span>${esc({ "google.com":"Google", "apple.com":"Apple", phone:"Phone", password:"Email" }[u.provider] || u.provider || "")}</span></div>
@@ -4194,7 +4231,7 @@ function drawSettings(sec){
       <div class="set-row"><div class="lt">Terms and privacy<small>How AIV X works, what it stores, and your rights.</small></div><span><a href="terms.html" target="_blank" rel="noopener">Terms</a> · <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></span></div>
       <div class="set-row"><div class="lt">Delete my account<small>Permanently deletes your chats, memories, library, app data, settings, and sign-in account.</small></div><button class="btn danger sm" id="aDel">Delete</button></div>
       <div style="margin-top:18px"><button class="btn sm" id="aOut">Log out</button></div>
-      <p class="muted small" style="margin-top:18px">AIV X by AI Verse · Built with Llama · AI models run on Cloudflare Workers AI. Questions or privacy requests: <a href="mailto:team@aiverse.it.com">team@aiverse.it.com</a></p>`;
+      <p class="muted small" style="margin-top:18px">AIV X by AI Verse · Runs on AIV-1 · Built with Llama. Questions or privacy requests: <a href="mailto:team@aiverse.it.com">team@aiverse.it.com</a></p>`;
     $("aExp").onclick = () => download("aivx-data.json", JSON.stringify({ profile:S.profile, chats:S.chats, library:S.library }, null, 2), "application/json");
     $("aDel").onclick = async () => {
       if(!confirm("Delete your AIV X account and all of its data permanently? This can't be undone.")) return;
@@ -4228,7 +4265,7 @@ function askConsent(){
 }
 /* ---------------- sidebar + top bar ---------------- */
 function renderMe(){
-  const n = S.profile.name || S.user.email || S.user.phone || "You";
+  const n = S.user.guest ? "Guest" : (S.profile.name || S.user.email || S.user.phone || "You");
   $("meName").textContent = n;
   $("meAv").innerHTML = S.user.photo ? `<img src="${esc(S.user.photo)}" alt="">` : esc(n.trim().split(/\s+/).map(x => x[0]).join("").slice(0, 2).toUpperCase());
 }
@@ -4261,13 +4298,40 @@ $("shareBtn").onclick = () => exportChat();
 /* =====================================================================
    START
    ===================================================================== */
+// Guest → account: move the guest's chats, library, memories, and app data into the new account
+async function moveGuestData(){
+  const g = LSX.get("aivx_guest", null); if(!g || !S.user || S.user.guest) return;
+  try{
+    const chats = LSX.get("aivx_c_" + g.uid, []), lib = LSX.get("aivx_l_" + g.uid, []), prof = LSX.get("aivx_u_" + g.uid, null);
+    for(const c of chats.slice(0, 100)) await Store.saveChat(c);
+    for(const x of lib.slice(0, 100)) await Store.saveLib(x);
+    if(prof && prof.memories && prof.memories.length){
+      S.profile.memories = (S.profile.memories || []).concat(prof.memories.filter(m => !(S.profile.memories || []).some(x => x.text === m.text)));
+      await saveProfile();
+    }
+    for(const a of APPS){ const d = LSX.get("aivx_app_" + g.uid + "_" + a.id, null); if(d && d.data) await Store.setAppData(a.id, d.at, d.data); }
+    ["aivx_c_","aivx_l_","aivx_u_","aivx_t_"].forEach(p => LSX.del(p + g.uid));
+    APPS.forEach(a => LSX.del("aivx_app_" + g.uid + "_" + a.id));
+    LSX.del("aivx_guest");
+    if(chats.length || lib.length) toast("Your guest chats are now in your account");
+  }catch(e){ console.warn("guest move", e); }
+}
+function openGuestWall(byChoice, why){
+  const used = guestUses() >= GUEST_LIMIT;
+  const box = modal(`<div class="mh2"><h3>${used && !byChoice ? "Create a free account to keep going" : "Create your free account"}</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
+    <div class="mb"><p class="muted" style="margin-bottom:12px">${esc(why || (used ? "You've used your " + GUEST_LIMIT + " guest messages. It only takes a minute to sign up, and it's free." : "Sign up free to keep everything and get more."))}</p>
+    <ul class="muted" style="padding-left:20px;line-height:1.8"><li>20 messages every day</li><li>Memory and chats on all your devices</li><li>Build your own AI app, free</li><li>Your guest chats move into your account</li></ul></div>
+    <div class="mf"><button class="btn" data-close>Not now</button><button class="btn primary" id="gwGo">Sign up or log in</button></div>`);
+  paintIcons(box);
+  $("gwGo").onclick = () => { closeModal(); Auth.leaveGuest(); };
+}
 async function onSignedIn(u){
   if(!u){
     $("app").classList.add("hidden"); $("auth").classList.remove("hidden");
     S.user = null; S.profile = null; S.chats = []; S.library = []; S.libMap = {}; return;
   }
   if(S.user && S.user.uid === u.uid) return;
-  S.user = u; Store.uid = u.uid;
+  S.user = u; Store.uid = u.uid; Store.local = !!u.guest;
   let p = null;
   try{ p = await Store.loadUser(); }catch(e){ console.warn(e); }
   const d = defaultProfile(u);
@@ -4280,6 +4344,7 @@ async function onSignedIn(u){
     else setTimeout(() => askConsent(), 0);
   }
   applyTheme();
+  if(!u.guest) await moveGuestData();
   try{ S.chats = (await Store.listChats()).sort((a, b) => b.updatedAt - a.updatedAt); }catch(e){ S.chats = []; }
   try{ S.library = await Store.listLibrary(); }catch(e){ S.library = []; }
   S.libMap = {}; S.library.forEach(x => S.libMap[x.id] = x);

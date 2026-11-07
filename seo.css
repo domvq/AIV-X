@@ -18,5 +18,7 @@ ol.steps{padding-left:22px}ol.steps li{margin:8px 0;color:var(--text2)}
 details{border-bottom:1px solid var(--line);padding:14px 0}summary{cursor:pointer;font-weight:600}details p{color:var(--text2);margin-top:8px}
 .band{border:1px solid var(--line);border-radius:18px;padding:26px;margin-top:48px;text-align:center;background:var(--card)}
 .band p{color:var(--text2);margin:8px 0 18px}
+.cmp{width:100%;border-collapse:collapse;font-size:15px;margin-top:4px}.cmp th,.cmp td{border-bottom:1px solid var(--line);padding:11px 10px;text-align:left;vertical-align:top}.cmp th{font-size:14px;color:var(--muted);font-weight:600}.cmp td:first-child{color:var(--text2)}.cmp td.us{font-weight:600}.tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.fair{border-left:3px solid var(--text);padding:4px 0 4px 16px;color:var(--text2)}.fine{font-size:13px;color:var(--muted);margin-top:14px}.fine a{color:var(--muted)}
 .related{display:flex;flex-wrap:wrap;gap:8px}.related a{border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:14px;color:var(--text2);text-decoration:none}
 footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}footer a{color:var(--muted)}
