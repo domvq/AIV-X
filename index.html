@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>AIV X — Build Your Personal AI. Your Way. Free to Start</title>
-<meta name="description" content="Build your own personal AI with AIV X, free to start. Create custom AI apps and get AI for health, fitness, study, research, finance, photos, and career.">
+<meta name="description" content="Build your own personal AI with AIV X, free to start. Create custom AI apps and get AI for health, fitness, study, research, finance, photos, music, and career.">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://aiv-x.com/">
 <meta name="application-name" content="AIV X">
@@ -828,6 +828,9 @@ const APPS = [
   { id:"career", name:"AI Career", url:APP_BASE + "ai-career.html", desc:"Resumes, cover letters, job matching, interviews.",
     persona:"You are now in AI Career mode: a career coach. Improve resumes with strong bullet points and metrics, write tailored cover letters, match skills to jobs, prepare interview answers using the STAR method, run mock interviews one question at a time, and plan career moves.",
     starters:["Rewrite my resume bullets","Write a cover letter for this job","Mock interview me","What jobs fit my skills?"] },
+  { id:"music", name:"AI Music", url:APP_BASE + "ai-music.html", desc:"Write songs, make beats, and create music with AI.",
+    persona:"You are now in AI Music mode: a music creation partner. Help people write original songs and lyrics, build chord progressions and melodies, plan beats and arrangements by genre and tempo, describe sounds and instruments, and give feedback on their music. Write only original lyrics and never reproduce copyrighted song lyrics. When someone wants a track made, send them to AI Music to create it.",
+    starters:["Write a song about summer nights","Make a lo-fi beat idea","Give me a chord progression for a sad song","Help me finish my chorus"] },
   { id:"aide", name:"AI Personal Assistant", url:APP_BASE + "ai-personal-assistant.html", desc:"Planner, calendar, tasks, reminders, and email.",
     persona:"You are now in AI Personal Assistant mode: a personal assistant. Plan days and weeks, organize tasks by priority, draft emails and messages, prepare travel plans and checklists, and summarize what matters. Use clear checklists and time blocks.",
     starters:["Plan my day","Draft an email to my boss","Make a packing list","Prioritize my to-dos"] },
@@ -1880,7 +1883,7 @@ Rules:
 - For multi-step jobs, first say your plan in one short line, then work through it step by step. You can use several tools in one block and keep going for several rounds.
 - After you act in an app, check the updated screen in the system message to confirm each change actually happened. If it didn't, try another way (a different button, field, or screen) before telling the user. Only say something is done when you've seen it on the screen.
 - When the user shares a goal or wants a plan (losing weight, saving money, studying for an exam, finding a job, setting plans or routines), build the plan right here first, then recommend the matching app to keep going.
-- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in AI Photo, budgets and stocks in AI Stock and Finance, workouts and meals in AI Health and Fitness, flashcards and studying in AI Study and Research, resumes and jobs in AI Career, tasks, reminders, calendar, and email in AI Personal Assistant), open that app and do it there.
+- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in AI Photo, budgets and stocks in AI Stock and Finance, workouts and meals in AI Health and Fitness, flashcards and studying in AI Study and Research, resumes and jobs in AI Career, songs, beats, and music in AI Music, tasks, reminders, calendar, and email in AI Personal Assistant), open that app and do it there.
 - You can move between apps in one job (for example, read a budget in one app, then add a task in AI Personal Assistant).
 - Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.
 
@@ -3535,6 +3538,8 @@ const NOT_APP = /\b(code|coding|function|script|python|javascript|html|css|sql|w
 const APP_ROUTES = [
   ["photo",   /\b(image|picture|pic|photo|photograph|portrait|headshot|selfie|logo|poster|artwork|illustration|drawing|painting|wallpaper|avatar|thumbnail|banner|meme|sticker)s?\b/i,
               /\b(image|picture|pic|photo|drawing|painting|portrait|illustration) of\b|\b(draw|paint|sketch|illustrate)( me)? (a|an|the|my|some|two|three)\b|\bremove (the )?background\b|\b(edit|enhance|retouch|upscale|crop) (this|my|the) (photo|picture|image|pic)\b/i],
+  ["music",   /\b(songs?|music|beats?|instrumentals?|melod(y|ies)|chords?( progressions?)?|lyrics|jingles?|soundtracks?|playlists?|rap|hip[- ]hop|lo-?fi|edm|remix(es)?|choruses|hooks?)\b/i,
+              /\b(make|create|write|compose|produce|generate|record) (me )?(a |an |some |my )?(new |original |short )?(song|beat|instrumental|melody|jingle|track|tune|soundtrack|lyrics|remix)\b/i],
   ["career",  /\b(resume|résumé|cv|cover letter|job (search|application|applications|listing|offer)|jobs|interview|linkedin|career)\b/i, /\bmock interview\b/i],
   ["study",   /\b(flashcards?|study guide|study plan|practice (test|quiz|exam)|quiz|exam|lesson|research (paper|study|proposal|question)|literature review)\b/i, /\bquiz me\b|\bhelp me study\b|\bmake (me )?flashcards\b/i],
   ["fitness", /\b(workouts?|exercises?|gym|meal plan|meals?|calories|macros|protein|diet|running plan|training plan|squat|bench press|deadlift|cardio|weight loss|lose weight|bulking|cutting)\b/i, null],
@@ -3777,6 +3782,7 @@ async function drawGlobalRules(){
 const GOAL_ROUTES = [
   ["fitness", /\b(los+(e|ing)|drop|shed|burn)\b[\s\S]{0,25}\b(weight|fat|pounds|lbs|kilos|belly)\b|\bweight ?loss\b|\b(get(ting)? (fit|in shape|stronger|toned)|build(ing)? muscle|gain (muscle|weight)|bulk(ing)?|tone up|eat (healthier|better|clean)|meal prep|diet|calorie|macros|work ?outs?|exercise|gym|cardio|run(ning)? (a|my first) (5k|10k|marathon|half)|training plan|sleep better|healthier)\b/i],
   ["finance", /\b(save|saving|savings) (money|up|for)\b|\b(budget(ing)?|pay (off|down) (my )?(debt|loans?|credit card)|debt|invest(ing|ment)?|retire(ment)?|emergency fund|net worth|stocks?|portfolio|spending|financial (plan|goals?)|money goals?)\b/i],
+  ["music", /\b(learn(ing)? (to )?(play|sing) |start(ing)? (a )?(band|music|podcast)|(writ(e|ing)|mak(e|ing)|produc(e|ing)|releas(e|ing)) (my |an |a )?(first |own )?(songs?|music|album|ep|mixtape|beats?)|music career|become a (rapper|singer|producer|dj|musician))/i],
   ["study", /\b(stud(y|ying)|exams?|finals|midterms?|test prep|homework|learn(ing)? (to|about|how)|nremt|mcat|sat|act|gre|lsat|certification|recert|flashcards?|research (paper|project|proposal))\b/i],
   ["career", /\b(job (hunt|search|offer|application)|(need|want|get|find|looking for|land) (a |my )?(new |first |better )?job|resume|résumé|cover letter|interview|career|promotion|raise|switch(ing)? careers?|linkedin)\b/i],
   ["aide", /\b(set(ting)? (up )?(plans?|goals?|reminders?|a schedule|routines?|habits?)|make (a )?plans?|plan(ning)? (my|the|a|for|out)|schedule|routine|organi[sz]e|to-?do|productiv\w*|habits?|time management|get my life together|stay on track|deadlines?|appointments?|calendar|trip|vacation|travel plans?|morning routine)\b/i],
@@ -3797,6 +3803,7 @@ const APP_PITCH = {
   study:"turn it into flashcards, quizzes, and a study schedule that adapts to you",
   career:"build your resume, match jobs, write cover letters, and practice interviews",
   aide:"turn the plan into tasks, calendar events, and reminders so you stay on track",
+  music:"write lyrics, build beats and melodies, and turn your ideas into music",
   photo:"edit it with AI: remove backgrounds, retouch, change styles, and more",
 };
 function goalHint(app){
