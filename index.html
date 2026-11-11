@@ -1960,7 +1960,7 @@ function waitForLink(appId, ms = 15000){
 async function doAgentChat(ai, userMsg, hint){
   const base = historyFor(S.chat, S.chat.messages.indexOf(ai));
   const userText = userMsg.content || "";
-  let msgs = null, visible = "", log = [], retriedPlan = false;
+  let msgs = null, visible = "", log = [], retriedPlan = false, retriedEmpty = false, appChanged = false;
   for(let step = 0; step < 10; step++){
     let block = "";
     if(S.openApp && Link.ready && Link.app === S.openApp){
@@ -1979,6 +1979,14 @@ async function doAgentChat(ai, userMsg, hint){
     visible = (prefix && repeats(prefix, fresh) ? fresh : prefix + fresh).trim();
     ai.content = visible;
     const found = findActions(full);
+    if(!found && !fresh && !retriedEmpty){
+      // the AI sent back nothing at all: ask once more for a real answer instead of showing "Done."
+      retriedEmpty = true;
+      if(full.trim()) msgs.push({ role:"assistant", content:full.slice(0, 6000) });
+      msgs.push({ role:"user", content:"(Your last reply came through empty. Answer my message now, in plain words" + (log.length ? ", using the tool results above" : "") + ". Don't use a tools block unless you really need one.)" });
+      ai.status = "Thinking"; updateMsg(ai);
+      continue;
+    }
     if(!found) break;
     let actions = parseActions(found);
     if(!actions && !ACTION_RE.test(full) && visible){ break; }   // stray, unreadable tool text outside a real tools block: just show the answer
@@ -2032,7 +2040,7 @@ async function doAgentChat(ai, userMsg, hint){
       }
       else{
         ai.status = "Working in " + appById(S.openApp).name; updateMsg(ai);
-        try{ const r = await appAsk("act", { actions:runnable }, 25000); (r.results || []).forEach(x => results.push(x)); }
+        try{ const r = await appAsk("act", { actions:runnable }, 25000); (r.results || []).forEach(x => results.push(x)); appChanged = true; }
         catch(e){ results.push("the app didn't respond: " + e.message); }
       }
     }
@@ -2044,7 +2052,12 @@ async function doAgentChat(ai, userMsg, hint){
     msgs.push({ role:"assistant", content:full.slice(0, 6000) });
     msgs.push({ role:"user", content:("[Tool results]\n- " + results.join("\n- ")).slice(0, 24000) + "\n\n" + (S.openApp ? "The app's updated screen is in the system message. " : "") + "If you have what you need, finish your answer now (no tools block), citing web sources as [n]. The user can already see what you wrote before the tools ran, so continue from there and don't repeat or summarize it. If more steps are needed, use another tools block." });
   }
-  if(!ai.content) ai.content = "Done.";
+  if(!ai.content){
+    const did = (ai.steps || []).map(x => x.text).filter(Boolean);
+    if(appChanged && did.length) ai.content = "Here's what I did:\n\n" + did.map(x => "- " + x).join("\n") + "\n\nLet me know if you'd like anything changed.";
+    else if(did.length) ai.content = "I looked into it, but I couldn't put an answer together that time. Tap the retry button below and I'll take another pass.";
+    else throw new Error("AIV X didn't get an answer back that time. Tap the retry button below to try again.");   // shown as an error with Try again, and the message isn't counted
+  }
 }
 
 /* ---------------- general tools the chat can use on its own ---------------- */
