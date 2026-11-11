@@ -665,6 +665,7 @@ th.sortable:hover{color:var(--text)}
 .agactt{flex:1 1 260px;font-size:14px;line-height:1.5}.agactt .agtag{margin-right:4px}
 .agact .agbtns{margin-top:0}
 .agact.done .agactt,.agact.skipped .agactt{color:var(--text2)}
+.qa .qabadge{min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--text);color:var(--bg);font-size:10.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;margin-left:2px}
 </style>
 </head>
 <body>
@@ -1495,13 +1496,15 @@ function renderEmpty(){
   }else{
     bs.classList.add("quick");
     const modeLbl = S.mode === "aivx" ? "AI mode" : "AI mode: " + app.name;
-    bs.innerHTML = [["build","hammer","Build your AI"],["mode","modes",modeLbl]]
-      .map(([k, ic, t]) => `<button class="qa" data-qa="${k}"><span data-i="${ic}"></span><span>${esc(t)}</span></button>`).join("");
+    const agN = (typeof AG !== "undefined") ? AG.unread + AG.approvals : 0;
+    bs.innerHTML = [["build","hammer","Build your AI"],["agents","agent","Agents"],["mode","modes",modeLbl]]
+      .map(([k, ic, t]) => `<button class="qa" data-qa="${k}"><span data-i="${ic}"></span><span>${esc(t)}</span>${k === "agents" && agN ? `<span class="qabadge">${agN > 9 ? "9+" : agN}</span>` : ""}</button>`).join("");
     paintIcons(bs);
     bs.querySelectorAll(".qa").forEach(b => b.onclick = e => {
       e.stopPropagation();
       const k = b.dataset.qa;
       if(k === "build") openBuild();
+      else if(k === "agents") openAgents();
       else if(k === "mode") openAIMode(b);
       else { S.tool = null; setTool(k); }
     });
@@ -3930,6 +3933,9 @@ function agBadge(){
   const n = AG.unread + AG.approvals;
   b.textContent = n > 9 ? "9+" : String(n);
   b.classList.toggle("hidden", !n);
+  // the Agents quick button under the message box shows the same count
+  const q = document.querySelector('.qa[data-qa="agents"]');
+  if(q){ let x = q.querySelector(".qabadge"); if(n){ if(!x){ x = document.createElement("span"); x.className = "qabadge"; q.appendChild(x); } x.textContent = n > 9 ? "9+" : String(n); } else if(x) x.remove(); }
 }
 function agApply(d){
   if(!d) return;
@@ -4360,12 +4366,19 @@ function renderTool(){
 }
 $("plusBtn").onclick = e => {
   e.stopPropagation();
-  showMenu(e.currentTarget, [
+  const anchor = e.currentTarget;
+  const agN = (typeof AG !== "undefined") ? AG.unread + AG.approvals : 0;
+  const curMode = S.mode === "aivx" ? "AIV X" : appById(S.mode).name;
+  showMenu(anchor, [
     ...(innerWidth <= 640 ? [
       { label:"Model: " + (MODELS.find(x => x.id === S.model) || MODELS[0]).name, desc:"Tap to change", fn:() => setTimeout(() => $("modelBtn").click(), 0) },
       { sep:true }] : []),
     { label:"Add photos & files", desc:"PDF, Word, Excel, slides, audio, code", fn:() => $("fileInput").click() },
     { label:"Take a photo", fn:() => $("camInput").click() },
+    { sep:true },
+    { label:"AI mode", desc:"Now: " + curMode + ". Switch to an AI Verse app", fn:() => setTimeout(() => openAIMode(anchor), 0) },
+    { label:"Build your AI", desc:"Make your own AI app", fn:() => setTimeout(() => openBuild(), 0) },
+    { label:"Agents", desc:agN ? agN + " waiting for you" : "Tasks that run for you on a schedule", fn:() => setTimeout(() => openAgents(), 0) },
     { sep:true },
     ...["image","video","search","research","doc","sheet","slides","app","code","link"].map(k => ({ label:TOOLS[k].name, desc:TOOLS[k].desc, check:S.tool === k, fn:() => setTool(k) })),
     { sep:true },
