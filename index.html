@@ -624,6 +624,47 @@ th.sortable:hover{color:var(--text)}
 .practice .pa{white-space:pre-wrap;background:var(--bg2);border-radius:8px;padding:8px;margin-top:4px;max-height:220px;overflow:auto}
 .guestbtn{display:block;width:100%;margin-top:14px;padding:10px;text-align:center;font-size:15px;color:var(--text2)}
 .guestbtn:hover{color:var(--text)}
+/* Agents */
+.agbadge{margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--text);color:var(--bg);font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
+.agbadge.hidden{display:none}
+.agcard,.agentcard{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--card,transparent)}
+.agentcard{margin:12px 0 4px;max-width:560px}
+.agtop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.agname{font-weight:600;font-size:15px}
+.aggoal{color:var(--text2);font-size:14px;line-height:1.5;margin:8px 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.agbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.agdel{color:var(--text2)}
+.agtag{font-size:11px;border:1px solid var(--line2);border-radius:999px;padding:2px 8px;color:var(--text2)}
+.agnote{border-left:3px solid var(--text);padding:6px 12px;margin-bottom:12px;color:var(--text2);font-size:14px}
+.agwhen{display:flex;gap:8px;flex-wrap:wrap}.agwhen .input{flex:1;min-width:120px}.agwhen .hidden{display:none}
+.agex{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.agexb{display:flex;flex-direction:column;gap:4px;text-align:left;border:1px solid var(--line);border-radius:12px;padding:12px 14px;flex:1 1 220px;color:var(--text)}
+.agexb:hover{border-color:var(--text2)}.agexb span{font-size:13px;color:var(--text2);line-height:1.45}
+.agchip{border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--text2)}.agchip:hover{color:var(--text);border-color:var(--text2)}
+.agempty p{margin-bottom:10px;line-height:1.55}
+.agrun{border-bottom:1px solid var(--line)}
+.agrunhead{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 2px;flex-wrap:wrap;color:var(--text)}
+.agrunhead .dot{width:8px;height:8px;border-radius:50%;flex:none;background:transparent}
+.agrun.unread .dot{background:var(--text)}.agrun.unread .agrt{font-weight:600}
+.agrun.failed .agrt{color:var(--text2)}
+.agrt{flex:1 1 200px}
+.agrunbody{padding:2px 2px 16px 18px}.agrunbody.hidden{display:none}
+.agsrc{display:flex;flex-direction:column;gap:4px;margin-top:10px;font-size:13px}.agsrc a{color:var(--text2)}
+.agsteps{margin-top:10px;font-size:13px;color:var(--text2)}.agsteps ul{padding-left:18px;margin-top:6px;line-height:1.6}
+.agrunning{display:flex;gap:14px;align-items:center;padding:40px 10px;justify-content:center}
+.agspin{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--text);animation:agspin 0.8s linear infinite}
+@keyframes agspin{to{transform:rotate(360deg)}}
+.agapps{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.agappsel{display:flex;flex-wrap:wrap;gap:8px}
+.agchk{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
+.agchk input{width:16px;height:16px;accent-color:var(--text)}
+.agacts{border:1px solid var(--line2);border-radius:12px;padding:12px 14px;margin:4px 0 14px}
+.agactsh{font-weight:600;font-size:14px;margin-bottom:8px}
+.agact{padding:10px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.agact:first-of-type{border-top:0}
+.agactt{flex:1 1 260px;font-size:14px;line-height:1.5}.agactt .agtag{margin-right:4px}
+.agact .agbtns{margin-top:0}
+.agact.done .agactt,.agact.skipped .agactt{color:var(--text2)}
 </style>
 </head>
 <body>
@@ -701,6 +742,7 @@ th.sortable:hover{color:var(--text)}
       <button class="navitem" id="navLibrary"><span data-i="library"></span>Library</button>
       <button class="navitem" id="navApps"><span data-i="grid"></span>AI Verse apps</button>
       <button class="navitem" id="navBuild"><span data-i="hammer"></span>Build</button>
+      <button class="navitem" id="navAgents"><span data-i="agent"></span>Agents<span class="agbadge hidden" id="agBadge"></span></button>
     </div>
     <div class="side-scroll">
       <div class="side-h">Projects <button id="newProject" title="New project">+</button></div>
@@ -864,6 +906,7 @@ const ICONS = {
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   library:'<path d="M4 19V5M9 19V5M14 5l5 14"/>',
+  agent:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
   hammer:'<path d="m15 12-8.5 8.5a2.1 2.1 0 0 1-3-3L12 9"/><path d="M17.6 15 22 10.6l-6.6-6.6-2.4.9-1.6 1.6 7.2 7.2Z"/>',
   chev:'<path d="m6 9 6 6 6-6"/>',
@@ -1150,6 +1193,7 @@ const Auth = {
     try{ await fb.auth().sendPasswordResetEmail(email); toast("Password reset email sent."); }catch(e){ this.err(e); }
   },
   async deleteAccount(){
+    try{ await agentsCall("deleteAll"); }catch(e){}   // remove this person's agents and reports from the server
     if(S.user && S.user.email) LSX.del("aivx_known_" + S.user.email.toLowerCase());
     if(DEMO){
       const accts = LSX.get("aivx_demo_accts", {});
@@ -1705,7 +1749,9 @@ async function send(textOverride){
   const ctx = S.pending.filter(p => p.text).map(p => `[Attached file: ${p.name}]\n${p.text}`).join("\n\n");
   const images = S.pending.filter(p => p.kind === "image").map(p => p.data);
   const userMsg = { id:uid("m_"), role:"user", content:text, atts, ctx: ctx ? ctx.slice(0, 40000) : "", _images:images, tool, at:Date.now() };
-  const routed = autoRoute(text, tool, images.length); if(routed) userMsg.routed = routed.id;
+  const routed = !tool && isAgentAsk(text) ? null : autoRoute(text, tool, images.length);
+  if(!tool && !images.length && isAgentAsk(text)) userMsg.agentAsk = true;
+  else if(routed) userMsg.routed = routed.id;
   else if(!tool){ const g = goalApp(text); if(g && S.openApp !== g.id) userMsg.goal = g.id; }
   chat.messages.push(userMsg);
   S.pending = []; renderPending();
@@ -1723,7 +1769,8 @@ async function runAssistant(ai, userMsg, tool){
   const cost = tool === "research" || tool === "video" ? 3 : 1;
   bump(cost);
   try{
-    if(userMsg.routed && (!tool || tool === "image")) await doRouted(ai, userMsg);
+    if(userMsg.agentAsk && !tool) await doAgentDraft(ai, userMsg);
+    else if(userMsg.routed && (!tool || tool === "image")) await doRouted(ai, userMsg);
     else if(tool === "image") await doImage(ai, userMsg);
     else if(tool === "search") await doSearch(ai, userMsg);
     else if(tool === "research") await doResearch(ai, userMsg);
@@ -3823,6 +3870,421 @@ hydrateUI = function(el, m){
   }catch(e){}
 };
 </script>
+<script>
+/* =====================================================================
+   AGENTS  (part 1: scheduled agents that research the web and report back)
+   ===================================================================== */
+const AG = { list:[], unread:0, approvals:0, plan:"free", limits:{ agents:1, minHours:24, runsPerDay:3 }, emailReady:false, email:"", runs:[], ready:false, err:"" };
+const AG_TZ = (() => { try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }catch(e){ return "UTC"; } })();
+const AG_DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const AG_EXAMPLES = [
+  ["Morning news briefing", "Every weekday at 7am, give me the 5 most important news stories in tech and AI with one line on why each matters."],
+  ["Job scout", "Every Monday at 9am, find new remote job postings for entry-level data analysts and list the 5 best with links."],
+  ["Price watch", "Every day at 8am, check the latest Bitcoin, Ethereum, and S&P 500 moves and tell me what changed and why."],
+  ["Research digest", "Every Friday at 4pm, find new studies and articles about prehospital emergency care and summarize the key findings."],
+];
+
+async function agIdToken(){
+  if(DEMO) return "dev:" + S.user.uid + ":" + (S.user.email || "");
+  try{ const u = fb && fb.auth().currentUser; return u ? await u.getIdToken() : ""; }catch(e){ return ""; }
+}
+async function agentsCall(action, extra = {}){
+  return api("/agents", Object.assign({ action, idToken: await agIdToken(), tz: AG_TZ }, extra));
+}
+function agWhen(sch){
+  sch = sch || {};
+  const [h, m] = String(sch.time || "08:00").split(":").map(Number);
+  const nice = ((h % 12) || 12) + (m ? ":" + String(m).padStart(2, "0") : "") + (h < 12 ? "am" : "pm");
+  if(sch.kind === "hours") return "Every " + sch.every + " hour" + (sch.every === 1 ? "" : "s");
+  if(sch.kind === "weekdays") return "Weekdays at " + nice;
+  if(sch.kind === "weekly") return "Every " + AG_DAYS[sch.day ?? 1] + " at " + nice;
+  return "Every day at " + nice;
+}
+function agTime(ms){
+  if(!ms) return "";
+  const d = new Date(ms), now = new Date();
+  const same = d.toDateString() === now.toDateString();
+  const t = d.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+  if(same) return "Today " + t;
+  const tm = new Date(now); tm.setDate(now.getDate() + 1);
+  const ys = new Date(now); ys.setDate(now.getDate() - 1);
+  if(d.toDateString() === tm.toDateString()) return "Tomorrow " + t;
+  if(d.toDateString() === ys.toDateString()) return "Yesterday " + t;
+  return d.toLocaleDateString([], { weekday:"short", month:"short", day:"numeric" }) + " " + t;
+}
+function agBadge(){
+  const b = $("agBadge"); if(!b) return;
+  const n = AG.unread + AG.approvals;
+  b.textContent = n > 9 ? "9+" : String(n);
+  b.classList.toggle("hidden", !n);
+}
+function agApply(d){
+  if(!d) return;
+  if(d.agents) AG.list = d.agents;
+  if(d.unread !== undefined) AG.unread = d.unread;
+  if(d.approvals !== undefined) AG.approvals = d.approvals;
+  if(d.plan) AG.plan = d.plan;
+  if(d.limits) AG.limits = d.limits;
+  if(d.emailReady !== undefined) AG.emailReady = d.emailReady;
+  if(d.email !== undefined) AG.email = d.email;
+  AG.ready = true; AG.err = "";
+  agBadge();
+}
+async function refreshAgents(){
+  if(!S.user || S.user.guest) return;
+  try{ agApply(await agentsCall("list")); agSyncContext(); }catch(e){ AG.err = e.message; }
+}
+
+/* ---- share a short copy of app data with agents that are allowed to use it ---- */
+const AG_SECRET = /(api[_-]?key|token|secret|password|passwd|auth|session|cookie|credential|card|cvv|ssn)/i;
+function agCompact(raw){
+  const parse = v => { if(typeof v === "string" && /^\s*[\[{]/.test(v)){ try{ return JSON.parse(v); }catch(e){} } return v; };
+  const walk = (v, depth) => {
+    v = parse(v);
+    if(depth > 6) return undefined;
+    if(Array.isArray(v)) return v.slice(-60).map(x => walk(x, depth + 1)).filter(x => x !== undefined);
+    if(v && typeof v === "object"){
+      const o = {};
+      for(const [k, x] of Object.entries(v)){
+        if(AG_SECRET.test(k)) continue;
+        const w = walk(x, depth + 1);
+        if(w === undefined || w === "" || w === null) continue;
+        o[k] = w;
+      }
+      return o;
+    }
+    if(typeof v === "string"){
+      if(/^data:/.test(v)) return "[file]";
+      return v.length > 500 ? v.slice(0, 500) + "…" : v;
+    }
+    return v;
+  };
+  try{ return JSON.stringify(walk(raw, 0)).slice(0, 8000); }catch(e){ return String(raw || "").slice(0, 8000); }
+}
+let agSyncAt = 0;
+async function agSyncContext(force){
+  const ids = [...new Set(AG.list.flatMap(a => a.apps || []))];
+  if(!force && Date.now() - agSyncAt < 30 * 60 * 1000) return;
+  agSyncAt = Date.now();
+  const apps = {};
+  for(const id of ids){
+    try{ const d = await Store.getAppData(id); if(d && d.data) apps[id] = agCompact(d.data); }catch(e){}
+  }
+  try{ await agentsCall("context", { apps }); }catch(e){}
+}
+let agTimer = null;
+function agentsBoot(){
+  AG.list = []; AG.unread = 0; AG.ready = false; agBadge();
+  clearInterval(agTimer);
+  if(!S.user || S.user.guest) return;
+  refreshAgents();
+  agTimer = setInterval(refreshAgents, 5 * 60 * 1000);
+}
+
+/* ---------------- Agents page ---------------- */
+async function openAgents(tab){
+  if(S.user && S.user.guest){ openGuestWall(true, "Create a free account to make agents that work for you on a schedule, even when AIV X is closed."); return; }
+  tab = tab || (AG.unread ? "reports" : (AG.list.length ? "reports" : "agents"));
+  const box = modal(`<div class="mh2"><h3>Agents</h3><div style="display:flex;gap:8px;align-items:center"><button class="btn primary sm" id="agNew">New agent</button><button class="iconbtn" data-close><span data-i="x"></span></button></div></div>
+    <div class="mb"><div class="seg" style="display:inline-flex;margin-bottom:16px"><button data-t="reports" class="${tab === "reports" ? "on" : ""}">Reports</button><button data-t="agents" class="${tab === "agents" ? "on" : ""}">My agents</button></div>
+    <div id="agBody"><div class="muted" style="padding:30px 0;text-align:center">Loading…</div></div></div>`, true);
+  box.querySelectorAll("[data-t]").forEach(b => b.onclick = () => openAgents(b.dataset.t));
+  $("agNew").onclick = () => openAgentNew();
+  try{
+    agApply(await agentsCall("list"));
+    if(tab === "reports"){ AG.runs = (await agentsCall("runs")).runs || []; }
+  }catch(e){
+    if($("agBody")) $("agBody").innerHTML = `<div class="muted" style="padding:30px 0;text-align:center">${esc(e.message)}</div>`;
+    return;
+  }
+  if(!$("agBody")) return;
+  if(tab === "reports") drawAgentRuns(); else drawAgentList();
+}
+function agTab(t){ document.querySelectorAll("#modal .seg [data-t]").forEach(x => x.classList.toggle("on", x.dataset.t === t)); }
+function drawAgentList(){
+  const b = $("agBody"); if(!b) return; agTab("agents");
+  if(!AG.list.length){
+    b.innerHTML = `<div class="agempty"><p><strong>Agents do tasks for you on a schedule.</strong> They search the web, read pages, and send you a short report, even when AIV X is closed.</p>
+      <p class="muted">Try one of these, or describe your own:</p>
+      <div class="agex">${AG_EXAMPLES.map(([n, t], i) => `<button class="agexb" data-ex="${i}"><strong>${esc(n)}</strong><span>${esc(t)}</span></button>`).join("")}</div></div>`;
+    b.querySelectorAll("[data-ex]").forEach(x => x.onclick = () => openAgentNew(AG_EXAMPLES[x.dataset.ex][1]));
+    return;
+  }
+  b.innerHTML = AG.list.map(a => `<div class="agcard" data-id="${a.id}">
+      <div class="agtop"><div><div class="agname">${esc(a.name)}</div><div class="muted small">${esc(a.when)}${a.enabled && a.nextRun ? " · Next run " + esc(agTime(a.nextRun)) : a.enabled ? "" : " · Paused"}</div></div>
+      <button class="switch ${a.enabled ? "on" : ""}" data-tog title="${a.enabled ? "Pause" : "Turn on"}"></button></div>
+      <div class="aggoal">${esc(a.goal)}</div>
+      ${(a.apps || []).length ? `<div class="agapps">${a.apps.map(id => `<span class="agtag">${esc((appById(id) || {}).name || id)}</span>`).join("")}</div>` : ""}
+      ${a.lastRun ? `<div class="muted small">Last run ${esc(agTime(a.lastRun))}${a.lastStatus && a.lastStatus !== "ok" ? " · " + esc(a.lastStatus) : ""}</div>` : `<div class="muted small">Hasn't run yet</div>`}
+      <div class="agbtns"><button class="btn sm" data-run>Run now</button><button class="btn sm" data-rep>Reports</button><button class="btn sm" data-edit>Edit</button><button class="btn sm agdel" data-del>Delete</button></div>
+    </div>`).join("") + `<p class="muted small" style="margin-top:14px">${AG.plan === "pro" ? "AIV Pro: up to " + AG.limits.agents + " agents, as often as every hour." : "Free plan: 1 agent that runs up to once a day. <a href='#' id='agUp'>Get AIV Pro</a> for up to 10 agents that run as often as every hour."} Agents search the web and the apps you let them use. They only change your apps after you approve, and never send messages, buy, or delete anything.</p>`;
+  const up = $("agUp"); if(up) up.onclick = e => { e.preventDefault(); closeModal(); openUpgrade("Get more agents with AIV Pro."); };
+  b.querySelectorAll(".agcard").forEach(c => {
+    const a = AG.list.find(x => x.id === c.dataset.id);
+    c.querySelector("[data-tog]").onclick = async () => { try{ agApply(await agentsCall("toggle", { id:a.id, on:!a.enabled })); drawAgentList(); }catch(e){ toast(e.message); } };
+    c.querySelector("[data-run]").onclick = () => agRunNow(a);
+    c.querySelector("[data-rep]").onclick = async () => { AG.runs = (await agentsCall("runs", { agentId:a.id })).runs || []; drawAgentRuns(a); };
+    c.querySelector("[data-edit]").onclick = () => openAgentEditor(a);
+    c.querySelector("[data-del]").onclick = async () => {
+      if(!confirm(`Delete "${a.name}" and all its reports? This can't be undone.`)) return;
+      try{ agApply(await agentsCall("delete", { id:a.id })); drawAgentList(); toast("Agent deleted"); }catch(e){ toast(e.message); }
+    };
+  });
+}
+async function agRunNow(a){
+  const b = $("agBody");
+  if(b) b.innerHTML = `<div class="agrunning"><div class="agspin"></div><div><strong>${esc(a.name)} is working…</strong><div class="muted small">Searching the web and reading pages. This takes about a minute.</div></div></div>`;
+  try{
+    if((a.apps || []).length) await agSyncContext(true);   // give it the freshest app data
+    const d = await agentsCall("run", { id:a.id });
+    await refreshAgents();
+    AG.runs = [d.run].concat(AG.runs.filter(r => r.id !== d.run.id));
+    drawAgentRuns(null, d.run.id);
+  }catch(e){
+    toast(e.message);
+    if(/Pro/.test(e.message)) openUpgrade(e.message); else drawAgentList();
+  }
+}
+function drawAgentRuns(only, openId){
+  const b = $("agBody"); if(!b) return; agTab(only ? "agents" : "reports");
+  const runs = AG.runs || [];
+  const name = id => (AG.list.find(a => a.id === id) || {}).name || "Agent";
+  if(!runs.length){
+    b.innerHTML = `<div class="muted" style="padding:30px 0;text-align:center">${AG.list.length ? "No reports yet. Your agents' reports will show up here after they run." + (only ? "" : "") : "You don't have any agents yet."}</div>
+      <div style="text-align:center">${AG.list.length ? `<button class="btn sm" id="agToList">See my agents</button>` : `<button class="btn primary sm" id="agToNew">Make your first agent</button>`}</div>`;
+    const l = $("agToList"); if(l) l.onclick = () => openAgents("agents");
+    const n = $("agToNew"); if(n) n.onclick = () => openAgentNew();
+    return;
+  }
+  b.innerHTML = (only ? `<button class="linkbtn small" id="agBack">‹ All reports</button><h4 style="margin:6px 0 10px">${esc(only.name)}</h4>` : "") +
+    runs.map(r => `<div class="agrun ${r.unread ? "unread" : ""} ${r.status !== "ok" ? "failed" : ""}" data-id="${r.id}">
+      <button class="agrunhead"><span class="dot"></span><span class="agrt">${esc(r.title || "Report")}</span><span class="muted small">${only ? "" : esc(name(r.agentId)) + " · "}${esc(agTime(r.at))}${agPending(r) ? " · " + agPending(r) + " to approve" : r.important ? " · Needs a look" : ""}</span></button>
+      <div class="agrunbody hidden"></div></div>`).join("");
+  const back = $("agBack"); if(back) back.onclick = () => openAgents("agents");
+  b.querySelectorAll(".agrun").forEach(el => {
+    const r = runs.find(x => x.id === el.dataset.id);
+    const open = async () => {
+      const body = el.querySelector(".agrunbody");
+      const show = body.classList.contains("hidden");
+      body.classList.toggle("hidden", !show);
+      if(!show) return;
+      body.innerHTML = agActionsHTML(r) + `<div class="md">${renderMarkdown(r.report || "", (r.sources || []).map(s => ({ title:s.title, url:s.url })))}</div>
+        ${(r.sources || []).length ? `<div class="agsrc">${r.sources.map((s, i) => `<a href="${esc(s.url)}" target="_blank" rel="noopener">[${i + 1}] ${esc(s.title || s.url)}</a>`).join("")}</div>` : ""}
+        ${(r.steps || []).length ? `<details class="agsteps"><summary>What the agent did</summary><ul>${r.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ul></details>` : ""}
+        <div class="agbtns"><button class="btn sm" data-chat>Discuss in chat</button></div>`;
+      body.querySelector("[data-chat]").onclick = () => agDiscuss(r, name(r.agentId));
+      agWireActions(body, r, el);
+      if(r.unread){
+        r.unread = false; el.classList.remove("unread");
+        AG.unread = Math.max(0, AG.unread - 1); agBadge();
+        try{ await agentsCall("read", { id:r.id }); }catch(e){}
+      }
+    };
+    el.querySelector(".agrunhead").onclick = open;
+    if(openId === r.id) open();
+  });
+}
+/* ---- suggested changes: nothing happens until the person approves ---- */
+function agPending(r){ return (r.actions || []).filter(a => a.status === "pending").length; }
+function agActionsHTML(r){
+  const acts = r.actions || [];
+  if(!acts.length) return "";
+  const label = { done:"Done", skipped:"Skipped", failed:"Didn't work", pending:"" };
+  return `<div class="agacts"><div class="agactsh">${agPending(r) ? "Suggested changes. Nothing changes until you approve." : "Suggested changes"}</div>
+    ${acts.map((a, i) => { const app = appById(a.app); return `<div class="agact ${a.status}" data-i="${i}">
+      <div class="agactt"><span class="agtag">${esc(app ? app.name : a.app)}</span> ${esc(a.do)}${a.why ? `<div class="muted small">${esc(a.why)}</div>` : ""}</div>
+      ${a.status === "pending" ? `<div class="agbtns"><button class="btn primary sm" data-ok>Approve</button><button class="btn sm" data-skip>Skip</button></div>` : `<div class="muted small">${label[a.status] || ""}</div>`}
+    </div>`; }).join("")}
+    ${agPending(r) > 1 ? `<div class="agbtns"><button class="btn sm" data-all>Approve all ${agPending(r)}</button></div>` : ""}</div>`;
+}
+function agWireActions(body, r, el){
+  const redraw = () => { const old = body.querySelector(".agacts"); if(old) old.outerHTML = agActionsHTML(r); agWireActions(body, r, el); const sm = el.querySelector(".agrunhead .muted"); if(sm && !agPending(r)) sm.textContent = sm.textContent.replace(/ · \d+ to approve/, ""); };
+  const setStatus = async (i, status) => {
+    r.actions[i].status = status;
+    if(status !== "pending") AG.approvals = Math.max(0, AG.approvals - 1); agBadge();
+    try{ await agentsCall("act", { id:r.id, index:i, status }); }catch(e){}
+  };
+  body.querySelectorAll(".agact").forEach(row => {
+    const i = +row.dataset.i;
+    const ok = row.querySelector("[data-ok]"), sk = row.querySelector("[data-skip]");
+    if(sk) sk.onclick = async () => { await setStatus(i, "skipped"); redraw(); };
+    if(ok) ok.onclick = () => agExecute(r, [i]);
+  });
+  const all = body.querySelector("[data-all]");
+  if(all) all.onclick = () => agExecute(r, r.actions.map((a, i) => a.status === "pending" ? i : -1).filter(i => i >= 0));
+}
+// Approved changes run in the app itself, in a new chat, so the person can watch each step
+async function agExecute(r, idxs){
+  if(!idxs.length) return;
+  if(S.busy) return toast("Wait for AIV X to finish first");
+  if(!canUse()) return;
+  const groups = {};
+  idxs.forEach(i => { const a = r.actions[i]; (groups[a.app] = groups[a.app] || []).push(i); });
+  closeModal(); newChat();
+  const chat = ensureChat();
+  chat.title = "Approved changes";
+  $("thread").innerHTML = ""; leaveCentered();
+  for(const [appId, list] of Object.entries(groups)){
+    const app = appById(appId);
+    if(!app || !app.url){ for(const i of list){ r.actions[i].status = "failed"; try{ await agentsCall("act", { id:r.id, index:i, status:"failed" }); }catch(e){} } continue; }
+    const text = list.length === 1 ? r.actions[list[0]].do : list.map((i, n) => (n + 1) + ". " + r.actions[i].do).join("\n");
+    const userMsg = { id:uid("m_"), role:"user", content:`In ${app.name}, please do ${list.length === 1 ? "this" : "these"} (approved from my agent's report):\n${text}`, atts:[], ctx:"", _images:[], tool:null, routed:app.id, agentAction:true, at:Date.now() };
+    chat.messages.push(userMsg); updateMsg(userMsg, true);
+    const ai = { id:uid("m_"), role:"assistant", content:"", pending:true, tool:null, at:Date.now() };
+    chat.messages.push(ai); updateMsg(ai, true);
+    await runAssistant(ai, userMsg, null);
+    const status = ai.error ? "failed" : "done";
+    for(const i of list){
+      r.actions[i].status = status;
+      AG.approvals = Math.max(0, AG.approvals - 1);
+      try{ await agentsCall("act", { id:r.id, index:i, status }); }catch(e){}
+    }
+    agBadge();
+  }
+  agSyncAt = 0;   // the app changed: send fresh data next time
+}
+function agDiscuss(r, agentName){
+  closeModal(); newChat();
+  const chat = ensureChat();
+  chat.title = agentName + ": " + (r.title || "Report");
+  const msg = { id:uid("m_"), role:"assistant", content:`**${r.title}** (from your agent "${agentName}", ${agTime(r.at)})\n\n${r.report}`, sources:(r.sources || []).map(s => ({ title:s.title, url:s.url })), at:Date.now() };
+  chat.messages.push(msg);
+  $("thread").innerHTML = ""; leaveCentered(); updateMsg(msg, true);
+  persistChat();
+  $("input").focus();
+}
+
+/* ---------------- New agent / editor ---------------- */
+function openAgentNew(text){
+  if(S.user && S.user.guest){ openGuestWall(true); return; }
+  const box = modal(`<div class="mh2"><h3>New agent</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
+    <div class="mb"><label class="label" style="margin-top:0">What should your agent do, and when?</label>
+    <textarea class="input" id="agDesc" rows="4" placeholder="Every morning at 7, find the top AI news and give me 5 bullet points with links">${esc(text || "")}</textarea>
+    <div class="agex small">${AG_EXAMPLES.map(([n, t], i) => `<button class="agchip" data-ex="${i}">${esc(n)}</button>`).join("")}</div>
+    <p class="muted small" style="margin-top:12px">AIV X turns this into an agent you can check before it starts.</p></div>
+    <div class="mf"><button class="btn" data-close>Cancel</button><button class="btn" id="agBlank">Set up by hand</button><button class="btn primary" id="agDraft">Next</button></div>`);
+  box.querySelectorAll("[data-ex]").forEach(x => x.onclick = () => { $("agDesc").value = AG_EXAMPLES[x.dataset.ex][1]; });
+  $("agBlank").onclick = () => openAgentEditor({ name:"", goal:$("agDesc").value.trim(), schedule:{ kind:"daily", time:"08:00" }, notify:0 });
+  $("agDraft").onclick = async () => {
+    const t = $("agDesc").value.trim(); if(!t) return $("agDesc").focus();
+    const btn = $("agDraft"); btn.disabled = true; btn.textContent = "Setting it up…";
+    try{ const d = await agentsCall("draft", { text:t }); openAgentEditor(d.draft, d.note); }
+    catch(e){ toast(e.message); btn.disabled = false; btn.textContent = "Next"; }
+  };
+  setTimeout(() => $("agDesc") && $("agDesc").focus(), 50);
+}
+function openAgentEditor(a, note){
+  a = Object.assign({ name:"", goal:"", about:"", schedule:{ kind:"daily", time:"08:00" }, notify:0 }, a || {});
+  const sch = Object.assign({ kind:"daily", time:"08:00", day:1, every:4 }, a.schedule || {});
+  const free = AG.plan !== "pro";
+  const box = modal(`<div class="mh2"><h3>${a.id ? "Edit agent" : "Check your agent"}</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
+    <div class="mb">${note ? `<div class="agnote">${esc(note)}</div>` : ""}
+    <label class="label" style="margin-top:0">Name</label><input class="input" id="agName" maxlength="60" value="${esc(a.name)}" placeholder="Morning briefing">
+    <label class="label">What it does</label><textarea class="input" id="agGoal" rows="5" maxlength="1500" placeholder="What to look for and how to write the report">${esc(a.goal)}</textarea>
+    <label class="label">Anything it should know about you <span class="muted small">— optional</span></label><textarea class="input" id="agAbout" rows="2" maxlength="1500" placeholder="I'm a beginner investor. I care most about tech stocks.">${esc(a.about || "")}</textarea>
+    <label class="label">Apps it can use <span class="muted small">— optional</span></label>
+    <div class="agappsel">${APPS.filter(x => x.url).map(x => `<label class="agchk"><input type="checkbox" value="${x.id}" ${(a.apps || []).includes(x.id) ? "checked" : ""}> ${esc(x.name)}</label>`).join("")}</div>
+    <div class="muted small" style="margin-top:6px">It can read what you've saved in these apps and suggest changes, like adding tasks or jobs. Nothing changes until you approve it.</div>
+    <label class="label">When it runs</label>
+    <div class="agwhen"><select class="input" id="agKind"><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekly">Once a week</option><option value="hours" ${free ? "disabled" : ""}>Every few hours${free ? " (AIV Pro)" : ""}</option></select>
+      <select class="input" id="agDay">${AG_DAYS.map((d, i) => `<option value="${i}">${d}</option>`).join("")}</select>
+      <input class="input" id="agTime" type="time" value="${esc(sch.time)}">
+      <select class="input" id="agEvery">${[1, 2, 3, 4, 6, 8, 12].map(n => `<option value="${n}">Every ${n} hour${n > 1 ? "s" : ""}</option>`).join("")}</select></div>
+    <div class="muted small" style="margin-top:6px">Times are in your time zone (${esc(AG_TZ)}).</div>
+    <label class="label">Where reports go</label>
+    <select class="input" id="agNotify"><option value="0">Agents inbox in AIV X</option><option value="1" ${AG.emailReady && AG.email ? "" : "disabled"}>Inbox, and email me every report</option><option value="2" ${AG.emailReady && AG.email ? "" : "disabled"}>Inbox, and email me only when something needs a look</option></select>
+    ${AG.emailReady && AG.email ? `<div class="muted small" style="margin-top:6px">Emails go to ${esc(AG.email)}.</div>` : `<div class="muted small" style="margin-top:6px">Email reports aren't available for this account yet.</div>`}
+    <p class="muted small" style="margin-top:14px">Your agent searches the web, reads pages and the apps you chose, then writes a report with its sources. It never sends messages, buys, or deletes anything, and it only changes your apps after you approve.</p></div>
+    <div class="mf">${a.id ? "" : `<button class="btn" data-close>Cancel</button>`}<button class="btn" id="agSaveRun">${a.id ? "Save and run now" : "Turn on and test it"}</button><button class="btn primary" id="agSave">${a.id ? "Save" : "Turn on"}</button></div>`);
+  $("agKind").value = sch.kind === "hours" && free ? "daily" : sch.kind;
+  $("agDay").value = String(sch.day ?? 1);
+  $("agEvery").value = String([1, 2, 3, 4, 6, 8, 12].includes(+sch.every) ? sch.every : 4);
+  $("agNotify").value = String(AG.emailReady && AG.email ? (a.notify || 0) : 0);
+  const sync = () => { const k = $("agKind").value; $("agDay").classList.toggle("hidden", k !== "weekly"); $("agTime").classList.toggle("hidden", k === "hours"); $("agEvery").classList.toggle("hidden", k !== "hours"); };
+  $("agKind").onchange = sync; sync();
+  const collect = () => ({ id:a.id, apps:[...document.querySelectorAll(".agappsel input:checked")].map(x => x.value), name:$("agName").value.trim() || "My agent", goal:$("agGoal").value.trim(), about:$("agAbout").value.trim(), tz:AG_TZ, notify:+$("agNotify").value,
+    schedule:{ kind:$("agKind").value, time:$("agTime").value || "08:00", day:+$("agDay").value, every:+$("agEvery").value } });
+  const save = async (runAfter, btn) => {
+    const ag = collect();
+    if(ag.goal.length < 8){ $("agGoal").focus(); return toast("Tell the agent what to do"); }
+    btn.disabled = true;
+    try{
+      const d = await agentsCall("save", { agent:ag });
+      agApply(d); agSyncContext(true);
+      if(d.note) toast(d.note);
+      toast(a.id ? "Agent saved" : `"${d.saved.name}" is on. ${d.saved.when}.`);
+      if(runAfter){ await openAgents("agents"); agRunNow(d.saved); }
+      else openAgents("agents");
+      return d.saved;
+    }catch(e){
+      btn.disabled = false;
+      toast(e.message);
+      if(/Pro/.test(e.message)) openUpgrade(e.message);
+    }
+  };
+  $("agSave").onclick = () => save(false, $("agSave"));
+  $("agSaveRun").onclick = () => save(true, $("agSaveRun"));
+  paintIcons(box);
+}
+
+/* ---------------- Make an agent from the chat ---------------- */
+const AGENT_WORD = /\b(agents?)\b/i;
+const AGENT_MAKE = /\b(make|create|build|set ?up|start|i want|i need|give me|can you)\b/i;
+const AGENT_ABOUT = /\b(what (is|are) (an? )?(ai )?agents?|how (do|does) (ai )?agents?|explain|agents? (are|is|work)|real estate agent|travel agent|insurance agent|secret agent|free agent|agent of)\b/i;
+const AGENT_WHEN = /\b(every|each) (single )?(day|morning|evening|night|afternoon|week|weekday|weekend|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday|hour|\d+ hours?|few hours|couple (of )?hours)\b|\b(daily|weekly|hourly|every weekday)\b/i;
+const AGENT_DO = /\b(send me|give me|brief(ing)?|report|summar(y|ies|ize|ise)|digest|roundup|update me|let me know|alert me|notify me|tell me|keep me (posted|updated|in the loop)|watch|monitor|track|check|look (for|up)|find|scan|search|news|headlines|prices?)\b/i;
+const AGENT_NOT = /\b(remind me|reminders?|alarm|pills?|medicine|meds|drink water|code|script|cron|python|javascript)\b/i;
+function isAgentAsk(text){
+  const t = String(text || "");
+  if(!t || t.length > 1000 || /```/.test(t)) return false;
+  if(AGENT_WORD.test(t) && AGENT_MAKE.test(t) && !AGENT_ABOUT.test(t) && !AGENT_NOT.test(t)) return true;
+  return AGENT_WHEN.test(t) && AGENT_DO.test(t) && !AGENT_NOT.test(t);
+}
+async function doAgentDraft(ai, userMsg){
+  if(!S.user || S.user.guest){
+    ai.content = "Agents work for you on a schedule, even when AIV X is closed, so they need a free account. Create one and I'll set this up for you.";
+    setTimeout(() => openGuestWall(true, "Create a free account to make agents that work for you on a schedule."), 400);
+    return;
+  }
+  ai.status = "Setting up your agent"; updateMsg(ai, true);
+  const d = await agentsCall("draft", { text:userMsg.content });
+  ai.agentDraft = d.draft;
+  const appNames = (d.draft.apps || []).map(id => (appById(id) || {}).name).filter(Boolean);
+  ai.content = `I set up an agent for that. It will run **${agWhen(d.draft.schedule).toLowerCase()}**, search the web${appNames.length ? ", check " + appNames.join(" and ") : ""}, and put a short report with sources in your Agents inbox.` +
+    (appNames.length ? " If it finds something to change in your apps, it will ask you first." : "") +
+    (d.note ? " " + d.note : "") + " Check it below, then turn it on.";
+}
+const _hydrateUI3 = hydrateUI;
+hydrateUI = function(el, m){
+  _hydrateUI3(el, m);
+  try{
+    if(!m.agentDraft || m.pending || m.error || el.querySelector(".agentcard")) return;
+    const a = m.agentDraft, saved = AG.list.find(x => x.id === m.agentSaved);
+    const card = document.createElement("div"); card.className = "agentcard";
+    card.innerHTML = `<div class="agtop"><div><div class="agname">${esc(a.name)}</div><div class="muted small">${esc(agWhen(a.schedule))}</div></div><span class="agtag">Agent</span></div>
+      <div class="aggoal">${esc(a.goal)}</div>
+      ${(a.apps || []).length ? `<div class="agapps">${a.apps.map(id => `<span class="agtag">${esc((appById(id) || {}).name || id)}</span>`).join("")}</div>` : ""}
+      ${m.agentSaved ? `<div class="muted small">${saved ? (saved.enabled ? "On" + (saved.nextRun ? " · Next run " + esc(agTime(saved.nextRun)) : "") : "Paused") : "Turned on"}</div>
+        <div class="agbtns"><button class="btn sm" data-open>Open Agents</button></div>`
+      : `<div class="agbtns"><button class="btn primary sm" data-on>Turn on</button><button class="btn sm" data-edit>Edit first</button></div>`}`;
+    el.insertBefore(card, el.querySelector(".actions") || null);
+    const on = card.querySelector("[data-on]");
+    if(on) on.onclick = async () => {
+      on.disabled = true; on.textContent = "Turning on…";
+      try{
+        const d = await agentsCall("save", { agent:Object.assign({}, a, { tz:AG_TZ }) });
+        agApply(d); m.agentSaved = d.saved.id; persistChat(); agSyncContext(true);
+        toast(`"${d.saved.name}" is on. ${d.saved.when}.`);
+        card.remove(); hydrateUI(el, m);
+      }catch(e){ on.disabled = false; on.textContent = "Turn on"; toast(e.message); if(/Pro/.test(e.message)) openUpgrade(e.message); }
+    };
+    const ed = card.querySelector("[data-edit]"); if(ed) ed.onclick = () => openAgentEditor(a);
+    const op = card.querySelector("[data-open]"); if(op) op.onclick = () => openAgents("agents");
+  }catch(e){ console.warn("agent card", e); }
+};
+
+$("navAgents").onclick = () => { if(innerWidth < 820) closeSide(); openAgents(); };
+</script>
 
 <script>
 /* =====================================================================
@@ -4335,6 +4797,7 @@ function openGuestWall(byChoice, why){
 async function onSignedIn(u){
   if(!u){
     $("app").classList.add("hidden"); $("auth").classList.remove("hidden");
+    try{ clearInterval(agTimer); AG.list = []; AG.unread = 0; agBadge(); }catch(e){}
     S.user = null; S.profile = null; S.chats = []; S.library = []; S.libMap = {}; return;
   }
   if(S.user && S.user.uid === u.uid) return;
@@ -4360,6 +4823,7 @@ async function onSignedIn(u){
   if(S.profile.proKey) api("/verify", { key:S.profile.proKey }).then(r => { S.pro = !!r.valid; renderUsage(); }).catch(() => {});
   $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
   renderMe(); renderUsage(); setMode("aivx", true); newChat();
+  try{ agentsBoot(); }catch(e){}
   const hm = location.hash.match(/^#app\/(\w+)/);
   if(hm){ const a = APPS.find(x => x.id === hm[1]); if(a && a.url) setTimeout(() => openFullApp(a), 0); }
   if(innerWidth < 820) closeSide(); else $("sideOpen").classList.add("hidden");
@@ -4371,6 +4835,3 @@ Auth.init(onSignedIn).catch(e => { $("auth").classList.remove("hidden"); $("auth
 </script>
 </body>
 </html>
-
-
-
