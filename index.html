@@ -261,6 +261,15 @@ details.thought div{white-space:pre-wrap;margin-top:8px}
 .src:hover{background:var(--bg2)}
 .src .h{color:var(--muted);font-size:12px}
 .src .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eco{margin-top:8px;font-size:12px;color:var(--muted)}
+.eco summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px}
+.eco summary::-webkit-details-marker{display:none}
+.eco summary::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
+.eco summary:hover{color:var(--text2)}
+.eco .eco-box{margin-top:8px;border:1px solid var(--line);border-radius:12px;padding:10px 14px;max-width:440px;color:var(--text2);line-height:1.6}
+.eco .eco-row{display:flex;justify-content:space-between;gap:16px}
+.eco .eco-row b{font-weight:500;color:var(--text)}
+.eco .eco-note{margin-top:6px;color:var(--muted)}
 .genimg{max-width:420px;width:100%;border-radius:16px;display:block;margin:6px 0;cursor:zoom-in}
 .artifact-card{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0;background:var(--panel);cursor:pointer;max-width:420px}
 .artifact-card:hover{background:var(--bg2)}
@@ -666,9 +675,13 @@ th.sortable:hover{color:var(--text)}
 .agact .agbtns{margin-top:0}
 .agact.done .agactt,.agact.skipped .agactt{color:var(--text2)}
 .qa .qabadge{min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--text);color:var(--bg);font-size:10.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;margin-left:2px}
+.netbanner{position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--text);color:var(--bg);text-align:center;font-size:13.5px;padding:8px 14px}
+button:focus-visible,a:focus-visible,[role=button]:focus-visible,summary:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
+<noscript><div style="max-width:520px;margin:80px auto;padding:0 20px;font-family:system-ui,sans-serif;text-align:center"><h1 style="font-size:22px">AIV X needs JavaScript</h1><p>Turn on JavaScript in your browser settings, then reload this page.</p></div></noscript>
 
 <!-- ================= SIGN IN ================= -->
 <div id="auth" class="hidden">
@@ -826,6 +839,7 @@ th.sortable:hover{color:var(--text)}
 //    The app key identifies AIV X to its API — it must match the AIVX_APP_KEY secret in the Worker.
 const AIV_API_URL = "https://aivx-api.domhasaball.workers.dev";
 const AIVX_APP_KEY = "aivx_iGsNWk4eHXokoW8awHmMVZpm";
+const AIV_BROWSE_URL = "https://api.aiverse.it.com/v1/browse";   // AIV Browse engine (aiv-browse repo), used by AIV-1 Eco
 
 // 2) Firebase web config (Firebase console → Project settings → Your apps → Web).
 //    Leave apiKey empty to run in DEMO MODE (accounts + memory stay in this browser).
@@ -883,6 +897,7 @@ const MODELS = [
   { id:"auto",  name:"AIV-1",          desc:"Best for most things. Searches, checks facts, sees photos" },
   { id:"fast",  name:"AIV-1 Fast",     desc:"Quick answers" },
   { id:"think", name:"AIV-1 Thinking", desc:"Reasons step by step for harder problems" },
+  { id:"eco",   name:"AIV-1 Eco",      desc:"Uses less energy and water, and shows the estimate" },
 ];
 
 const TOOLS = {
@@ -952,10 +967,27 @@ function brandSVG(){
   </g></svg>`;
 }
 function paintBrand(){ document.querySelectorAll("[data-brand]").forEach(el => { if(!el.firstChild) el.innerHTML = brandSVG(); }); }
-function paintIcons(root){ (root || document).querySelectorAll('[data-i]').forEach(el => { if(!el.firstChild) el.innerHTML = icon(el.dataset.i); }); }
+function paintIcons(root){
+  (root || document).querySelectorAll('[data-i]').forEach(el => { if(!el.firstChild) el.innerHTML = icon(el.dataset.i); });
+  labelButtons(root);
+}
+// Screen readers: give icon-only buttons a name (from their tooltip), and hide decorative icons
+function labelButtons(root){
+  (root || document).querySelectorAll("button, a.btn, [role=button]").forEach(b => {
+    if(b.getAttribute("aria-label")) return;
+    const txt = (b.textContent || "").trim();
+    const name = b.title || (b.hasAttribute("data-close") ? "Close" : "");
+    if(!txt && name) b.setAttribute("aria-label", name);
+  });
+  (root || document).querySelectorAll("svg:not([aria-hidden])").forEach(s => s.setAttribute("aria-hidden", "true"));
+}
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Only real web links are ever put in an href (blocks javascript: and data: links from outside content)
+const safeUrl = u => { u = String(u || "").trim(); return /^https?:\/\//i.test(u) ? u : "#"; };
+// Turn any server error shape into plain text
+const errText = (e, fallback) => { if(!e) return fallback || "Something went wrong."; if(typeof e === "string") return e; return e.message || (e.error && (e.error.message || e.error)) || fallback || "Something went wrong."; };
 const uid = (p="") => p + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
 const today = () => new Date().toISOString().slice(0,10);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1023,6 +1055,8 @@ const Store = {
       if(!LSX.set("aivx_c_" + this.uid, all.slice(0, 150))) toast("Browser storage is full — delete some chats or images.");
       return;
     }
+    // Firestore documents can't be larger than 1 MB: drop the oldest messages of a very long chat rather than fail to save
+    while(clean.messages.length > 4 && JSON.stringify(clean).length > 900000) clean.messages.splice(0, Math.max(2, Math.floor(clean.messages.length / 10)));
     await fb.firestore().collection("users").doc(this.uid).collection("chats").doc(chat.id).set(clean);
   },
   async deleteChat(id){
@@ -1042,6 +1076,8 @@ const Store = {
       if(!LSX.set("aivx_l_" + this.uid, all.slice(0, 200))) toast("Browser storage is full — delete some library items.");
       return;
     }
+    if(item.src && item.src.length > 900000 && /^data:image/.test(item.src)){ try{ item.src = await resizeImage(item.src, 900, 0.72); }catch(e){} }   // keep images under Firestore's 1 MB limit
+    if(JSON.stringify(item).length > 1000000) throw new Error("This item is too large to save.");
     await fb.firestore().collection("users").doc(this.uid).collection("library").doc(item.id).set(item);
   },
   async deleteLib(id){
@@ -1306,13 +1342,19 @@ async function saveProfile(){
 /* =====================================================================
    API
    ===================================================================== */
+function statusText(code){
+  if(code === 429) return "AIV X is getting a lot of requests right now. Give it a minute and try again.";
+  if(code === 401 || code === 403) return "AIV X couldn't confirm this request. Refresh the page and try again.";
+  if(code >= 500) return "AIV X is having a problem on our side. Try again in a moment.";
+  return "That didn't go through (" + code + "). Try again.";
+}
 async function api(path, body){
   const res = await fetch(AIV_API_URL + path, {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify(Object.assign({}, body, { key: S.profile && S.profile.proKey || undefined, appKey: AIVX_APP_KEY, train: !(S.profile && S.profile.settings && S.profile.settings.improve === false) }))
   });
   const data = await res.json().catch(() => ({}));
-  if(!res.ok) throw new Error(data.error || ("Request failed (" + res.status + ")"));
+  if(!res.ok) throw new Error(errText(data.error, statusText(res.status)));
   return data;
 }
 async function ask(messages, opts = {}){
@@ -1324,7 +1366,7 @@ async function streamChat(messages, { model = "auto", onToken, signal, max_token
     method:"POST", headers:{ "Content-Type":"application/json" }, signal,
     body: JSON.stringify({ messages, model, stream:true, max_tokens, key: S.profile.proKey || undefined, appKey: AIVX_APP_KEY, train: S.profile.settings.improve !== false })
   });
-  if(!res.ok){ const d = await res.json().catch(() => ({})); throw new Error(d.error || ("Request failed (" + res.status + ")")); }
+  if(!res.ok){ const d = await res.json().catch(() => ({})); throw new Error(errText(d.error, statusText(res.status))); }
   const ct = res.headers.get("content-type") || "";
   if(!ct.includes("event-stream")){ const d = await res.json(); onToken(d.reply || "", true); return d.reply || ""; }
   const reader = res.body.getReader(), dec = new TextDecoder();
@@ -1401,6 +1443,7 @@ How you respond:
   }
   p += "\n\nHOW YOU IMPROVE (say this accurately if asked; never claim you retrain yourself mid-chat): you don't change during a conversation, but AIV X has a nightly learning loop. It learns from examples (answers people liked guide new answers), from preferences (thumbs-down feedback becomes rules for everyone, and better-vs-worse answer pairs are saved), and from practice (AIV-1 re-answers questions people disliked, a judge scores them, and AI Verse approves the good ones). The saved examples and pairs can then be used to fine-tune the model, which updates its weights. You also remember facts and preferences about this user in Memory. The user can help with the thumbs buttons under any answer.";
   p += "\n\nIf the user asks what you remember about them, tell them plainly from the MEMORY section above (or say you don't have anything saved yet), and mention they can manage it in Settings > Memory.";
+  if(S.model === "eco") p += "\n\nECO MODE: the user picked AIV-1 Eco, which saves energy and water. Answer directly and concisely. Only search the web when the answer really depends on current or outside information, and use one focused search rather than several. If asked about Eco mode, explain that it uses the cheapest method that still answers well (caching, plain-text page reading instead of full page rendering, a smaller model, early stopping) and that the energy and water numbers under each answer are estimates, not measurements.";
   if(extra) p += "\n\n" + extra;
   return p;
 }
@@ -1434,7 +1477,7 @@ function renderMarkdown(text, sources){
   let src = String(text || "");
   let html = (window.marked && window.DOMPurify) ? DOMPurify.sanitize(marked.parse(src), { ADD_ATTR:["target"] }) : "<p>" + esc(src).replace(/\n/g, "<br>") + "</p>";
   const div = document.createElement("div"); div.innerHTML = html;
-  div.querySelectorAll("a").forEach(a => { a.target = "_blank"; a.rel = "noopener"; });
+  div.querySelectorAll("a").forEach(a => { a.target = "_blank"; a.rel = "noopener noreferrer"; if(a.getAttribute("href") && !/^(https?:|mailto:|tel:|#)/i.test(a.getAttribute("href").trim())) a.removeAttribute("href"); });
   div.querySelectorAll("pre > code").forEach(code => {
     const pre = code.parentElement;
     const lang = ((code.className.match(/language-([\w-]+)/) || [])[1] || "").toLowerCase();
@@ -1446,7 +1489,7 @@ function renderMarkdown(text, sources){
   });
   if(sources && sources.length){
     div.innerHTML = div.innerHTML.replace(/\[(\d{1,2})\](?![^<]*<\/a>)/g, (m, n) => {
-      const s = sources[+n - 1]; return s ? `<a href="${esc(s.url)}" target="_blank" rel="noopener" title="${esc(s.title)}"><sup>[${n}]</sup></a>` : m;
+      const s = sources[+n - 1]; return s ? `<a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer" title="${esc(s.title)}"><sup>[${n}]</sup></a>` : m;
     });
   }
   return div.innerHTML;
@@ -1542,7 +1585,8 @@ function msgEl(m){
     (m.images || []).forEach(im => { const src = im.src || (S.libMap[im.lib] && S.libMap[im.lib].src); if(src) html += `<img class="genimg" src="${src}" alt="${esc(im.prompt || "Generated image")}">`; });
     if(m.artifact){ const k = m.artifact; html += `<div class="artifact-card" data-lib="${esc(k.lib)}"><div class="ic">${KIND_EMO[k.kind] || "FILE"}</div><div><div class="tt">${esc(k.title)}</div><div class="st">${m.pending ? "Building…" : "Click to open"}</div></div></div>`; }
     if(m.runs && m.runs.length && !m.pending) html += runsHTML(m.runs);
-    if(m.sources && m.sources.length) html += `<div class="sources">${m.sources.map((s, i) => `<a class="src" href="${esc(s.url)}" target="_blank" rel="noopener"><span class="h">[${i+1}] ${esc(hostOf(s.url))}</span><span class="tt">${esc(s.title)}</span></a>`).join("")}</div>`;
+    if(m.sources && m.sources.length) html += `<div class="sources">${m.sources.map((s, i) => `<a class="src" href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener"><span class="h">[${i+1}] ${esc(hostOf(s.url))}</span><span class="tt">${esc(s.title)}</span></a>`).join("")}</div>`;
+    if(m.eco && !m.pending && !m.error) html += ecoHTML(m);
     if(m.error) html += `<div class="err-msg">${esc(m.error)}</div>`;
     if(!m.pending){
       html += `<div class="actions"><button class="iconbtn" data-a="copy" title="Copy"><span data-i="copy"></span></button><button class="iconbtn" data-a="speak" title="Read aloud"><span data-i="speaker"></span></button><button class="iconbtn" data-a="regen" title="Regenerate"><span data-i="redo"></span></button><button class="iconbtn ${m.rating > 0 ? "on" : ""}" data-a="good" title="Good response"><span data-i="up2"></span></button><button class="iconbtn ${m.rating < 0 ? "on" : ""}" data-a="bad" title="Bad response"><span data-i="down2"></span></button></div>`;
@@ -1771,6 +1815,8 @@ async function runAssistant(ai, userMsg, tool){
   S.busy = true; S.abort = new AbortController(); setSending(true);
   const cost = tool === "research" || tool === "video" ? 3 : 1;
   bump(cost);
+  // Eco readout applies to text answers (chat, search, links). Media and builds are left out.
+  if(S.model === "eco" && !["image", "video", "app", "build", "research"].includes(tool) && !(userMsg.routed && !tool)) ecoStart(ai); else ai.eco = null;
   try{
     if(userMsg.agentAsk && !tool) await doAgentDraft(ai, userMsg);
     else if(userMsg.routed && (!tool || tool === "image")) await doRouted(ai, userMsg);
@@ -1794,6 +1840,7 @@ async function runAssistant(ai, userMsg, tool){
     if(e.name === "AbortError"){ if(!ai.content) ai.content = "_Stopped._"; }
     else { ai.error = friendlyError(e); refund(cost); }
   }
+  if(ai.eco){ if(ai.error || !ai.content) ai.eco = null; else ecoFinish(ai); }
   ai.pending = false; ai.status = "";
   (ai.steps || []).forEach(s => s.done = true);
   updateMsg(ai, true);
@@ -1804,8 +1851,11 @@ async function runAssistant(ai, userMsg, tool){
   contribute(userMsg, ai);
 }
 function friendlyError(e){
-  const m = String(e.message || e);
-  if(/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Couldn't reach AIV. Check your connection" + (AIV_API_URL.includes("YOUR-SUBDOMAIN") ? " — the AIV API URL hasn't been set up yet." : ".");
+  const m = errText(e && e.message !== undefined ? e.message : e);
+  if(navigator.onLine === false) return "You're offline. Reconnect and tap the retry button below.";
+  if(/Failed to fetch|NetworkError|Load failed|network error|ERR_/i.test(m)) return "Couldn't reach AIV X. Check your connection and tap the retry button below.";
+  if(/\[object Object\]|^undefined$|^null$/.test(m)) return "Something went wrong. Tap the retry button below.";
+  if(/quota|resource-exhausted/i.test(m)) return "AIV X is at capacity right now. Try again in a little while.";
   return m;
 }
 function setSending(on){
@@ -1827,7 +1877,7 @@ async function regenerate(m){
   const userMsg = S.chat.messages[i - 1];
   if(!userMsg || userMsg.role !== "user") return;
   if(!canUse()) return;
-  Object.assign(m, { content:"", error:null, pending:true, images:[], sources:null, steps:null, artifact:null, memNote:null, tool:userMsg.tool });
+  Object.assign(m, { content:"", error:null, pending:true, images:[], sources:null, steps:null, artifact:null, memNote:null, eco:null, tool:userMsg.tool });
   updateMsg(m, true);
   S.chat.messages = S.chat.messages.slice(0, i + 1);
   renderThread();
@@ -2063,6 +2113,75 @@ async function doAgentChat(ai, userMsg, hint){
   }
 }
 
+/* ---------------- AIV-1 Eco: efficient browsing + energy/water estimates ----------------
+   Web lookups go to the AIV Browse engine (cache first, plain-text reading, early stopping).
+   Every number here is a modeled ESTIMATE, never a measurement. Coefficients match
+   FOOTPRINT in the aiv-browse repo (src/config.js); keep the two in sync. */
+const ECO = {
+  whPerToken: { small:0.00005, large:0.0004 },
+  pue: 1.2,
+  waterLPerKwh: 0.5 + 2.0,          // on-site cooling + electricity generation
+  baselineContext: 3,               // traditional approach: ~3x more context sent to a large model
+};
+function ecoWater(wh){ return wh / 1000 * ECO.waterLPerKwh * 1000; }   // mL
+function ecoStart(ai){
+  ai.eco = { browseWh:0, browseBaseWh:0, answerWh:0, answerBaseWh:0, searches:0, fetches:0, renders:0, cacheHits:0, skipped:0, steps:{}, rounds:1, fallback:false };
+}
+function ecoAdd(ai, r){
+  const e = ai.eco; if(!e || !r) return;
+  const f = r.footprint || {}, u = r.usage || {};
+  e.browseWh += f.energy_wh || 0; e.browseBaseWh += f.baseline_energy_wh || 0;
+  e.searches += u.search_calls || 0; e.fetches += u.fetches || 0; e.renders += u.renders || 0;
+  e.cacheHits += u.cache_hits || 0; e.skipped += u.skipped_fetches || 0;
+  if(r.cache && r.cache !== "miss") e.steps[r.cache + " cache"] = (e.steps[r.cache + " cache"] || 0) + 1;
+  Object.entries(u.retrieval_steps || {}).forEach(([k, n]) => e.steps[k] = (e.steps[k] || 0) + n);
+}
+// Ask the AIV Browse engine for compressed, cited source text (no answer; AIV-1 writes that).
+async function browseEco(q, ai){
+  const res = await fetch(AIV_BROWSE_URL, {
+    method:"POST", headers:{ "Content-Type":"application/json" }, signal: S.abort && S.abort.signal,
+    body: JSON.stringify({ question:q, mode:"eco", include_answer:false })
+  });
+  const d = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error(d.error || ("Browse failed (" + res.status + ")"));
+  ecoAdd(ai, d);
+  if(ai.eco) ai.eco.rounds++;
+  return d;
+}
+// Estimate the answer's own inference (prompt + reply) after it finishes.
+function ecoFinish(ai){
+  const e = ai.eco; if(!e) return;
+  let promptChars = 0;
+  try{ promptChars = systemPrompt().length + JSON.stringify(historyFor(S.chat, S.chat.messages.indexOf(ai))).length; }catch(x){ promptChars = 6000; }
+  const tokens = (promptChars * e.rounds + (ai.content || "").length) / 4;
+  e.answerWh = tokens * ECO.whPerToken.small * ECO.pue;
+  e.answerBaseWh = tokens * ECO.baselineContext * ECO.whPerToken.large * ECO.pue;
+}
+function ecoTotals(e){
+  const wh = e.browseWh + e.answerWh, base = Math.max(e.browseBaseWh + e.answerBaseWh, wh);
+  return { wh, ml:ecoWater(wh), baseWh:base, baseMl:ecoWater(base), saved: base > 0 ? Math.max(0, Math.round((1 - wh / base) * 100)) : 0 };
+}
+function fmtWh(wh){ return wh < 0.01 ? "<0.01 Wh" : (wh < 1 ? wh.toFixed(2) : wh.toFixed(1)) + " Wh"; }
+function fmtMl(ml){ return ml < 0.01 ? "<0.01 mL" : (ml < 1 ? ml.toFixed(2) : ml.toFixed(1)) + " mL"; }
+function ecoHTML(m){
+  const e = m.eco; if(!e) return "";
+  const t = ecoTotals(e);
+  const how = Object.keys(e.steps).length ? Object.keys(e.steps).map(k => k === "http" ? "plain text" : k === "jsonld" ? "structured data" : k === "render" ? "page render" : k).join(", ") : (e.fallback ? "standard search" : "no browsing needed");
+  const nSrc = (m.sources || []).length;
+  const line = `${how === "no browsing needed" ? "No browsing needed" : "Retrieved via " + how}${nSrc ? " · " + nSrc + " source" + (nSrc > 1 ? "s" : "") : ""} · est. ${fmtWh(t.wh)} / ${fmtMl(t.ml)} water`;
+  const row = (a, b) => `<div class="eco-row"><span>${a}</span><b>${b}</b></div>`;
+  return `<details class="eco"><summary>${esc(line)}</summary><div class="eco-box">` +
+    row("Estimated energy", fmtWh(t.wh)) + row("Estimated water", fmtMl(t.ml)) +
+    row("Same task, traditional approach", fmtWh(t.baseWh) + " / " + fmtMl(t.baseMl)) +
+    row("Estimated savings", "about " + t.saved + "% less") +
+    (e.searches || e.fetches ? row("Searches · pages read", e.searches + " · " + e.fetches) : "") +
+    (e.cacheHits ? row("Reused from cache", String(e.cacheHits)) : "") +
+    (e.skipped ? row("Pages skipped (early stop)", String(e.skipped)) : "") +
+    row("Full page renders", String(e.renders)) +
+    `<div class="eco-note">${e.fallback ? "The efficient browsing engine wasn't reachable, so standard search was used. " : ""}These are modeled estimates based on the work done for this answer, not direct measurements. The traditional comparison assumes every page is fully rendered and a larger model reads more text.</div>` +
+    `</div></details>`;
+}
+
 /* ---------------- general tools the chat can use on its own ---------------- */
 const GENERAL_TOOLS = ["search", "read", "image", "video", "document", "spreadsheet", "slides", "recall"];
 const TOOL_STATUS = { search:"Searching the web", read:"Reading the page", image:"Creating an image", video:"Making a video", document:"Writing the document", spreadsheet:"Building the spreadsheet", slides:"Designing the slides", recall:"Looking through your chats" };
@@ -2075,6 +2194,17 @@ async function runGeneralTool(d, a, ai, userMsg){
   try{
     if(d === "search"){
       const q = String(a.q || a.query || "").slice(0, 300);
+      if(S.model === "eco" && ai.eco){
+        try{
+          const b = await browseEco(q, ai);
+          const src = (b.sources || []).filter(x => x.text);
+          if(src.length){
+            ai.sources = ai.sources || [];
+            const lines = src.map(x => { ai.sources.push({ title:x.title, url:x.url, snippet:"" }); return `[${ai.sources.length}] ${x.title} — ${x.url}\n${x.text}`; });
+            return R(`Searched the web efficiently for “${q}”` + (b.cache && b.cache !== "miss" ? " (from cache)" : ""), "Search results (already-read page text, use these and don't read the same pages again):\n" + lines.join("\n\n"));
+          }
+        }catch(e){ if(e.name === "AbortError") throw e; ai.eco.fallback = true; }
+      }
       const r = await api("/search", { q });
       const res = (r.results || []).slice(0, 6);
       ai.sources = ai.sources || [];
@@ -2167,6 +2297,20 @@ async function doSearch(ai, userMsg){
   let q = userMsg.content;
   if(S.chat.messages.length > 2){
     try{ q = (await ask([{ role:"system", content:"Turn the user's latest message into one short web search query, using the conversation for context. Reply with the query only." }, ...historyFor(S.chat, S.chat.messages.indexOf(ai)).slice(-6).map(m => ({ role:m.role, content:typeof m.content === "string" ? m.content.slice(0, 1500) : m.content[0].text.slice(0,1500) }))], { model:"fast", max_tokens:40 })).replace(/["]/g, "").trim() || q; }catch(e){}
+  }
+  if(S.model === "eco" && ai.eco){
+    try{
+      const b = await browseEco(q, ai);
+      const src = (b.sources || []).filter(x => x.text);
+      if(src.length){
+        ai.sources = src.map(x => ({ title:x.title, url:x.url, snippet:"" }));
+        ai.steps[0].done = true; ai.steps[0].text = `Searched “${q}” efficiently · read ${src.length} page${src.length > 1 ? "s" : ""}` + (b.cache && b.cache !== "miss" ? " from cache" : "");
+        updateMsg(ai);
+        const block = "WEB SEARCH RESULTS, already-read page text (cite them inline like [1], [2] matching these numbers; if they don't answer the question, say so):\n" +
+          src.map((s, i) => `[${i+1}] ${s.title} — ${s.url}\n${s.text}`).join("\n\n");
+        return doChat(ai, userMsg, "", block);
+      }
+    }catch(e){ if(e.name === "AbortError") throw e; ai.eco.fallback = true; }
   }
   const r = await api("/search", { q });
   ai.sources = (r.results || []).slice(0, 8);
@@ -3404,7 +3548,7 @@ Only use the notes provided.`, block.slice(0, 90000), { maxTokens:6000, model:"a
 /* =====================================================================
    AIV-1 + AIV CODE — model names, live status, and the write → run → fix loop
    ===================================================================== */
-function aivModel(m){ return m === "think" ? "aiv-1-think" : m === "fast" ? "aiv-1-fast" : "aiv-1"; }
+function aivModel(m){ return m === "think" ? "aiv-1-think" : (m === "fast" || m === "eco") ? "aiv-1-fast" : "aiv-1"; }
 const PYODIDE_URL = window.AIV_PYODIDE || "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
 const CODE_EXT = { js:"js", javascript:"js", mjs:"js", jsx:"jsx", ts:"ts", typescript:"ts", tsx:"tsx", py:"py", python:"py", python3:"py", html:"html", htm:"html", css:"css", json:"json", sql:"sql", sh:"sh", bash:"sh", java:"java", c:"c", cpp:"cpp", "c++":"cpp", cs:"cs", go:"go", rust:"rs", rs:"rs", php:"php", rb:"rb", ruby:"rb", swift:"swift", kotlin:"kt", kt:"kt", yaml:"yml", yml:"yml", md:"md", markdown:"md", txt:"txt", xml:"xml" };
 function codeBlocks(md){
@@ -3939,6 +4083,11 @@ function agBadge(){
 }
 function agApply(d){
   if(!d) return;
+  // tell the person when a new report or approval arrives while they're using AIV X
+  if(AG.ready && d.unread !== undefined && (d.unread > AG.unread || (d.approvals || 0) > AG.approvals) && !document.querySelector("#modal #agBody")){
+    toast((d.approvals || 0) > AG.approvals ? "Your agent has changes waiting for your approval" : "New report from your agent");
+  }
+  if(d.runsLeft !== undefined) AG.runsLeft = d.runsLeft;
   if(d.agents) AG.list = d.agents;
   if(d.unread !== undefined) AG.unread = d.unread;
   if(d.approvals !== undefined) AG.approvals = d.approvals;
@@ -4036,7 +4185,7 @@ function drawAgentList(){
       ${(a.apps || []).length ? `<div class="agapps">${a.apps.map(id => `<span class="agtag">${esc((appById(id) || {}).name || id)}</span>`).join("")}</div>` : ""}
       ${a.lastRun ? `<div class="muted small">Last run ${esc(agTime(a.lastRun))}${a.lastStatus && a.lastStatus !== "ok" ? " · " + esc(a.lastStatus) : ""}</div>` : `<div class="muted small">Hasn't run yet</div>`}
       <div class="agbtns"><button class="btn sm" data-run>Run now</button><button class="btn sm" data-rep>Reports</button><button class="btn sm" data-edit>Edit</button><button class="btn sm agdel" data-del>Delete</button></div>
-    </div>`).join("") + `<p class="muted small" style="margin-top:14px">${AG.plan === "pro" ? "AIV Pro: up to " + AG.limits.agents + " agents, as often as every hour." : "Free plan: 1 agent that runs up to once a day. <a href='#' id='agUp'>Get AIV Pro</a> for up to 10 agents that run as often as every hour."} Agents search the web and the apps you let them use. They only change your apps after you approve, and never send messages, buy, or delete anything.</p>`;
+    </div>`).join("") + `<p class="muted small" style="margin-top:14px">${AG.plan === "pro" ? "AIV Pro: up to " + AG.limits.agents + " agents, as often as every hour." : "Free plan: 1 agent that runs up to once a day. <a href='#' id='agUp'>Get AIV Pro</a> for up to 10 agents that run as often as every hour."} ${AG.runsLeft !== undefined ? AG.runsLeft + " of " + AG.limits.runsPerDay + " runs left today. " : ""}Agents search the web and the apps you let them use. They only change your apps after you approve, and never send messages, buy, or delete anything.</p>`;
   const up = $("agUp"); if(up) up.onclick = e => { e.preventDefault(); closeModal(); openUpgrade("Get more agents with AIV Pro."); };
   b.querySelectorAll(".agcard").forEach(c => {
     const a = AG.list.find(x => x.id === c.dataset.id);
@@ -4088,7 +4237,7 @@ function drawAgentRuns(only, openId){
       body.classList.toggle("hidden", !show);
       if(!show) return;
       body.innerHTML = agActionsHTML(r) + `<div class="md">${renderMarkdown(r.report || "", (r.sources || []).map(s => ({ title:s.title, url:s.url })))}</div>
-        ${(r.sources || []).length ? `<div class="agsrc">${r.sources.map((s, i) => `<a href="${esc(s.url)}" target="_blank" rel="noopener">[${i + 1}] ${esc(s.title || s.url)}</a>`).join("")}</div>` : ""}
+        ${(r.sources || []).length ? `<div class="agsrc">${r.sources.map((s, i) => `<a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">[${i + 1}] ${esc(s.title || s.url)}</a>`).join("")}</div>` : ""}
         ${(r.steps || []).length ? `<details class="agsteps"><summary>What the agent did</summary><ul>${r.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ul></details>` : ""}
         <div class="agbtns"><button class="btn sm" data-chat>Discuss in chat</button></div>`;
       body.querySelector("[data-chat]").onclick = () => agDiscuss(r, name(r.agentId));
@@ -4201,6 +4350,7 @@ function openAgentEditor(a, note){
     <label class="label" style="margin-top:0">Name</label><input class="input" id="agName" maxlength="60" value="${esc(a.name)}" placeholder="Morning briefing">
     <label class="label">What it does</label><textarea class="input" id="agGoal" rows="5" maxlength="1500" placeholder="What to look for and how to write the report">${esc(a.goal)}</textarea>
     <label class="label">Anything it should know about you <span class="muted small">— optional</span></label><textarea class="input" id="agAbout" rows="2" maxlength="1500" placeholder="I'm a beginner investor. I care most about tech stocks.">${esc(a.about || "")}</textarea>
+    ${(S.profile.memories || []).length ? `<button class="linkbtn small" id="agMem" type="button" style="margin-top:6px">Add what AIV X remembers about me</button>` : ""}
     <label class="label">Apps it can use <span class="muted small">— optional</span></label>
     <div class="agappsel">${APPS.filter(x => x.url).map(x => `<label class="agchk"><input type="checkbox" value="${x.id}" ${(a.apps || []).includes(x.id) ? "checked" : ""}> ${esc(x.name)}</label>`).join("")}</div>
     <div class="muted small" style="margin-top:6px">It can read what you've saved in these apps and suggest changes, like adding tasks or jobs. Nothing changes until you approve it.</div>
@@ -4221,6 +4371,13 @@ function openAgentEditor(a, note){
   $("agNotify").value = String(AG.emailReady && AG.email ? (a.notify || 0) : 0);
   const sync = () => { const k = $("agKind").value; $("agDay").classList.toggle("hidden", k !== "weekly"); $("agTime").classList.toggle("hidden", k === "hours"); $("agEvery").classList.toggle("hidden", k !== "hours"); };
   $("agKind").onchange = sync; sync();
+  const mem = $("agMem");
+  if(mem) mem.onclick = () => {
+    const have = $("agAbout").value.trim();
+    const add = (S.profile.memories || []).map(m => String(m.text || "").replace(/^User said: "?|"$/g, "")).filter(t => t && !have.includes(t)).slice(0, 12).join(". ");
+    $("agAbout").value = (have ? have + " " : "") + add.slice(0, 1500 - have.length - 1);
+    mem.remove();
+  };
   const collect = () => ({ id:a.id, apps:[...document.querySelectorAll(".agappsel input:checked")].map(x => x.value), name:$("agName").value.trim() || "My agent", goal:$("agGoal").value.trim(), about:$("agAbout").value.trim(), tz:AG_TZ, notify:+$("agNotify").value,
     schedule:{ kind:$("agKind").value, time:$("agTime").value || "08:00", day:+$("agDay").value, every:+$("agEvery").value } });
   const save = async (runAfter, btn) => {
@@ -4857,7 +5014,24 @@ async function onSignedIn(u){
 paintIcons();
 paintBrand();
 setSending(false);
-Auth.init(onSignedIn).catch(e => { $("auth").classList.remove("hidden"); $("authErr").textContent = "Couldn't start sign-in: " + e.message; });
+/* ---------------- connection status + safety nets ---------------- */
+function netBanner(){
+  let b = $("netBanner");
+  if(navigator.onLine === false){
+    if(!b){ b = document.createElement("div"); b.id = "netBanner"; b.className = "netbanner"; b.setAttribute("role", "status"); b.textContent = "You're offline. AIV X will work again when you reconnect."; document.body.appendChild(b); }
+  }else if(b){ b.remove(); toast("Back online"); try{ refreshAgents(); }catch(e){} }
+}
+window.addEventListener("offline", netBanner); window.addEventListener("online", netBanner); netBanner();
+// Never leave the app stuck on "sending" because of an unexpected error
+window.addEventListener("unhandledrejection", e => { console.warn("unhandled", e.reason); });
+window.addEventListener("error", e => { console.warn("error", e.message); });
+new MutationObserver(muts => { for(const m of muts) for(const n of m.addedNodes) if(n.nodeType === 1) labelButtons(n); }).observe(document.body, { childList:true, subtree:true });
+
+Auth.init(onSignedIn).catch(e => {
+  $("auth").classList.remove("hidden");
+  $("authErr").innerHTML = (navigator.onLine === false ? "You're offline. Reconnect to sign in." : "Sign-in couldn't load. Check your connection, and turn off any ad or script blocker for this site.") + ' <a href="#" id="authReload">Reload</a>';
+  const r = $("authReload"); if(r) r.onclick = ev => { ev.preventDefault(); location.reload(); };
+});
 </script>
 </body>
 </html>
