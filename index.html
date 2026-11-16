@@ -678,6 +678,12 @@ th.sortable:hover{color:var(--text)}
 .netbanner{position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--text);color:var(--bg);text-align:center;font-size:13.5px;padding:8px 14px}
 button:focus-visible,a:focus-visible,[role=button]:focus-visible,summary:focus-visible{outline:2px solid var(--text);outline-offset:2px}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+.aglive{list-style:none;padding:0 6px 10px;margin:0 auto;max-width:560px;font-size:13.5px;line-height:1.55;color:var(--text2);max-height:240px;overflow-y:auto}
+.aglive li{padding:4px 0 4px 16px;position:relative}.aglive li::before{content:"";position:absolute;left:2px;top:12px;width:6px;height:6px;border-radius:50%;background:var(--text2)}
+.aglive li.think,.agsteps li.think{font-style:italic;color:var(--muted,var(--text2))}.aglive li.think::before{background:transparent;border:1px solid var(--text2)}
+.agsteps li.think{list-style:circle}
+.agrun.quiet .agrt{color:var(--text2)}
+.agnotes{padding-left:18px;font-size:13.5px;color:var(--text2);line-height:1.6;margin:4px 0 6px}
 </style>
 </head>
 <body>
@@ -1791,6 +1797,8 @@ async function send(textOverride){
   if(!canUse()) return;
 
   const chat = ensureChat();
+  // "Build me an AI assistant that…" typed in a normal chat goes to Build when this person can still build one
+  if(!S.tool && !S.pending.length && isAssistantAsk(text) && !(S.user && S.user.guest) && (S.pro || (S.profile.aiBuilds || 0) < FREE_ASSISTANT_BUILDS) && !chat.assistantId){ S.tool = "build"; renderTool(); }
   const tool = S.tool;
   const atts = S.pending.map(p => ({ kind:p.kind, name:p.name, thumb:p.thumb || null }));
   const ctx = S.pending.filter(p => p.text).map(p => `[Attached file: ${p.name}]\n${p.text}`).join("\n\n");
@@ -1828,7 +1836,8 @@ async function runAssistant(ai, userMsg, tool){
     else if(tool === "doc") await doDoc(ai, userMsg);
     else if(tool === "sheet") await doSheet(ai, userMsg);
     else if(tool === "slides") await doSlides(ai, userMsg);
-    else if(tool === "build") await doAssistant(ai, userMsg);
+    else if(tool === "build" && S.chat.assistantId && /^\s*(undo|go back|revert|put it back|undo that)\b[\s.!]*$/i.test(userMsg.content)) await (buildFor(S.chat) === "assistant" ? undoAssistant(ai) : undoFullApp(ai));
+    else if(tool === "build") await (buildFor(S.chat) === "assistant" ? doAssistant(ai, userMsg) : doFullApp(ai, userMsg));
     else if(tool === "app") await doBuild(ai, userMsg);
     else if(tool === "code") await doCode(ai, userMsg);
     else {
@@ -2422,38 +2431,170 @@ Rules: valid JSON with double quotes; use \\n for line breaks inside strings; no
 Never design an app meant to deceive people, impersonate a real person or organization, harass anyone, or give dangerous or illegal instructions — design a safe version instead.
 If a current app is provided, apply the user's requested changes and return the FULL updated JSON.`;
 
+/* Build works in stages, the way a careful builder would:
+   1. ask (only if something essential is missing)  2. design  3. sample data
+   4. test with practice questions  5. fix what failed  6. open it, and keep a version to undo to */
+const BUILD_ASK_SYSTEM = `Someone wants an AI app built for them. Decide whether you can build a good one right now.
+Reply with JSON only: {"ready":true} or {"ready":false,"questions":[{"q":"short question","options":["2-4 short answer choices"]}]}
+Ask ONLY when something essential is missing: what the app should mainly do, or who it is for. Ask at most 2 questions, each answerable in a few words. If the description already says what it does and for whom, or is 15 words or longer, reply {"ready":true}. Never ask about colors, names, or technical details: decide those yourself.`;
+const BUILD_JUDGE_SYSTEM = `You test a newly built AI app. You get the app's instructions and its replies to practice requests. The practice run had no working tools, so do NOT fail a reply for being unable to search the web, open files, or save records, as long as it says what it would do.
+Fail a reply only for real problems: it ignores the app's role, breaks one of its rules, has the wrong tone, is unhelpful or confusing, refuses something it should do, invents specific facts, or (for legal, medical, or money apps) acts like a licensed professional or skips needed cautions.
+Reply with JSON only: {"results":[{"pass":true,"issue":""}],"fix":"if anything failed, one or two sentences saying what to change in the instructions; otherwise empty"}  with one result per practice request, in order.`;
+function isAssistantAsk(text){
+  const t = String(text || "");
+  if(!t || t.length > 1200 || /```/.test(t)) return false;
+  if(/^\s*(how|what|why|can you (explain|tell)|is it|should i|where)\b/i.test(t) || /\b(python|javascript|typescript|code|coding|langchain|api key|tutorial|step[- ]by[- ]step guide|explain how|fine-?tun|dataset|train a model)\b/i.test(t)) return false;
+  return /\b(build|create|make|design|set ?up)\b[^.?!\n]{0,60}\b(ai (app|assistant|tutor|coach|helper|bot|chat ?bot|advisor|lawyer|writer|planner|companion|receptionist|trainer|teacher)|(custom|my own|personal|a|an) (ai )?(assistant|chat ?bot|gpt)|an ai (that|for|to|which))\b/i.test(t);
+}
+function buildSampleStore(spec, sample){
+  const records = {};
+  let n = 0;
+  spec.collections.forEach(c => {
+    const rows = sample && Array.isArray(sample[c.id]) ? sample[c.id] : (sample && Array.isArray(sample[c.name]) ? sample[c.name] : []);
+    records[c.id] = rows.slice(0, 3).map(r => {
+      const o = { id:uid("r"), _at:Date.now(), _sample:true };
+      c.fields.forEach(f => { if(r && r[f] != null && String(r[f]).trim()) o[f] = String(r[f]).slice(0, 400); });
+      return o;
+    }).filter(o => o[c.fields[0]]);
+    n += records[c.id].length;
+  });
+  return n ? { store:{ "aivapp.state":JSON.stringify({ records, files:[], chat:[] }) }, count:n } : { store:null, count:0 };
+}
+async function testAssistant(spec, tests, ai){
+  tests = tests.slice(0, 3);
+  if(!tests.length) return null;
+  const toolNote = [spec.tools.web && "search the web and read pages", spec.tools.files && "search the user's uploaded files", spec.tools.data && spec.collections.length && ("save and update records in " + spec.collections.map(c => c.name).join(", "))].filter(Boolean);
+  const sys = spec.instructions + `\n\n(This is a practice run. ${toolNote.length ? "In real use you can " + toolNote.join("; ") + ". Those tools are off right now, so say briefly what you would look up or save, then help as far as you can." : ""} Keep the reply under 150 words.)`;
+  const replies = await Promise.all(tests.map(q => ask([{ role:"system", content:sys }, { role:"user", content:q }], { model:"auto", max_tokens:400 }).catch(() => "")));
+  if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError");
+  let verdict = null;
+  try{
+    verdict = parseMemJSON(await ask([{ role:"system", content:BUILD_JUDGE_SYSTEM },
+      { role:"user", content:"APP INSTRUCTIONS:\n" + spec.instructions.slice(0, 5000) + "\n\n" + tests.map((q, i) => `PRACTICE REQUEST ${i + 1}: ${q}\nAPP'S REPLY ${i + 1}: ${String(replies[i] || "(no reply)").slice(0, 1200)}`).join("\n\n") }], { model:"auto", max_tokens:500 }));
+  }catch(e){}
+  const res = tests.map((q, i) => {
+    const r = verdict && Array.isArray(verdict.results) ? verdict.results[i] : null;
+    const empty = !String(replies[i] || "").trim();
+    return { q, pass: empty ? false : (r ? r.pass !== false : true), issue: empty ? "It gave no reply." : String((r && r.issue) || "").slice(0, 200) };
+  });
+  return { results:res, fix:String((verdict && verdict.fix) || "").slice(0, 600), judged:!!verdict };
+}
 async function doAssistant(ai, userMsg){
   const chat = S.chat;
   const prev = chat.assistantId ? S.libMap[chat.assistantId] : null;
   const isNew = !prev;
   if(isNew && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error("You've used your free AI app build. Get AIV Pro to build more.");
+  const hist = historyFor(chat, chat.messages.indexOf(ai)).slice(-8).map(m => ({ role:m.role, content:typeof m.content === "string" ? m.content : m.content[0].text }));
+  const stop = () => { if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError"); };
+
+  // 1. Ask first, but only when something essential is missing (and only once)
+  if(isNew && !chat.buildAsked && !/\bjust build it\b/i.test(userMsg.content)){
+    chat.buildAsked = true;
+    ai.status = "Reading your idea"; updateMsg(ai);
+    let q = null;
+    try{ q = parseMemJSON(await ask([{ role:"system", content:BUILD_ASK_SYSTEM }, { role:"user", content:userMsg.content.slice(0, 2000) }], { model:"fast", max_tokens:300 })); }catch(e){}
+    stop();
+    const qs = q && q.ready === false && Array.isArray(q.questions) ? q.questions.filter(x => x && x.q).slice(0, 2) : [];
+    if(qs.length){
+      ai.buildQuestions = true;
+      ai.content = "Before I build it, " + (qs.length > 1 ? "two quick questions" : "one quick question") + " so it fits what you need:\n\n" +
+        qs.map((x, i) => `${i + 1}. ${String(x.q).slice(0, 200)}` + (Array.isArray(x.options) && x.options.length ? ` (for example: ${x.options.slice(0, 4).map(o => String(o).slice(0, 60)).join(", ")})` : "")).join("\n") +
+        "\n\nAnswer in a message and I'll build it, or tap the button to let me decide.\n\n```aiv-buttons\n" + JSON.stringify({ options:["Just build it"] }) + "\n```";
+      refund(1);   // a question isn't a build: don't count it
+      return;
+    }
+  }
+
+  // 2. Design it
   const item = prev ? Object.assign({}, prev) : { id:uid("l_"), kind:"assistant", title:"New assistant", spec:null, html:"", at:Date.now(), chat:chat.id };
   ai.artifact = { lib:item.id, kind:"assistant", title:item.title };
-  ai.status = isNew ? "Designing your AI app" : "Updating your AI app"; updateMsg(ai);
-  let sys = ASSISTANT_SYSTEM;
+  ai.steps = [];
+  addStep(ai, isNew ? "Designing your AI app" : "Working out the changes", false);
+  let sys = ASSISTANT_SYSTEM + `\nAlso include in the JSON: "tests":["3 realistic things a real user of this app would type, covering its main jobs"]` +
+    (isNew ? `, and if data is on, "sample":{"<collection id>":[2 realistic example records using that collection's field names]} so the app doesn't start empty.` : ".");
   if(prev && prev.spec) sys += "\n\nCURRENT ASSISTANT:\n" + JSON.stringify(prev.spec);
-  const hist = historyFor(chat, chat.messages.indexOf(ai)).slice(-8).map(m => ({ role:m.role, content:typeof m.content === "string" ? m.content : m.content[0].text }));
-  let spec = null, lastErr = "";
+  let raw = null, spec = null;
   for(const model of ["auto", "auto"]){
     try{
-      const s = parseMemJSON(await ask([{ role:"system", content:sys }, ...hist], { model, max_tokens:2400 }));
-      if(s.name && s.instructions){ spec = s; break; }
-      lastErr = "incomplete";
-    }catch(e){ lastErr = e.message; }
-    if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError");
+      const s = parseMemJSON(await ask([{ role:"system", content:sys }, ...hist], { model, max_tokens:2800 }));
+      if(s.name && s.instructions){ raw = s; break; }
+    }catch(e){}
+    stop();
   }
-  if(!spec) throw new Error("The assistant didn't come back complete. Try again, or describe it a little differently.");
-  spec = normalizeSpec(spec);
+  if(!raw) throw new Error("The app didn't come back complete. Try again, or describe it a little differently.");
+  spec = normalizeSpec(raw);
+  const toolsOn = [spec.tools.web && "web research", spec.tools.files && "your files", spec.tools.data && spec.collections.length && ("saved " + spec.collections.map(c => c.name.toLowerCase()).join(", "))].filter(Boolean);
+  ai.steps[0] = { text:(isNew ? "Designed " : "Updated the design of ") + spec.name + (toolsOn.length ? " with " + toolsOn.join(", ") : ""), done:true };
+  ai.artifact.title = spec.name; updateMsg(ai, true);
+
+  // 3. Sample data so a new app doesn't open empty
+  let sampleCount = 0;
+  if(isNew && spec.tools.data){
+    const sm = buildSampleStore(spec, raw.sample);
+    if(sm.store){ item.store = sm.store; sampleCount = sm.count; addStep(ai, `Added ${sm.count} example record${sm.count > 1 ? "s" : ""} so you can see how it works`); }
+  }
+
+  // 4. Test it with practice questions, 5. fix what failed (one round, so it can't loop)
+  let tests = (Array.isArray(raw.tests) ? raw.tests : spec.starters).map(x => String(x || "").slice(0, 300)).filter(Boolean);
+  if(!tests.length) tests = spec.starters.slice();
+  let report = null, fixed = false;
+  if(tests.length){
+    addStep(ai, "Testing it with " + Math.min(3, tests.length) + " practice questions", false);
+    try{ report = await testAssistant(spec, tests, ai); }catch(e){ if(e.name === "AbortError") throw e; }
+    stop();
+    const failed = report ? report.results.filter(r => !r.pass) : [];
+    ai.steps[ai.steps.length - 1] = { text: report ? `Tested it with ${report.results.length} practice questions: ${report.results.length - failed.length} passed` : "Couldn't run the practice test this time", done:true };
+    updateMsg(ai, true);
+    if(failed.length && report.fix){
+      addStep(ai, "Fixing what the test found", false);
+      try{
+        const s2 = parseMemJSON(await ask([{ role:"system", content:ASSISTANT_SYSTEM + "\n\nCURRENT ASSISTANT:\n" + JSON.stringify(spec) },
+          { role:"user", content:"A practice test found problems. Keep everything else the same and improve the instructions to fix them.\nProblems: " + failed.map(f => `"${f.q}" → ${f.issue || "poor reply"}`).join("; ") + "\nWhat to change: " + report.fix }], { model:"auto", max_tokens:2800 }));
+        if(s2.name && s2.instructions && String(s2.instructions).length > 200){
+          const keep = spec; spec = normalizeSpec(s2);
+          spec.tools = keep.tools; spec.collections = keep.collections;   // a fix never changes the app's tools or data layout
+          fixed = true;
+        }
+      }catch(e){}
+      stop();
+      ai.steps[ai.steps.length - 1] = { text: fixed ? "Fixed its instructions: " + report.fix.slice(0, 140) : "Couldn't apply the fix automatically", done:true };
+      updateMsg(ai, true);
+    }
+  }
+
+  // 6. Save it, keeping the previous version so changes can be undone
+  if(prev && prev.spec){
+    item.versions = (prev.versions || []).concat([{ at:prev.at || Date.now(), spec:prev.spec, title:prev.title }]).slice(-5);
+  }
   item.spec = spec; item.title = spec.name; item.html = assistantHTML(spec); item.at = Date.now();
+  item.tests = report ? { at:Date.now(), results:report.results, fixed } : null;
   ai.artifact.title = item.title;
   if(isNew){
     chat.assistantId = item.id;
     if(!S.pro){ S.profile.aiBuilds = (S.profile.aiBuilds || 0) + 1; await saveProfile(); }
   }
   const can = [spec.tools.web && "research the web", spec.tools.files && "read the files you upload", spec.tools.data && spec.collections.length && ("keep your " + spec.collections.map(c => c.name.toLowerCase()).join(" and "))].filter(Boolean);
-  ai.content = isNew
-    ? `**${spec.name}** is ready. ${spec.tagline}\n\n${can.length ? "It can " + can.join(", ").replace(/, ([^,]*)$/, ", and $1") + ". " : ""}Try it in the panel. Tell me anything you'd like to change — what it does, its tools, its screens, or its tone — and I'll update it.`
-    : `Updated **${spec.name}**. Try it in the panel.`;
+  const failedNow = report ? report.results.filter(r => !r.pass) : [];
+  const testLine = !report ? "" : failedNow.length === 0 ? `I tested it with ${report.results.length} practice questions and it handled all of them.`
+    : fixed ? `I tested it with ${report.results.length} practice questions, found ${failedNow.length === 1 ? "a problem" : failedNow.length + " problems"}, and updated its instructions to fix ${failedNow.length === 1 ? "it" : "them"}. Try ${failedNow.length === 1 ? "that one" : "those"} yourself: "${failedNow[0].q}".`
+    : `I tested it with ${report.results.length} practice questions. ${failedNow.length} didn't go well ("${failedNow[0].q}"), so check that one and tell me what to change.`;
+  ai.content = (isNew
+    ? `**${spec.name}** is ready. ${spec.tagline}\n\n${can.length ? "It can " + can.join(", ").replace(/, ([^,]*)$/, ", and $1") + ". " : ""}${sampleCount ? "I added a few example records so it isn't empty; delete them whenever you like. " : ""}${testLine}`
+    : `Updated **${spec.name}**. ${testLine} If you don't like the change, say **undo** and I'll put the last version back.`) +
+    `\n\nTry it in the panel, then tell me what to change: what it does, its tools, its saved lists, or how it talks.`;
+  await addLib(item);
+  openArtifact(item, "preview");
+}
+// "undo" in a build chat puts the previous version back
+async function undoAssistant(ai){
+  const chat = S.chat, it = chat.assistantId ? S.libMap[chat.assistantId] : null;
+  if(!it || !(it.versions || []).length){ ai.content = "There's no earlier version to go back to yet."; refund(1); return; }
+  const item = Object.assign({}, it), v = item.versions[item.versions.length - 1];
+  item.versions = item.versions.slice(0, -1);
+  item.spec = v.spec; item.title = v.title || v.spec.name; item.html = assistantHTML(v.spec); item.at = Date.now(); item.tests = null;
+  ai.artifact = { lib:item.id, kind:"assistant", title:item.title };
+  ai.content = `Done. **${item.title}** is back to the version from before your last change.`;
+  refund(1);
   await addLib(item);
   openArtifact(item, "preview");
 }
@@ -2850,8 +2991,32 @@ $("cvMore").onclick = e => {
     items.push({ label:"Copy instructions", fn:() => { navigator.clipboard.writeText((it.spec && it.spec.instructions) || ""); toast("Instructions copied"); } });
     items.push({ label:"Clear this app's saved data", fn:() => { if(!confirm("Clear this app's chat, records, and files?")) return; it.store = {}; addLib(it); openArtifact(it, "preview"); } });
     items.push({ label:"Restart preview", fn:() => openArtifact(it, "preview") });
+    if((it.versions || []).length) items.push({ label:"Undo last change", desc:"Go back to the previous version", fn:async () => {
+      const v = it.versions[it.versions.length - 1];
+      it.versions = it.versions.slice(0, -1); it.spec = v.spec; it.title = v.title || v.spec.name; it.html = assistantHTML(v.spec); it.at = Date.now(); it.tests = null;
+      await addLib(it); openArtifact(it, "preview"); toast("Back to the previous version");
+    } });
+    if(it.tests && it.tests.results) items.push({ label:"See test results", fn:() => {
+      const box = modal(`<div class="mh2"><h3>Practice test</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div><div class="mb">
+        <p class="muted small" style="margin-bottom:12px">AIV X tried this app on a few practice questions right after building it${it.tests.fixed ? ", then improved its instructions based on what it found" : ""}.</p>
+        ${it.tests.results.map(r => `<div class="set-row"><div class="lt">${esc(r.q)}<small>${r.pass ? "Handled well" : esc(r.issue || "Needed work")}</small></div><span class="muted small">${r.pass ? "Passed" : (it.tests.fixed ? "Fixed after" : "Needs a look")}</span></div>`).join("")}</div>`);
+      paintIcons(box);
+    } });
   }
   if(it.kind === "build"){
+    if(it.full && (it.versions || []).length) items.push({ label:"Undo last change", desc:"Go back to the previous version", fn:async () => {
+      const v = it.versions[it.versions.length - 1];
+      it.versions = it.versions.slice(0, -1); Object.assign(it, { plan:v.plan, screens:v.screens, title:v.title || v.plan.name, html:assembleApp(v.plan, v.screens), at:Date.now(), tests:null });
+      await addLib(it); openArtifact(it, "preview"); toast("Back to the previous version");
+    } });
+    if(it.full && it.tests && (it.tests.results || []).length) items.push({ label:"See test results", fn:() => {
+      const names = Object.fromEntries((it.plan.screens || []).map(s => [s.id, s.title]).concat([["assistant", "Assistant"], ["settings", "Settings"]]));
+      const box = modal(`<div class="mh2"><h3>Screen test</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div><div class="mb">
+        <p class="muted small" style="margin-bottom:12px">AIV X opened every screen in a hidden test copy right after building it.</p>
+        ${it.tests.results.map(r => `<div class="set-row"><div class="lt">${esc(names[r.id] || r.id)}<small>${r.ok ? "Opens without errors" : esc((r.errors || [])[0] || "Had a problem")}</small></div><span class="muted small">${r.ok ? ((it.tests.fixed || []).includes(names[r.id]) ? "Fixed" : "Passed") : "Needs a look"}</span></div>`).join("")}
+        ${(it.tests.fallbacks || []).length ? `<p class="muted small" style="margin-top:10px">Simpler versions used for: ${esc(it.tests.fallbacks.join(", "))}. Describe what they should do and AIV X will rebuild them.</p>` : ""}</div>`);
+      paintIcons(box);
+    } });
     items.push({ label:"Download HTML", fn:() => download(slug(it.title) + ".html", injectBridge(it.html, {}, true), "text/html") });
     items.push({ label:"Open in new tab", fn:() => window.open(URL.createObjectURL(new Blob([injectBridge(it.html, {}, true)], { type:"text/html" })), "_blank") });
     items.push({ label:"Copy code", fn:() => { navigator.clipboard.writeText(it.html); toast("Code copied"); } });
@@ -4179,7 +4344,7 @@ function drawAgentList(){
     return;
   }
   b.innerHTML = AG.list.map(a => `<div class="agcard" data-id="${a.id}">
-      <div class="agtop"><div><div class="agname">${esc(a.name)}</div><div class="muted small">${esc(a.when)}${a.enabled && a.nextRun ? " · Next run " + esc(agTime(a.nextRun)) : a.enabled ? "" : " · Paused"}</div></div>
+      <div class="agtop"><div><div class="agname">${esc(a.name)}</div><div class="muted small">${esc(a.when)}${a.enabled && a.nextRun ? " · Next run " + esc(agTime(a.nextRun)) : a.enabled ? "" : " · Paused"}${a.quiet ? " · Only when something changed" : ""}</div></div>
       <button class="switch ${a.enabled ? "on" : ""}" data-tog title="${a.enabled ? "Pause" : "Turn on"}"></button></div>
       <div class="aggoal">${esc(a.goal)}</div>
       ${(a.apps || []).length ? `<div class="agapps">${a.apps.map(id => `<span class="agtag">${esc((appById(id) || {}).name || id)}</span>`).join("")}</div>` : ""}
@@ -4199,18 +4364,51 @@ function drawAgentList(){
     };
   });
 }
+// Run now: the agent's steps appear live while it works
+async function agRunStream(id, onStep){
+  const res = await fetch(AIV_API_URL + "/agents", { method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ action:"run", id, stream:true, idToken: await agIdToken(), tz:AG_TZ, key: S.profile.proKey || undefined, appKey: AIVX_APP_KEY, train: S.profile.settings.improve !== false }) });
+  if(!res.ok || !res.body || !/event-stream/.test(res.headers.get("Content-Type") || "")){
+    const d = await res.json().catch(() => ({}));
+    if(!res.ok) throw new Error(errText(d.error, statusText(res.status)));
+    return d;   // an older Worker that doesn't stream: it answers all at once
+  }
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = "", last = null;
+  while(true){
+    const { done, value } = await reader.read();
+    if(done) break;
+    buf += dec.decode(value, { stream:true });
+    const lines = buf.split("\n"); buf = lines.pop();
+    for(const line of lines){
+      const t = line.trim();
+      if(!t.startsWith("data:")) continue;
+      const p = t.slice(5).trim(); if(!p || p === "[DONE]") continue;
+      let j = null; try{ j = JSON.parse(p); }catch(e){ continue; }
+      if(j.step) onStep(j.step);
+      else if(j.error){ const e = new Error(errText(j.error)); e.upgrade = j.upgrade; throw e; }
+      else if(j.run) last = j;
+    }
+  }
+  if(!last) throw new Error("The agent stopped before it finished. Try Run now again.");
+  return last;
+}
+function agStepHTML(s){
+  const think = /^Thinking: /.test(s);
+  return `<li class="${think ? "think" : ""}">${esc(think ? s.slice(10) : s)}</li>`;
+}
 async function agRunNow(a){
   const b = $("agBody");
-  if(b) b.innerHTML = `<div class="agrunning"><div class="agspin"></div><div><strong>${esc(a.name)} is working…</strong><div class="muted small">Searching the web and reading pages. This takes about a minute.</div></div></div>`;
+  if(b) b.innerHTML = `<div class="agrunning"><div class="agspin"></div><div><strong>${esc(a.name)} is working…</strong><div class="muted small">It decides its own steps: searching, reading, and checking as it goes. This usually takes about a minute.</div></div></div><ul class="aglive" id="agLive" aria-live="polite"></ul>`;
   try{
     if((a.apps || []).length) await agSyncContext(true);   // give it the freshest app data
-    const d = await agentsCall("run", { id:a.id });
+    const d = await agRunStream(a.id, s => { const l = $("agLive"); if(l){ l.insertAdjacentHTML("beforeend", agStepHTML(s)); l.lastElementChild.scrollIntoView({ block:"nearest" }); } });
     await refreshAgents();
     AG.runs = [d.run].concat(AG.runs.filter(r => r.id !== d.run.id));
     drawAgentRuns(null, d.run.id);
   }catch(e){
     toast(e.message);
-    if(/Pro/.test(e.message)) openUpgrade(e.message); else drawAgentList();
+    if(e.upgrade || /Pro/.test(e.message)) openUpgrade(e.message); else drawAgentList();
   }
 }
 function drawAgentRuns(only, openId){
@@ -4225,8 +4423,8 @@ function drawAgentRuns(only, openId){
     return;
   }
   b.innerHTML = (only ? `<button class="linkbtn small" id="agBack">‹ All reports</button><h4 style="margin:6px 0 10px">${esc(only.name)}</h4>` : "") +
-    runs.map(r => `<div class="agrun ${r.unread ? "unread" : ""} ${r.status !== "ok" ? "failed" : ""}" data-id="${r.id}">
-      <button class="agrunhead"><span class="dot"></span><span class="agrt">${esc(r.title || "Report")}</span><span class="muted small">${only ? "" : esc(name(r.agentId)) + " · "}${esc(agTime(r.at))}${agPending(r) ? " · " + agPending(r) + " to approve" : r.important ? " · Needs a look" : ""}</span></button>
+    runs.map(r => `<div class="agrun ${r.unread ? "unread" : ""} ${r.status === "quiet" ? "quiet" : r.status !== "ok" ? "failed" : ""}" data-id="${r.id}">
+      <button class="agrunhead"><span class="dot"></span><span class="agrt">${esc(r.title || "Report")}</span><span class="muted small">${only ? "" : esc(name(r.agentId)) + " · "}${esc(agTime(r.at))}${agPending(r) ? " · " + agPending(r) + " to approve" : r.status === "quiet" ? " · Nothing new" : r.important ? " · Needs a look" : ""}</span></button>
       <div class="agrunbody hidden"></div></div>`).join("");
   const back = $("agBack"); if(back) back.onclick = () => openAgents("agents");
   b.querySelectorAll(".agrun").forEach(el => {
@@ -4238,7 +4436,7 @@ function drawAgentRuns(only, openId){
       if(!show) return;
       body.innerHTML = agActionsHTML(r) + `<div class="md">${renderMarkdown(r.report || "", (r.sources || []).map(s => ({ title:s.title, url:s.url })))}</div>
         ${(r.sources || []).length ? `<div class="agsrc">${r.sources.map((s, i) => `<a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">[${i + 1}] ${esc(s.title || s.url)}</a>`).join("")}</div>` : ""}
-        ${(r.steps || []).length ? `<details class="agsteps"><summary>What the agent did</summary><ul>${r.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ul></details>` : ""}
+        ${(r.steps || []).length ? `<details class="agsteps"><summary>How the agent worked (${r.steps.filter(s => !/^Thinking: /.test(s)).length} steps)</summary><ul>${r.steps.map(agStepHTML).join("")}</ul></details>` : ""}
         <div class="agbtns"><button class="btn sm" data-chat>Discuss in chat</button></div>`;
       body.querySelector("[data-chat]").onclick = () => agDiscuss(r, name(r.agentId));
       agWireActions(body, r, el);
@@ -4360,10 +4558,13 @@ function openAgentEditor(a, note){
       <input class="input" id="agTime" type="time" value="${esc(sch.time)}">
       <select class="input" id="agEvery">${[1, 2, 3, 4, 6, 8, 12].map(n => `<option value="${n}">Every ${n} hour${n > 1 ? "s" : ""}</option>`).join("")}</select></div>
     <div class="muted small" style="margin-top:6px">Times are in your time zone (${esc(AG_TZ)}).</div>
+    <label class="agchk" style="margin-top:14px;border-radius:12px"><input type="checkbox" id="agQuiet" ${a.quiet ? "checked" : ""}> Only tell me when something changed</label>
+    <div class="muted small" style="margin-top:6px">It still runs on schedule. Runs with nothing new are filed quietly, with no badge or email.</div>
+    ${a.id && (a.notes || []).length ? `<label class="label">What it remembers between runs</label><ul class="agnotes">${a.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul><button class="linkbtn small" id="agClearNotes" type="button">Clear its notes</button>` : ""}
     <label class="label">Where reports go</label>
     <select class="input" id="agNotify"><option value="0">Agents inbox in AIV X</option><option value="1" ${AG.emailReady && AG.email ? "" : "disabled"}>Inbox, and email me every report</option><option value="2" ${AG.emailReady && AG.email ? "" : "disabled"}>Inbox, and email me only when something needs a look</option></select>
     ${AG.emailReady && AG.email ? `<div class="muted small" style="margin-top:6px">Emails go to ${esc(AG.email)}.</div>` : `<div class="muted small" style="margin-top:6px">Email reports aren't available for this account yet.</div>`}
-    <p class="muted small" style="margin-top:14px">Your agent searches the web, reads pages and the apps you chose, then writes a report with its sources. It never sends messages, buys, or deletes anything, and it only changes your apps after you approve.</p></div>
+    <p class="muted small" style="margin-top:14px">Your agent plans its own steps: it searches the web, reads pages and the apps you chose, checks what it finds, keeps notes for next time, then writes a report with its sources. It never sends messages, buys, or deletes anything, and it only changes your apps after you approve.</p></div>
     <div class="mf">${a.id ? "" : `<button class="btn" data-close>Cancel</button>`}<button class="btn" id="agSaveRun">${a.id ? "Save and run now" : "Turn on and test it"}</button><button class="btn primary" id="agSave">${a.id ? "Save" : "Turn on"}</button></div>`);
   $("agKind").value = sch.kind === "hours" && free ? "daily" : sch.kind;
   $("agDay").value = String(sch.day ?? 1);
@@ -4378,7 +4579,9 @@ function openAgentEditor(a, note){
     $("agAbout").value = (have ? have + " " : "") + add.slice(0, 1500 - have.length - 1);
     mem.remove();
   };
-  const collect = () => ({ id:a.id, apps:[...document.querySelectorAll(".agappsel input:checked")].map(x => x.value), name:$("agName").value.trim() || "My agent", goal:$("agGoal").value.trim(), about:$("agAbout").value.trim(), tz:AG_TZ, notify:+$("agNotify").value,
+  const cn = $("agClearNotes");
+  if(cn) cn.onclick = async () => { try{ agApply(await agentsCall("clearNotes", { id:a.id })); a.notes = []; const ul = box.querySelector(".agnotes"); if(ul) ul.remove(); cn.remove(); toast("Notes cleared"); }catch(e){ toast(e.message); } };
+  const collect = () => ({ id:a.id, quiet:$("agQuiet").checked, apps:[...document.querySelectorAll(".agappsel input:checked")].map(x => x.value), name:$("agName").value.trim() || "My agent", goal:$("agGoal").value.trim(), about:$("agAbout").value.trim(), tz:AG_TZ, notify:+$("agNotify").value,
     schedule:{ kind:$("agKind").value, time:$("agTime").value || "08:00", day:+$("agDay").value, every:+$("agEvery").value } });
   const save = async (runAfter, btn) => {
     const ag = collect();
@@ -4460,6 +4663,313 @@ hydrateUI = function(el, m){
 };
 
 $("navAgents").onclick = () => { if(innerWidth < 820) closeSide(); openAgents(); };
+</script>
+<script>
+/* =====================================================================
+   FULL APP BUILDER: Build makes complete AI apps, not just chat assistants.
+   How it works, the way a careful developer would:
+     1. ask a question if something essential is missing
+     2. plan the whole app: screens, saved data, AI features, assistant, sample data
+     3. write every screen on the AIV App Kit (a tested engine for layout, data, forms, charts, AI)
+     4. open every screen in a hidden test copy and fix any screen that breaks
+     5. open the finished app; change it by chatting; undo any change
+   ===================================================================== */
+const APPKIT_CSS = ":root{--accent:#111;--accent-ink:#fff;--bg:#fff;--bg2:#f6f6f7;--card:#fff;--text:#111;--text2:#5d5d66;--muted:#8a8a93;--line:#e7e7ea;--line2:#d4d4d9;--good:#1f8a4c;--warn:#b25e09;--bad:#c62828;--r:14px;--shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.04);color-scheme:light}\n@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d0d0f;--bg2:#16161a;--card:#16161a;--text:#f2f2f4;--text2:#b4b4bc;--muted:#83838d;--line:#26262c;--line2:#34343c;--shadow:none;color-scheme:dark}}\n:root[data-theme=dark]{--bg:#0d0d0f;--bg2:#16161a;--card:#16161a;--text:#f2f2f4;--text2:#b4b4bc;--muted:#83838d;--line:#26262c;--line2:#34343c;--shadow:none;color-scheme:dark}\n*{box-sizing:border-box}\nhtml,body{margin:0;height:100%}\nbody{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}\nbutton,input,select,textarea{font:inherit;color:inherit}\ninput,select,textarea{font-size:16px}\na{color:var(--accent)}\n.kx{display:flex;height:100%;min-height:100vh}\n.kx-side{width:232px;flex:none;border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;padding:16px 10px;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}\n.kx-brand{display:flex;align-items:center;gap:10px;padding:4px 10px 16px}\n.kx-logo{width:34px;height:34px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;flex:none}\n.kx-logo svg{width:19px;height:19px}\n.kx-name{font-weight:700;font-size:16px;line-height:1.2}\n.kx-tag{font-size:12px;color:var(--muted);line-height:1.3}\n.kx-nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:0;background:none;cursor:pointer;text-align:left;width:100%;color:var(--text2);font-size:14.5px}\n.kx-nav svg{width:18px;height:18px;flex:none}\n.kx-nav:hover{background:var(--line)}\n.kx-nav.on{background:var(--card);color:var(--text);font-weight:600;box-shadow:var(--shadow);outline:1px solid var(--line)}\n.kx-side .kx-spacer{flex:1}\n.kx-main{flex:1;min-width:0;display:flex;flex-direction:column}\n.kx-top{display:none}\n.kx-view{flex:1;padding:28px 32px 60px;max-width:1080px;width:100%;margin:0 auto}\n.kx-tabs{display:none}\n.kx-foot{font-size:11.5px;color:var(--muted);text-align:center;padding:10px}\n@media (max-width:760px){\n  .kx-side{display:none}\n  .kx-top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}\n  .kx-top .kx-title{font-weight:700;font-size:16px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n  .kx-view{padding:18px 16px 96px}\n  .kx-tabs{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--line);z-index:6;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}\n  .kx-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:6px 2px;font-size:10.5px;color:var(--muted);cursor:pointer;min-width:0}\n  .kx-tab span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n  .kx-tab svg{width:21px;height:21px}\n  .kx-tab.on{color:var(--text);font-weight:600}\n}\n.kx-icon{width:18px;height:18px;display:inline-block;vertical-align:-3px}\n.kx-ib{border:0;background:none;width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2)}\n.kx-ib:hover{background:var(--line)}\n.kx-ib svg{width:19px;height:19px}\n/* page */\n.ui-page{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}\n.ui-page h1{font-size:26px;line-height:1.2;margin:0;letter-spacing:-.01em}\n.ui-page p{margin:4px 0 0;color:var(--text2)}\n.ui-page .ui-actions{display:flex;gap:8px;flex-wrap:wrap}\n@media (max-width:760px){.ui-page h1{font-size:22px}}\n.ui-section{margin:26px 0 12px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}\n.ui-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}\n.ui-card>h3{margin:0 0 12px;font-size:15.5px}\n.ui-card .ui-card-foot{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}\n.ui-stack>*+*{margin-top:16px}\n.ui-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(var(--min,260px),1fr))}\n.ui-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}\n.ui-stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}\n.ui-stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}\n.ui-stat .l{font-size:12.5px;color:var(--muted)}\n.ui-stat .v{font-size:24px;font-weight:700;letter-spacing:-.01em;margin-top:2px;line-height:1.2}\n.ui-stat .h{font-size:12.5px;color:var(--text2);margin-top:2px}\n/* buttons */\n.ui-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line2);background:var(--card);color:var(--text);border-radius:10px;padding:8px 14px;font-weight:550;font-size:14px;cursor:pointer;white-space:nowrap;min-height:38px}\n.ui-btn:hover{border-color:var(--text2)}\n.ui-btn svg{width:16px;height:16px}\n.ui-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}\n.ui-btn.primary:hover{filter:brightness(1.08)}\n.ui-btn.ghost{border-color:transparent;background:none;color:var(--text2)}\n.ui-btn.ghost:hover{background:var(--line);color:var(--text)}\n.ui-btn.danger{color:var(--bad)}\n.ui-btn.small{padding:5px 10px;min-height:32px;font-size:13px}\n.ui-btn:disabled{opacity:.55;cursor:default}\n/* forms */\n.ui-form{display:grid;gap:14px}\n.ui-field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text2)}\n.ui-field .hint{font-size:12px;color:var(--muted);margin-top:4px}\n.ui-input{width:100%;border:1px solid var(--line2);background:var(--bg);border-radius:10px;padding:9px 12px;outline:none;min-height:40px}\n.ui-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}\ntextarea.ui-input{min-height:96px;resize:vertical}\n.ui-check{display:flex;align-items:center;gap:8px;font-size:14.5px}\n.ui-check input{width:18px;height:18px;accent-color:var(--accent)}\n.ui-search{position:relative;flex:1;min-width:180px}\n.ui-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}\n.ui-search input{padding-left:34px}\n/* list */\n.ui-list{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}\n.ui-li{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line);min-width:0}\n.ui-li:first-child{border-top:0}\n.ui-li.click{cursor:pointer}.ui-li.click:hover{background:var(--bg2)}\n.ui-li .main{flex:1;min-width:0}\n.ui-li .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.ui-li .s{font-size:13px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.ui-li .m{font-size:13px;color:var(--muted);white-space:nowrap}\n.ui-li .acts{display:flex;gap:4px}\n.ui-avatar{width:36px;height:36px;border-radius:50%;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none;color:var(--text2)}\n/* table */\n.ui-tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}\n.ui-table{width:100%;border-collapse:collapse;font-size:14px}\n.ui-table th{text-align:left;font-size:12.5px;color:var(--muted);font-weight:600;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap}\n.ui-table td{padding:10px 14px;border-bottom:1px solid var(--line)}\n.ui-table tr:last-child td{border-bottom:0}\n/* bits */\n.ui-badge{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);color:var(--text2);white-space:nowrap}\n.ui-badge.good{color:var(--good);border-color:color-mix(in srgb,var(--good) 30%,transparent);background:color-mix(in srgb,var(--good) 9%,transparent)}\n.ui-badge.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 30%,transparent);background:color-mix(in srgb,var(--warn) 9%,transparent)}\n.ui-badge.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 30%,transparent);background:color-mix(in srgb,var(--bad) 9%,transparent)}\n.ui-badge.accent{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}\n.ui-progress{height:8px;background:var(--bg2);border:1px solid var(--line);border-radius:999px;overflow:hidden}\n.ui-progress i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s}\n.ui-empty{text-align:center;padding:36px 20px;color:var(--text2);border:1px dashed var(--line2);border-radius:var(--r)}\n.ui-empty svg{width:28px;height:28px;color:var(--muted);margin-bottom:6px}\n.ui-empty p{margin:0 0 12px}\n.ui-tabbar{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}\n.ui-tabbar button{border:0;background:none;padding:9px 12px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;font-weight:550}\n.ui-tabbar button.on{color:var(--text);border-bottom-color:var(--accent)}\n.ui-md{line-height:1.6;overflow-wrap:anywhere}\n.ui-md>*:first-child{margin-top:0}.ui-md>*:last-child{margin-bottom:0}\n.ui-md h1,.ui-md h2,.ui-md h3{line-height:1.3;margin:1.1em 0 .4em}\n.ui-md h1{font-size:20px}.ui-md h2{font-size:17px}.ui-md h3{font-size:15.5px}\n.ui-md ul,.ui-md ol{padding-left:22px}\n.ui-md code{background:var(--bg2);padding:1px 5px;border-radius:5px;font-size:13.5px}\n.ui-md pre{background:var(--bg2);padding:12px;border-radius:10px;overflow-x:auto}\n.ui-md table{border-collapse:collapse;width:100%;font-size:14px}.ui-md th,.ui-md td{border:1px solid var(--line);padding:6px 9px;text-align:left}\n.ui-md blockquote{margin:0;border-left:3px solid var(--line2);padding-left:12px;color:var(--text2)}\n.ui-ai{display:grid;gap:12px}\n.ui-ai .out{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--bg2);min-height:20px}\n.ui-loading{display:flex;align-items:center;gap:10px;color:var(--text2);font-size:14px}\n.ui-spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--accent);animation:kxspin .8s linear infinite;flex:none}\n@keyframes kxspin{to{transform:rotate(360deg)}}\n.ui-error{border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);background:color-mix(in srgb,var(--bad) 7%,transparent);color:var(--bad);border-radius:12px;padding:12px 14px;font-size:14px}\n.ui-chartbox{position:relative;height:240px}\n.ui-kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px}.ui-kv dt{color:var(--muted)}.ui-kv dd{margin:0}\n/* toast + modal */\n.kx-toasts{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:50;pointer-events:none}\n@media (max-width:760px){.kx-toasts{bottom:84px}}\n.kx-toast{background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.18);max-width:86vw}\n.kx-scrim{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}\n.kx-modal{background:var(--card);border-radius:18px;width:min(560px,100%);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)}\n.kx-modal .mh{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 6px}\n.kx-modal .mh h3{margin:0;font-size:17px}\n.kx-modal .mb{padding:10px 18px;overflow-y:auto}\n.kx-modal .mf{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px 16px}\n@media (max-width:760px){.kx-scrim{align-items:flex-end;padding:0}.kx-modal{border-radius:18px 18px 0 0;width:100%}}\n/* assistant */\n.kx-chat{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:420px}\n@media (max-width:760px){.kx-chat{height:calc(100vh - 210px)}}\n.kx-msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:4px 2px 12px}\n.kx-msg{max-width:84%;padding:10px 14px;border-radius:16px;font-size:15px;line-height:1.55}\n.kx-msg.u{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:6px;white-space:pre-wrap}\n.kx-msg.a{align-self:flex-start;background:var(--bg2);border:1px solid var(--line);border-bottom-left-radius:6px}\n.kx-msg .did{font-size:12.5px;color:var(--muted);margin-top:6px}\n.kx-starters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}\n.kx-starters button{border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:7px 13px;font-size:13.5px;cursor:pointer;color:var(--text2)}\n.kx-starters button:hover{color:var(--text);border-color:var(--text2)}\n.kx-compose{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:12px}\n.kx-compose textarea{flex:1;min-height:44px;max-height:160px;resize:none}\n@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}\n";
+const APPKIT_JS = "/* AIV App Kit: the engine every AIV X-built app runs on.\n   It gives apps navigation, saved data, forms, lists, charts, AI helpers, an AI assistant that can use the app,\n   settings, and a self-test, so the screens AIV X writes stay small and reliable. */\n(function(){\n\"use strict\";\nvar CFG = window.__APP_CONFIG || {};\nvar screens = {}, order = [], current = null, currentParams = {}, actions = {}, errors = [];\nvar ICONS = {\n  home:'\u003cpath d=\"M3 11l9-7 9 7\"/>\u003cpath d=\"M5 10v10h14V10\"/>', list:'\u003cpath d=\"M8 6h13M8 12h13M8 18h13\"/>\u003ccircle cx=\"3.5\" cy=\"6\" r=\"1\"/>\u003ccircle cx=\"3.5\" cy=\"12\" r=\"1\"/>\u003ccircle cx=\"3.5\" cy=\"18\" r=\"1\"/>',\n  calendar:'\u003crect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/>\u003cpath d=\"M3 10h18M8 3v4M16 3v4\"/>', chart:'\u003cpath d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/>',\n  check:'\u003cpath d=\"M20 6L9 17l-5-5\"/>', user:'\u003ccircle cx=\"12\" cy=\"8\" r=\"4\"/>\u003cpath d=\"M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6\"/>', users:'\u003ccircle cx=\"9\" cy=\"8\" r=\"3.5\"/>\u003cpath d=\"M2 20c1-3.5 3.5-5 7-5s6 1.5 7 5\"/>\u003cpath d=\"M16 4.5a3.5 3.5 0 010 7M18 15c2 .7 3.3 2.3 4 5\"/>',\n  book:'\u003cpath d=\"M4 4h6a3 3 0 013 3v13a2 2 0 00-2-2H4z\"/>\u003cpath d=\"M20 4h-6a3 3 0 00-3 3v13a2 2 0 012-2h7z\"/>', dollar:'\u003cpath d=\"M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6\"/>',\n  heart:'\u003cpath d=\"M20.8 5.6a5.5 5.5 0 00-7.8 0L12 6.6l-1-1a5.5 5.5 0 10-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 000-7.8z\"/>', star:'\u003cpath d=\"M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z\"/>',\n  chat:'\u003cpath d=\"M21 12a8 8 0 01-11.6 7.1L3 21l1.9-6.4A8 8 0 1121 12z\"/>', settings:'\u003ccircle cx=\"12\" cy=\"12\" r=\"3\"/>\u003cpath d=\"M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z\"/>',\n  plus:'\u003cpath d=\"M12 5v14M5 12h14\"/>', search:'\u003ccircle cx=\"11\" cy=\"11\" r=\"7\"/>\u003cpath d=\"M21 21l-4.3-4.3\"/>', edit:'\u003cpath d=\"M12 20h9\"/>\u003cpath d=\"M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z\"/>',\n  trash:'\u003cpath d=\"M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6\"/>', clock:'\u003ccircle cx=\"12\" cy=\"12\" r=\"9\"/>\u003cpath d=\"M12 7v5l3 2\"/>', folder:'\u003cpath d=\"M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z\"/>',\n  bolt:'\u003cpath d=\"M13 2L4 14h7l-1 8 9-12h-7z\"/>', music:'\u003cpath d=\"M9 18V5l12-2v13\"/>\u003ccircle cx=\"6\" cy=\"18\" r=\"3\"/>\u003ccircle cx=\"18\" cy=\"16\" r=\"3\"/>', camera:'\u003cpath d=\"M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z\"/>\u003ccircle cx=\"12\" cy=\"13\" r=\"4\"/>',\n  map:'\u003cpath d=\"M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z\"/>\u003cpath d=\"M8 2v16M16 6v16\"/>', briefcase:'\u003crect x=\"2\" y=\"7\" width=\"20\" height=\"14\" rx=\"2\"/>\u003cpath d=\"M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16\"/>',\n  cart:'\u003ccircle cx=\"9\" cy=\"21\" r=\"1\"/>\u003ccircle cx=\"20\" cy=\"21\" r=\"1\"/>\u003cpath d=\"M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6\"/>', bell:'\u003cpath d=\"M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0\"/>',\n  file:'\u003cpath d=\"M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z\"/>\u003cpath d=\"M14 2v6h6\"/>', sparkles:'\u003cpath d=\"M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z\"/>',\n  target:'\u003ccircle cx=\"12\" cy=\"12\" r=\"9\"/>\u003ccircle cx=\"12\" cy=\"12\" r=\"5\"/>\u003ccircle cx=\"12\" cy=\"12\" r=\"1\"/>', flag:'\u003cpath d=\"M4 22V4M4 4h13l-2 4 2 4H4\"/>', tag:'\u003cpath d=\"M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L2 12V2h10l8.6 8.6a2 2 0 010 2.8z\"/>\u003ccircle cx=\"7\" cy=\"7\" r=\"1.5\"/>',\n  activity:'\u003cpath d=\"M22 12h-4l-3 9L9 3l-3 9H2\"/>', globe:'\u003ccircle cx=\"12\" cy=\"12\" r=\"9\"/>\u003cpath d=\"M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18\"/>', mail:'\u003crect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\"/>\u003cpath d=\"M22 6l-10 7L2 6\"/>',\n  phone:'\u003cpath d=\"M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z\"/>',\n  image:'\u003crect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/>\u003ccircle cx=\"8.5\" cy=\"8.5\" r=\"1.5\"/>\u003cpath d=\"M21 15l-5-5L5 21\"/>', box:'\u003cpath d=\"M21 8l-9-5-9 5v8l9 5 9-5z\"/>\u003cpath d=\"M3 8l9 5 9-5M12 13v8\"/>',\n  pill:'\u003cpath d=\"M10.5 20.5a5 5 0 01-7-7l9-9a5 5 0 017 7z\"/>\u003cpath d=\"M8.5 8.5l7 7\"/>', dumbbell:'\u003cpath d=\"M6 6v12M18 6v12M3 9v6M21 9v6M6 12h12\"/>', food:'\u003cpath d=\"M4 3v8a3 3 0 006 0V3M7 3v18M17 3c-2 0-3 2-3 6s1 5 3 5v7\"/>',\n  school:'\u003cpath d=\"M22 10L12 5 2 10l10 5 10-5z\"/>\u003cpath d=\"M6 12v5c3 2 9 2 12 0v-5\"/>', home2:'\u003cpath d=\"M3 11l9-7 9 7\"/>\u003cpath d=\"M5 10v10h14V10\"/>', x:'\u003cpath d=\"M18 6L6 18M6 6l12 12\"/>',\n  menu:'\u003cpath d=\"M3 6h18M3 12h18M3 18h18\"/>', moon:'\u003cpath d=\"M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z\"/>', copy:'\u003crect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\"/>\u003cpath d=\"M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1\"/>',\n  download:'\u003cpath d=\"M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3\"/>', upload:'\u003cpath d=\"M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12\"/>', send:'\u003cpath d=\"M22 2L11 13M22 2l-7 20-4-9-9-4z\"/>',\n  refresh:'\u003cpath d=\"M23 4v6h-6M1 20v-6h6\"/>\u003cpath d=\"M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15\"/>', arrow:'\u003cpath d=\"M5 12h14M13 6l6 6-6 6\"/>', back:'\u003cpath d=\"M19 12H5M11 18l-6-6 6-6\"/>'\n};\nfunction icon(name){ return '\u003csvg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">' + (ICONS[name] || ICONS.star) + '\u003c/svg>'; }\nfunction esc(s){ return String(s == null ? \"\" : s).replace(/[&\u003c>\"']/g, function(c){ return { \"&\":\"&amp;\", \"\u003c\":\"&lt;\", \">\":\"&gt;\", '\"':\"&quot;\", \"'\":\"&#39;\" }[c]; }); }\n\n/* ---------- h(): build elements. h(\"div\", {class:\"x\", onclick:fn}, \"text\", child, [more]) ---------- */\nfunction h(tag, props){\n  var el = document.createElement(tag || \"div\");\n  props = props && typeof props === \"object\" && !(props instanceof Node) && !Array.isArray(props) ? props : (arguments.length > 1 ? (add(el, props), null) : null);\n  if(props) Object.keys(props).forEach(function(k){\n    var v = props[k];\n    if(v == null || v === false) return;\n    if(k === \"class\" || k === \"className\") el.className = v;\n    else if(k === \"style\" && typeof v === \"object\") Object.assign(el.style, v);\n    else if(k === \"html\") el.innerHTML = v;\n    else if(k === \"text\") el.textContent = v;\n    else if(k.slice(0, 2) === \"on\" && typeof v === \"function\") el.addEventListener(k.slice(2).toLowerCase(), v);\n    else if(k === \"value\") el.value = v;\n    else if(k === \"checked\") el.checked = !!v;\n    else el.setAttribute(k, v === true ? \"\" : v);\n  });\n  for(var i = 2; i \u003c arguments.length; i++) add(el, arguments[i]);\n  return el;\n}\nfunction add(el, c){\n  if(c == null || c === false) return;\n  if(Array.isArray(c)) return c.forEach(function(x){ add(el, x); });\n  if(c instanceof Node) return el.appendChild(c);\n  el.appendChild(document.createTextNode(String(c)));\n}\nfunction node(x){ if(x instanceof Node) return x; if(x == null) return document.createTextNode(\"\"); if(typeof x === \"string\" && /\u003c[a-z][\\s\\S]*>/i.test(x)){ var d = h(\"div\"); d.innerHTML = x; return d; } return document.createTextNode(String(x)); }\n\n/* ---------- saved data ---------- */\nvar KEY = \"aivapp.data\", META = \"aivapp.meta\";\nvar DB = { data:{}, listeners:{} };\nfunction load(){ try{ DB.data = JSON.parse(localStorage.getItem(KEY) || \"{}\") || {}; }catch(e){ DB.data = {}; } }\nvar saveT = null;\nfunction persist(){ clearTimeout(saveT); saveT = setTimeout(function(){ try{ localStorage.setItem(KEY, JSON.stringify(DB.data)); }catch(e){ toast(\"Couldn't save. Storage may be full.\"); } }, 120); }\nfunction colDef(name){ return (CFG.collections || []).find(function(c){ return c.id === name; }) || null; }\nfunction col(name){ name = String(name); if(!DB.data[name]) DB.data[name] = []; return DB.data[name]; }\nfunction newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }\nfunction emit(name){ (DB.listeners[name] || []).concat(DB.listeners[\"*\"] || []).forEach(function(fn){ try{ fn(name); }catch(e){} }); }\nfunction coerce(name, rec){\n  var d = colDef(name); if(!d) return rec;\n  (d.fields || []).forEach(function(f){\n    if(!(f.name in rec)) return;\n    var v = rec[f.name];\n    if(f.type === \"number\" || f.type === \"money\"){ var n = parseFloat(String(v).replace(/[^0-9.\\-]/g, \"\")); rec[f.name] = isFinite(n) ? n : (v === \"\" ? null : v); }\n    else if(f.type === \"checkbox\" || f.type === \"boolean\") rec[f.name] = v === true || v === \"true\" || v === \"on\" || v === 1;\n  });\n  return rec;\n}\nfunction matches(rec, where){\n  if(!where) return true;\n  if(typeof where === \"function\") return !!where(rec);\n  return Object.keys(where).every(function(k){ return String(rec[k]) === String(where[k]); });\n}\nvar db = {\n  list: function(name, o){\n    o = o || {};\n    var out = col(name).filter(function(r){ return matches(r, o.where); });\n    if(o.search){ var q = String(o.search).toLowerCase(); out = out.filter(function(r){ return JSON.stringify(r).toLowerCase().indexOf(q) >= 0; }); }\n    var sort = o.sort || \"-_created\";\n    var desc = sort[0] === \"-\", key = desc ? sort.slice(1) : sort;\n    out = out.slice().sort(function(a, b){ var x = a[key], y = b[key]; if(x == null) return 1; if(y == null) return -1; var r = typeof x === \"number\" && typeof y === \"number\" ? x - y : String(x).localeCompare(String(y), undefined, { numeric:true }); return desc ? -r : r; });\n    return o.limit ? out.slice(0, o.limit) : out;\n  },\n  get: function(name, id){ return col(name).find(function(r){ return r.id === id; }) || null; },\n  find: function(name, where){ return col(name).find(function(r){ return matches(r, where); }) || null; },\n  add: function(name, rec){ var r = coerce(name, Object.assign({}, rec || {})); r.id = r.id || newId(); r._created = r._created || Date.now(); r._updated = Date.now(); col(name).push(r); persist(); emit(name); return r; },\n  update: function(name, id, patch){ var r = db.get(name, id); if(!r) return null; Object.assign(r, coerce(name, Object.assign({}, patch || {})), { id:r.id, _updated:Date.now() }); persist(); emit(name); return r; },\n  remove: function(name, id){ var c = col(name), i = c.findIndex(function(r){ return r.id === id; }); if(i \u003c 0) return false; c.splice(i, 1); persist(); emit(name); return true; },\n  count: function(name, where){ return db.list(name, { where:where }).length; },\n  sum: function(name, field, where){ return db.list(name, { where:where }).reduce(function(s, r){ var n = parseFloat(r[field]); return s + (isFinite(n) ? n : 0); }, 0); },\n  clear: function(name){ DB.data[name] = []; persist(); emit(name); },\n  on: function(name, fn){ (DB.listeners[name] = DB.listeners[name] || []).push(fn); },\n  all: function(){ return JSON.parse(JSON.stringify(DB.data)); },\n  setAll: function(d){ DB.data = d && typeof d === \"object\" ? d : {}; persist(); emit(\"*\"); }\n};\nfunction seed(){\n  var m = {}; try{ m = JSON.parse(localStorage.getItem(META) || \"{}\") || {}; }catch(e){}\n  if(m.seeded) return;\n  var s = CFG.sample || {};\n  Object.keys(s).forEach(function(name){ if(Array.isArray(s[name]) && !col(name).length) s[name].slice(0, 8).forEach(function(r, i){ db.add(name, Object.assign({}, r, { _sample:true, _created:Date.now() - (s[name].length - i) * 60000 })); }); });\n  m.seeded = 1; try{ localStorage.setItem(META, JSON.stringify(m)); }catch(e){}\n  persist();\n}\n\n/* ---------- formatting ---------- */\nvar fmt = {\n  date: function(d){ if(!d) return \"\"; var x = typeof d === \"number\" ? new Date(d) : new Date(String(d).length === 10 ? d + \"T12:00:00\" : d); return isNaN(x) ? String(d) : x.toLocaleDateString(undefined, { month:\"short\", day:\"numeric\", year: x.getFullYear() === new Date().getFullYear() ? undefined : \"numeric\" }); },\n  time: function(d){ var x = new Date(d); return isNaN(x) ? \"\" : x.toLocaleTimeString(undefined, { hour:\"numeric\", minute:\"2-digit\" }); },\n  money: function(n, cur){ var v = parseFloat(n); if(!isFinite(v)) return \"\"; try{ return v.toLocaleString(undefined, { style:\"currency\", currency:cur || CFG.currency || \"USD\" }); }catch(e){ return \"$\" + v.toFixed(2); } },\n  number: function(n, d){ var v = parseFloat(n); return isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: d == null ? 2 : d }) : \"\"; },\n  percent: function(n){ var v = parseFloat(n); return isFinite(v) ? Math.round(v) + \"%\" : \"\"; },\n  ago: function(t){ var s = (Date.now() - (typeof t === \"number\" ? t : Date.parse(t))) / 1000; if(!isFinite(s)) return \"\"; if(s \u003c 60) return \"just now\"; if(s \u003c 3600) return Math.floor(s / 60) + \"m ago\"; if(s \u003c 86400) return Math.floor(s / 3600) + \"h ago\"; if(s \u003c 604800) return Math.floor(s / 86400) + \"d ago\"; return fmt.date(t); },\n  today: function(){ var d = new Date(); return d.getFullYear() + \"-\" + String(d.getMonth() + 1).padStart(2, \"0\") + \"-\" + String(d.getDate()).padStart(2, \"0\"); },\n  daysUntil: function(d){ var x = new Date(String(d).length === 10 ? d + \"T12:00:00\" : d), t = new Date(); t.setHours(12, 0, 0, 0); return isNaN(x) ? null : Math.round((x - t) / 86400000); }\n};\n\n/* ---------- markdown (safe) ---------- */\nfunction md(src){\n  var lines = String(src || \"\").replace(/\\r/g, \"\").split(\"\\n\"), out = [], list = null, code = null;\n  function inline(s){ return esc(s).replace(/\\*\\*(.+?)\\*\\*/g, \"\u003cstrong>$1\u003c/strong>\").replace(/(^|[^*])\\*([^*\\n]+)\\*/g, \"$1\u003cem>$2\u003c/em>\").replace(/`([^`]+)`/g, \"\u003ccode>$1\u003c/code>\")\n    .replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^)\\s]+)\\)/g, '\u003ca href=\"$2\" target=\"_blank\" rel=\"noopener noreferrer\">$1\u003c/a>'); }\n  function close(){ if(list){ out.push(\"\u003c/\" + list + \">\"); list = null; } }\n  for(var i = 0; i \u003c lines.length; i++){\n    var l = lines[i];\n    if(/^```/.test(l)){ if(code === null){ close(); code = []; } else { out.push(\"\u003cpre>\u003ccode>\" + esc(code.join(\"\\n\")) + \"\u003c/code>\u003c/pre>\"); code = null; } continue; }\n    if(code !== null){ code.push(l); continue; }\n    var m;\n    if((m = l.match(/^(#{1,3})\\s+(.*)/))){ close(); out.push(\"\u003ch\" + m[1].length + \">\" + inline(m[2]) + \"\u003c/h\" + m[1].length + \">\"); }\n    else if((m = l.match(/^\\s*[-*\u2022]\\s+(.*)/))){ if(list !== \"ul\"){ close(); out.push(\"\u003cul>\"); list = \"ul\"; } out.push(\"\u003cli>\" + inline(m[1]) + \"\u003c/li>\"); }\n    else if((m = l.match(/^\\s*\\d+[.)]\\s+(.*)/))){ if(list !== \"ol\"){ close(); out.push(\"\u003col>\"); list = \"ol\"; } out.push(\"\u003cli>\" + inline(m[1]) + \"\u003c/li>\"); }\n    else if(/^\\|.*\\|\\s*$/.test(l) && i + 1 \u003c lines.length && /^\\|?\\s*:?-{2,}/.test(lines[i + 1])){\n      close(); var head = l.split(\"|\").slice(1, -1), rows = []; i += 2;\n      while(i \u003c lines.length && /^\\|.*\\|\\s*$/.test(lines[i])){ rows.push(lines[i].split(\"|\").slice(1, -1)); i++; } i--;\n      out.push(\"\u003ctable>\u003ctr>\" + head.map(function(c){ return \"\u003cth>\" + inline(c.trim()) + \"\u003c/th>\"; }).join(\"\") + \"\u003c/tr>\" + rows.map(function(r){ return \"\u003ctr>\" + r.map(function(c){ return \"\u003ctd>\" + inline(c.trim()) + \"\u003c/td>\"; }).join(\"\") + \"\u003c/tr>\"; }).join(\"\") + \"\u003c/table>\");\n    }\n    else if((m = l.match(/^>\\s?(.*)/))){ close(); out.push(\"\u003cblockquote>\" + inline(m[1]) + \"\u003c/blockquote>\"); }\n    else if(!l.trim()){ close(); }\n    else { close(); out.push(\"\u003cp>\" + inline(l) + \"\u003c/p>\"); }\n  }\n  if(code !== null) out.push(\"\u003cpre>\u003ccode>\" + esc(code.join(\"\\n\")) + \"\u003c/code>\u003c/pre>\");\n  close();\n  return out.join(\"\");\n}\n\n/* ---------- toast, modal, confirm ---------- */\nfunction toast(msg){\n  var box = document.querySelector(\".kx-toasts\") || document.body.appendChild(h(\"div\", { class:\"kx-toasts\", role:\"status\" }));\n  var t = h(\"div\", { class:\"kx-toast\" }, String(msg)); box.appendChild(t);\n  setTimeout(function(){ t.remove(); }, 2800);\n}\nfunction modal(title, content, o){\n  o = o || {};\n  return new Promise(function(resolve){\n    var scrim = h(\"div\", { class:\"kx-scrim\" }), box = h(\"div\", { class:\"kx-modal\", role:\"dialog\", \"aria-label\":title });\n    function done(v){ scrim.remove(); document.removeEventListener(\"keydown\", key); resolve(v); }\n    function key(e){ if(e.key === \"Escape\") done(null); }\n    var foot = h(\"div\", { class:\"mf\" });\n    (o.actions || [{ label:\"Close\", value:null }]).forEach(function(a){ foot.appendChild(h(\"button\", { class:\"ui-btn \" + (a.variant || \"\"), onclick:function(){ var v = typeof a.value === \"function\" ? a.value() : a.value; if(v !== false) done(v === undefined ? a.label : v); } }, a.label)); });\n    box.appendChild(h(\"div\", { class:\"mh\" }, h(\"h3\", null, title), h(\"button\", { class:\"kx-ib\", \"aria-label\":\"Close\", html:icon(\"x\"), onclick:function(){ done(null); } })));\n    box.appendChild(h(\"div\", { class:\"mb\" }, node(content)));\n    if(!o.noFooter) box.appendChild(foot);\n    scrim.appendChild(box); scrim.addEventListener(\"click\", function(e){ if(e.target === scrim) done(null); });\n    document.addEventListener(\"keydown\", key); document.body.appendChild(scrim);\n    var f = box.querySelector(\"input,textarea,select\"); if(f) setTimeout(function(){ f.focus(); }, 30);\n    if(o.onOpen) o.onOpen(box, done);\n  });\n}\nfunction confirmBox(msg, yes){ return modal(\"Are you sure?\", h(\"p\", { style:{ margin:0 } }, msg), { actions:[{ label:\"Cancel\", value:false, variant:\"ghost\" }, { label:yes || \"Yes\", value:true, variant:\"primary\" }] }).then(function(v){ return v === true; }); }\n\n/* ---------- UI building blocks (each returns an element) ---------- */\nvar ui = {\n  icon: function(name){ return h(\"span\", { class:\"kx-icon\", html:icon(name) }); },\n  page: function(title, subtitle, actionsEls){ return h(\"div\", { class:\"ui-page\" }, h(\"div\", null, h(\"h1\", null, title), subtitle ? h(\"p\", null, subtitle) : null), actionsEls ? h(\"div\", { class:\"ui-actions\" }, actionsEls) : null); },\n  section: function(t){ return h(\"div\", { class:\"ui-section\" }, t); },\n  card: function(o){ o = typeof o === \"string\" ? { body:o } : (o || {}); return h(\"div\", { class:\"ui-card\" }, o.title ? h(\"h3\", null, o.title) : null, o.body != null ? node(o.body) : null, o.footer ? h(\"div\", { class:\"ui-card-foot\" }, o.footer) : null); },\n  grid: function(children, min){ return h(\"div\", { class:\"ui-grid\", style:{ \"--min\": (min || 260) + \"px\" } }, children); },\n  row: function(){ return h(\"div\", { class:\"ui-row\" }, Array.prototype.slice.call(arguments)); },\n  stack: function(children){ return h(\"div\", { class:\"ui-stack\" }, children); },\n  stats: function(items){ return h(\"div\", { class:\"ui-stats\" }, (items || []).map(function(s){ return h(\"div\", { class:\"ui-stat\" }, h(\"div\", { class:\"l\" }, s.label), h(\"div\", { class:\"v\" }, s.value == null || s.value === \"\" ? \"0\" : String(s.value)), s.hint ? h(\"div\", { class:\"h\" }, s.hint) : null); })); },\n  button: function(label, onClick, o){\n    o = o || {};\n    var b = h(\"button\", { class:\"ui-btn \" + (o.variant || \"\") + (o.small ? \" small\" : \"\"), type:\"button\", title:o.title }, o.icon ? h(\"span\", { html:icon(o.icon), style:{ display:\"inline-flex\" } }) : null, label);\n    b.addEventListener(\"click\", function(e){\n      if(!onClick) return;\n      var r; try{ r = onClick(e); }catch(err){ report(err, \"button: \" + label); toast(\"Something went wrong.\"); }\n      if(r && typeof r.then === \"function\"){ b.disabled = true; r.catch(function(err){ report(err, \"button: \" + label); toast(err && err.message ? err.message : \"Something went wrong.\"); }).finally(function(){ b.disabled = false; }); }\n    });\n    return b;\n  },\n  badge: function(text, tone){ return h(\"span\", { class:\"ui-badge \" + (tone || \"\") }, text); },\n  progress: function(value, max){ var p = Math.max(0, Math.min(100, (parseFloat(value) || 0) / (parseFloat(max) || 100) * 100)); return h(\"div\", { class:\"ui-progress\", role:\"progressbar\", \"aria-valuenow\":Math.round(p) }, h(\"i\", { style:{ width:p + \"%\" } })); },\n  empty: function(text, actionLabel, onAction, iconName){ return h(\"div\", { class:\"ui-empty\" }, h(\"div\", { html:icon(iconName || \"sparkles\") }), h(\"p\", null, text || \"Nothing here yet.\"), actionLabel ? ui.button(actionLabel, onAction, { variant:\"primary\", icon:\"plus\" }) : null); },\n  markdown: function(text){ return h(\"div\", { class:\"ui-md\", html:md(text) }); },\n  loading: function(text){ return h(\"div\", { class:\"ui-loading\" }, h(\"div\", { class:\"ui-spin\" }), text || \"Working\u2026\"); },\n  error: function(text){ return h(\"div\", { class:\"ui-error\", role:\"alert\" }, text); },\n  kv: function(pairs){ var dl = h(\"dl\", { class:\"ui-kv\" }); Object.keys(pairs || {}).forEach(function(k){ dl.appendChild(h(\"dt\", null, k)); dl.appendChild(h(\"dd\", null, node(pairs[k]))); }); return dl; },\n  search: function(onInput, placeholder){ var i = h(\"input\", { class:\"ui-input\", type:\"search\", placeholder:placeholder || \"Search\", \"aria-label\":placeholder || \"Search\" }); var t; i.addEventListener(\"input\", function(){ clearTimeout(t); t = setTimeout(function(){ onInput(i.value.trim()); }, 150); }); return h(\"div\", { class:\"ui-search\" }, h(\"span\", { html:icon(\"search\") }), i); },\n  tabs: function(tabs, start){\n    var wrap = h(\"div\"), bar = h(\"div\", { class:\"ui-tabbar\", role:\"tablist\" }), body = h(\"div\");\n    function show(i){ Array.prototype.forEach.call(bar.children, function(b, j){ b.classList.toggle(\"on\", i === j); b.setAttribute(\"aria-selected\", i === j); }); body.innerHTML = \"\"; safeRender(tabs[i].render, body, \"tab: \" + tabs[i].label); }\n    tabs.forEach(function(t, i){ bar.appendChild(h(\"button\", { type:\"button\", role:\"tab\", onclick:function(){ show(i); } }, t.label)); });\n    wrap.appendChild(bar); wrap.appendChild(body); setTimeout(function(){ show(start || 0); }, 0);\n    return wrap;\n  },\n  list: function(items, o, emptyText){\n    o = o || {}; items = items || [];\n    if(!items.length) return ui.empty(emptyText || o.empty || \"Nothing here yet.\", o.emptyAction, o.onEmptyAction);\n    return h(\"div\", { class:\"ui-list\" }, items.map(function(it){\n      var t = o.title ? o.title(it) : (it.name || it.title || it.id), s = o.subtitle ? o.subtitle(it) : null, m = o.meta ? o.meta(it) : null, b = o.badge ? o.badge(it) : null;\n      var li = h(\"div\", { class:\"ui-li\" + (o.onClick ? \" click\" : \"\"), tabindex:o.onClick ? 0 : null },\n        o.avatar ? h(\"div\", { class:\"ui-avatar\" }, String(o.avatar(it) || \"\").slice(0, 2).toUpperCase()) : null,\n        h(\"div\", { class:\"main\" }, h(\"div\", { class:\"t\" }, node(t)), s ? h(\"div\", { class:\"s\" }, node(s)) : null),\n        b ? (b instanceof Node ? b : ui.badge(b)) : null, m ? h(\"div\", { class:\"m\" }, node(m)) : null,\n        o.actions ? h(\"div\", { class:\"acts\" }, o.actions.map(function(a){ return h(\"button\", { class:\"kx-ib\", type:\"button\", title:a.label, \"aria-label\":a.label, html:icon(a.icon || \"edit\"), onclick:function(e){ e.stopPropagation(); Promise.resolve(a.onClick(it)).catch(function(err){ report(err, \"list action\"); }); } }); })) : null);\n      if(o.onClick){ li.addEventListener(\"click\", function(){ o.onClick(it); }); li.addEventListener(\"keydown\", function(e){ if(e.key === \"Enter\") o.onClick(it); }); }\n      return li;\n    }));\n  },\n  table: function(rows, columns, o){\n    o = o || {}; rows = rows || [];\n    if(!rows.length) return ui.empty(o.empty || \"No rows yet.\");\n    columns = columns || Object.keys(rows[0]).filter(function(k){ return k[0] !== \"_\" && k !== \"id\"; }).map(function(k){ return { key:k, label:k }; });\n    return h(\"div\", { class:\"ui-tablewrap\" }, h(\"table\", { class:\"ui-table\" }, h(\"thead\", null, h(\"tr\", null, columns.map(function(c){ return h(\"th\", null, c.label || c.key); }))),\n      h(\"tbody\", null, rows.map(function(r){ var tr = h(\"tr\", { style:o.onClick ? { cursor:\"pointer\" } : null, onclick:o.onClick ? function(){ o.onClick(r); } : null }, columns.map(function(c){ var v = c.format ? c.format(r[c.key], r) : r[c.key]; return h(\"td\", null, node(v == null ? \"\" : v)); })); return tr; }))));\n  },\n  field: function(f){\n    var id = \"f_\" + newId(), type = f.type || \"text\", input;\n    if(type === \"textarea\") input = h(\"textarea\", { class:\"ui-input\", id:id, name:f.name, placeholder:f.placeholder || \"\", required:f.required ? true : null });\n    else if(type === \"select\") input = h(\"select\", { class:\"ui-input\", id:id, name:f.name, required:f.required ? true : null }, (f.required ? [] : [h(\"option\", { value:\"\" }, \"Choose\u2026\")]).concat((f.options || []).map(function(o){ var v = typeof o === \"object\" ? o.value : o, l = typeof o === \"object\" ? o.label : o; return h(\"option\", { value:v }, l); })));\n    else if(type === \"checkbox\" || type === \"boolean\"){ input = h(\"input\", { type:\"checkbox\", id:id, name:f.name, checked:!!f.value }); return h(\"div\", { class:\"ui-field\" }, h(\"label\", { class:\"ui-check\", for:id }, input, f.label || f.name)); }\n    else input = h(\"input\", { class:\"ui-input\", id:id, name:f.name, type:{ money:\"number\", number:\"number\", date:\"date\", time:\"time\", email:\"email\", tel:\"tel\", phone:\"tel\", url:\"url\", datetime:\"datetime-local\", color:\"color\" }[type] || \"text\", step:type === \"money\" ? \"0.01\" : (type === \"number\" ? \"any\" : null), placeholder:f.placeholder || \"\", required:f.required ? true : null });\n    if(f.value != null && type !== \"checkbox\") input.value = f.value;\n    return h(\"div\", { class:\"ui-field\" }, h(\"label\", { for:id }, f.label || f.name, f.required ? \" *\" : \"\"), input, f.hint ? h(\"div\", { class:\"hint\" }, f.hint) : null);\n  },\n  form: function(fields, o){\n    o = o || {};\n    var form = h(\"form\", { class:\"ui-form\", novalidate:true }), msg = h(\"div\");\n    (fields || []).forEach(function(f){ form.appendChild(ui.field(f)); });\n    var btn = h(\"button\", { class:\"ui-btn primary\", type:\"submit\" }, o.submit || \"Save\");\n    form.appendChild(msg); form.appendChild(h(\"div\", { class:\"ui-row\" }, btn, o.cancel ? ui.button(\"Cancel\", o.cancel, { variant:\"ghost\" }) : null));\n    form.addEventListener(\"submit\", function(e){\n      e.preventDefault(); msg.innerHTML = \"\";\n      var vals = {}, missing = [];\n      (fields || []).forEach(function(f){ var el = form.elements[f.name]; if(!el) return; var v = f.type === \"checkbox\" || f.type === \"boolean\" ? el.checked : el.value.trim(); if(f.required && (v === \"\" || v == null)) missing.push(f.label || f.name); vals[f.name] = v; });\n      if(missing.length){ msg.appendChild(ui.error(\"Please fill in: \" + missing.join(\", \"))); return; }\n      btn.disabled = true;\n      Promise.resolve(o.onSubmit ? o.onSubmit(vals, form) : null).then(function(){ if(o.reset !== false) form.reset(); }).catch(function(err){ report(err, \"form\"); msg.appendChild(ui.error(err && err.message ? err.message : \"Couldn't save that.\")); }).finally(function(){ btn.disabled = false; });\n    });\n    return form;\n  },\n  recordForm: function(collection, record, o){\n    o = o || {}; var d = colDef(collection);\n    var fields = (d ? d.fields : []).filter(function(f){ return !f.hidden; }).map(function(f){ return Object.assign({}, f, { value: record ? record[f.name] : (f.default != null ? f.default : (f.type === \"date\" && f.defaultToday ? fmt.today() : null)) }); });\n    return ui.form(fields, { submit: record ? \"Save changes\" : (o.submit || \"Add\"), reset:!record, cancel:o.cancel, onSubmit:function(v){ var r = record ? db.update(collection, record.id, v) : db.add(collection, v); toast(record ? \"Saved\" : \"Added\"); if(o.onSaved) return o.onSaved(r); } });\n  },\n  editRecord: function(collection, record){\n    var d = colDef(collection), name = d ? d.name.replace(/s$/, \"\") : \"item\";\n    return modal(record ? \"Edit \" + name.toLowerCase() : \"New \" + name.toLowerCase(), h(\"div\"), { noFooter:true, onOpen:function(box, done){ box.querySelector(\".mb\").appendChild(ui.recordForm(collection, record, { onSaved:function(){ done(true); App.refresh(); }, cancel:function(){ done(null); } })); } });\n  },\n  crud: function(collection, o){\n    o = o || {}; var d = colDef(collection) || { id:collection, name:collection, fields:[] };\n    var wrap = h(\"div\", { class:\"ui-stack\" }), listBox = h(\"div\"), q = \"\";\n    var titleKey = o.titleField || (d.fields[0] && d.fields[0].name) || \"name\";\n    var subKeys = o.subtitleFields || d.fields.slice(1, 3).filter(function(f){ return f.type !== \"textarea\"; }).map(function(f){ return f.name; });\n    function show(f, v){ if(v == null || v === \"\") return \"\"; var fd = d.fields.find(function(x){ return x.name === f; }) || {}; return fd.type === \"date\" ? fmt.date(v) : fd.type === \"money\" ? fmt.money(v) : (fd.type === \"checkbox\" || fd.type === \"boolean\") ? (v ? (fd.label || f) : \"\") : String(v); }\n    function draw(){\n      listBox.innerHTML = \"\";\n      var rows = db.list(collection, { search:q, sort:o.sort });\n      listBox.appendChild(ui.list(rows, { title:function(r){ return r[titleKey] || \"(untitled)\"; }, subtitle:function(r){ return subKeys.map(function(k){ return show(k, r[k]); }).filter(Boolean).join(\" \u00b7 \"); },\n        badge:o.badge, meta:o.meta || function(r){ return r._sample ? \"Example\" : \"\"; }, onClick:function(r){ ui.editRecord(collection, r); },\n        actions:[{ label:\"Delete\", icon:\"trash\", onClick:function(r){ return confirmBox(\"Delete this \" + d.name.replace(/s$/, \"\").toLowerCase() + \"?\", \"Delete\").then(function(y){ if(y){ db.remove(collection, r.id); toast(\"Deleted\"); draw(); } }); } }],\n        empty:q ? \"No matches.\" : \"No \" + d.name.toLowerCase() + \" yet.\", emptyAction:q ? null : \"Add \" + d.name.replace(/s$/, \"\").toLowerCase(), onEmptyAction:function(){ ui.editRecord(collection, null); } }));\n    }\n    wrap.appendChild(h(\"div\", { class:\"ui-row\" }, ui.search(function(v){ q = v; draw(); }, \"Search \" + d.name.toLowerCase()), ui.button(\"Add\", function(){ ui.editRecord(collection, null); }, { variant:\"primary\", icon:\"plus\" })));\n    wrap.appendChild(listBox); draw();\n    return wrap;\n  },\n  chart: function(o){\n    var box = h(\"div\", { class:\"ui-chartbox\" }), canvas = h(\"canvas\", { role:\"img\", \"aria-label\":o.title || \"Chart\" }); box.appendChild(canvas);\n    loadChart().then(function(Chart){\n      var cs = getComputedStyle(document.documentElement), accent = cs.getPropertyValue(\"--accent\").trim() || \"#111\", text = cs.getPropertyValue(\"--text2\").trim(), line = cs.getPropertyValue(\"--line\").trim();\n      var pal = [accent, \"#6b7280\", \"#0ea5e9\", \"#f59e0b\", \"#10b981\", \"#ef4444\", \"#8b5cf6\"];\n      var type = o.type || \"bar\";\n      var ds = (o.datasets || [{ label:o.label || \"\", data:o.data || [] }]).map(function(d, i){ var c = d.color || pal[i % pal.length]; return Object.assign({ borderColor:c, backgroundColor:type === \"line\" ? c + \"22\" : (type === \"pie\" || type === \"doughnut\" ? pal : c), borderWidth:2, tension:.3, fill:type === \"line\" && i === 0, pointRadius:type === \"line\" ? 2 : undefined, borderRadius:type === \"bar\" ? 6 : undefined }, d); });\n      new Chart(canvas, { type:type, data:{ labels:o.labels || [], datasets:ds }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:ds.length > 1 || type === \"pie\" || type === \"doughnut\", labels:{ color:text } } },\n        scales:type === \"pie\" || type === \"doughnut\" ? {} : { x:{ ticks:{ color:text }, grid:{ display:false } }, y:{ ticks:{ color:text }, grid:{ color:line }, beginAtZero:true } } } });\n    }).catch(function(){ box.innerHTML = \"\"; box.appendChild(ui.error(\"The chart couldn't load. Check your connection.\")); });\n    return box;\n  },\n  aiPanel: function(o){\n    o = o || {};\n    var wrap = h(\"div\", { class:\"ui-ai\" }), out = h(\"div\"), last = \"\";\n    var input = o.multiline === false ? h(\"input\", { class:\"ui-input\", placeholder:o.placeholder || \"\", \"aria-label\":o.label || o.placeholder || \"Input\" }) : h(\"textarea\", { class:\"ui-input\", placeholder:o.placeholder || \"\", \"aria-label\":o.label || o.placeholder || \"Input\" });\n    if(o.value) input.value = o.value;\n    var go = ui.button(o.buttonLabel || \"Generate\", function(){\n      var v = input.value.trim();\n      if(!o.noInput && o.requireInput !== false && !v){ input.focus(); return; }\n      out.innerHTML = \"\"; out.appendChild(ui.loading(o.loadingText || \"Thinking\u2026\"));\n      return Promise.resolve(o.run(v)).then(function(r){\n        out.innerHTML = \"\"; if(r == null) return;\n        if(r instanceof Node){ out.appendChild(r); return; }\n        last = String(r);\n        var box = h(\"div\", { class:\"out\" }, ui.markdown(last));\n        out.appendChild(box);\n        out.appendChild(h(\"div\", { class:\"ui-row\", style:{ marginTop:\"8px\" } }, ui.button(\"Copy\", function(){ copy(last); }, { small:true, variant:\"ghost\", icon:\"copy\" }), o.onSave ? ui.button(o.saveLabel || \"Save\", function(){ return o.onSave(last, v); }, { small:true, icon:\"download\" }) : null));\n      }).catch(function(err){ out.innerHTML = \"\"; out.appendChild(ui.error(err && err.message ? err.message : \"That didn't work. Try again.\")); });\n    }, { variant:\"primary\", icon:\"sparkles\" });\n    if(o.label) wrap.appendChild(h(\"div\", { class:\"ui-field\" }, h(\"label\", null, o.label)));\n    if(o.noInput){ wrap.appendChild(h(\"div\", { class:\"ui-row\" }, go)); } else { wrap.appendChild(input); wrap.appendChild(h(\"div\", { class:\"ui-row\" }, go)); }\n    wrap.appendChild(out);\n    return wrap;\n  },\n  fmt: fmt\n};\nfunction copy(t){ try{ navigator.clipboard.writeText(t).then(function(){ toast(\"Copied\"); }, function(){ toast(\"Couldn't copy\"); }); }catch(e){ toast(\"Couldn't copy\"); } }\nvar chartP = null;\nfunction loadChart(){ if(window.Chart) return Promise.resolve(window.Chart); if(chartP) return chartP; chartP = new Promise(function(res, rej){ var s = document.createElement(\"script\"); s.src = \"https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js\"; s.onload = function(){ res(window.Chart); }; s.onerror = function(){ chartP = null; rej(new Error(\"chart\")); }; document.head.appendChild(s); }); return chartP; }\n\n/* ---------- AI helpers (AIV-1 through AIV X) ---------- */\nfunction needAIV(){ if(!window.AIV) throw new Error(\"AI isn't available here. Open this app in AIV X.\"); }\nvar ai = {\n  ask: function(prompt, o){ needAIV(); o = o || {}; var sys = (CFG.aiStyle ? CFG.aiStyle + \"\\n\" : \"\") + (o.system || \"You are a helpful assistant inside the app \\\"\" + (CFG.name || \"App\") + \"\\\". Be accurate and concise. Use Markdown. Never invent facts; say when you're not sure.\");\n    return window.AIV.chat(Array.isArray(prompt) ? prompt : [{ role:\"system\", content:sys }, { role:\"user\", content:String(prompt) }], o).then(function(r){ return String(r || \"\").trim(); }); },\n  json: function(prompt, example, o){\n    needAIV(); o = o || {};\n    var ask = function(p){ return window.AIV.chat([{ role:\"system\", content:(o.system ? o.system + \"\\n\" : \"\") + \"Reply with ONLY valid JSON, no explanation, matching this example's shape:\\n\" + JSON.stringify(example) }, { role:\"user\", content:p }], { followup:o.followup }); };\n    function parse(t){ var s = String(t || \"\").replace(/```(?:json)?/gi, \"\"); var a = Math.min.apply(null, [s.indexOf(\"{\"), s.indexOf(\"[\")].filter(function(x){ return x >= 0; }).concat([Infinity])), b = Math.max(s.lastIndexOf(\"}\"), s.lastIndexOf(\"]\")); if(!isFinite(a) || b \u003c= a) throw new Error(\"no JSON\"); return JSON.parse(s.slice(a, b + 1)); }\n    return ask(String(prompt)).then(function(t){ try{ return parse(t); }catch(e){ return window.AIV.chat([{ role:\"system\", content:\"Fix this so it is valid JSON only. Output only the JSON.\" }, { role:\"user\", content:String(t).slice(0, 6000) }], { followup:true }).then(parse); } })\n      .catch(function(){ throw new Error(\"The AI's answer couldn't be read. Try again.\"); });\n  },\n  image: function(prompt){ needAIV(); return window.AIV.image(String(prompt)); },\n  search: function(q){ needAIV(); return window.AIV.search(String(q)).then(function(r){ return (r && r.results) || []; }); },\n  read: function(url){ needAIV(); return window.AIV.read(String(url)); },\n  extract: function(file){ needAIV(); return window.AIV.extract(file); }\n};\n\n/* ---------- screens, navigation ---------- */\nvar App = {\n  config: CFG, db: db, ai: ai, ui: ui, h: h, fmt: fmt, icon: icon, toast: toast, modal: modal, confirm: confirmBox, copy: copy, md: md,\n  screen: function(id, def){\n    if(!id || !def) return;\n    if(!screens[id]) order.push(id);\n    screens[id] = Object.assign({ title:id, icon:\"star\", nav:true }, def, { id:id });\n    if(App._started) drawNav();\n  },\n  action: function(name, def){ if(name && def && typeof def.run === \"function\") actions[name] = def; },\n  go: function(id, params){ if(!screens[id]) return; current = id; currentParams = params || {}; drawNav(); render(); try{ history.replaceState(null, \"\", \"#\" + id); }catch(e){} },\n  refresh: function(){ render(); },\n  current: function(){ return current; },\n  errors: errors\n};\nfunction report(err, where){\n  var e = { where: where || current || \"app\", message: String(err && err.message || err), stack: String(err && err.stack || \"\").split(\"\\n\").slice(0, 4).join(\"\\n\") };\n  errors.push(e);\n  try{ parent.postMessage({ __aivAppError:1, error:e }, \"*\"); }catch(x){}\n}\nfunction safeRender(fn, el, where){\n  try{\n    var r = fn(el, currentParams);\n    if(r && typeof r.then === \"function\") r.catch(function(err){ report(err, where); el.appendChild(ui.error(\"Part of this screen didn't load. \" + (err && err.message ? err.message : \"\"))); });\n  }catch(err){ report(err, where); el.appendChild(ui.error(\"Part of this screen didn't load. \" + (err && err.message ? err.message : \"\"))); }\n}\nfunction render(){\n  var v = document.querySelector(\".kx-view\"); if(!v) return;\n  var s = screens[current]; v.innerHTML = \"\";\n  var t = document.querySelector(\".kx-top .kx-title\"); if(t) t.textContent = CFG.name || (s ? s.title : \"\");\n  if(!s){ v.appendChild(ui.empty(\"This screen doesn't exist.\")); return; }\n  safeRender(s.render, v, \"screen: \" + current);\n  v.scrollTop = 0; try{ window.scrollTo(0, 0); }catch(e){}\n}\nfunction navItems(){ return order.filter(function(id){ return screens[id].nav !== false; }); }\nfunction drawNav(){\n  var side = document.querySelector(\".kx-navlist\"), tabs = document.querySelector(\".kx-tabs\"); if(!side) return;\n  side.innerHTML = \"\"; tabs.innerHTML = \"\";\n  var items = navItems(), mobile = items.slice(0, 5);\n  items.forEach(function(id){ var s = screens[id]; side.appendChild(h(\"button\", { class:\"kx-nav\" + (id === current ? \" on\" : \"\"), type:\"button\", \"aria-current\":id === current ? \"page\" : null, onclick:function(){ App.go(id); } }, h(\"span\", { html:icon(s.icon), style:{ display:\"inline-flex\" } }), s.title)); });\n  mobile.forEach(function(id){ var s = screens[id]; tabs.appendChild(h(\"button\", { class:\"kx-tab\" + (id === current ? \" on\" : \"\"), type:\"button\", onclick:function(){ App.go(id); } }, h(\"span\", { html:icon(s.icon), style:{ display:\"inline-flex\" } }), h(\"span\", null, s.short || s.title))); });\n  if(items.length > 5){\n    var more = items.slice(4);\n    tabs.removeChild(tabs.lastChild);   // 4 tabs + \"More\" on phones\n    var openMore = function(){\n      var listEl = h(\"div\", { class:\"ui-list\" });\n      modal(\"More\", listEl, { noFooter:true, onOpen:function(box, done){\n        more.forEach(function(id){\n          listEl.appendChild(h(\"div\", { class:\"ui-li click\", tabindex:0, onclick:function(){ done(null); App.go(id); } },\n            h(\"span\", { html:icon(screens[id].icon), style:{ display:\"inline-flex\", width:\"20px\" } }),\n            h(\"div\", { class:\"main\" }, h(\"div\", { class:\"t\" }, screens[id].title))));\n        });\n      } });\n    };\n    tabs.appendChild(h(\"button\", { class:\"kx-tab\" + (more.indexOf(current) >= 0 ? \" on\" : \"\"), type:\"button\", onclick:openMore },\n      h(\"span\", { html:icon(\"menu\"), style:{ display:\"inline-flex\" } }), h(\"span\", null, \"More\")));\n  }\n}\nfunction shell(){\n  document.title = CFG.name || \"App\";\n  var root = h(\"div\", { class:\"kx\" },\n    h(\"aside\", { class:\"kx-side\", \"aria-label\":\"Main navigation\" },\n      h(\"div\", { class:\"kx-brand\" }, h(\"div\", { class:\"kx-logo\", html:icon(CFG.icon || \"sparkles\") }), h(\"div\", null, h(\"div\", { class:\"kx-name\" }, CFG.name || \"App\"), CFG.tagline ? h(\"div\", { class:\"kx-tag\" }, CFG.tagline) : null)),\n      h(\"nav\", { class:\"kx-navlist\" }), h(\"div\", { class:\"kx-spacer\" }),\n      h(\"button\", { class:\"kx-nav\", type:\"button\", onclick:toggleTheme }, h(\"span\", { html:icon(\"moon\"), style:{ display:\"inline-flex\" } }), \"Light / dark\"),\n      h(\"div\", { class:\"kx-foot\" }, \"Built with AIV X\")),\n    h(\"div\", { class:\"kx-main\" },\n      h(\"header\", { class:\"kx-top\" }, h(\"div\", { class:\"kx-logo\", html:icon(CFG.icon || \"sparkles\"), style:{ width:\"30px\", height:\"30px\", borderRadius:\"9px\" } }), h(\"div\", { class:\"kx-title\" }, CFG.name || \"App\"), h(\"button\", { class:\"kx-ib\", \"aria-label\":\"Light or dark\", html:icon(\"moon\"), onclick:toggleTheme })),\n      h(\"main\", { class:\"kx-view\", id:\"main\" }),\n      h(\"nav\", { class:\"kx-tabs\", \"aria-label\":\"Main navigation\" })));\n  document.body.innerHTML = \"\"; document.body.appendChild(root);\n  if(CFG.accent && /^#[0-9a-f]{3,8}$/i.test(CFG.accent)){ document.documentElement.style.setProperty(\"--accent\", CFG.accent); document.documentElement.style.setProperty(\"--accent-ink\", ink(CFG.accent)); }\n  try{ var th = localStorage.getItem(\"aivapp.theme\"); if(th) document.documentElement.setAttribute(\"data-theme\", th); }catch(e){}\n}\nfunction ink(hex){ hex = hex.replace(\"#\", \"\"); if(hex.length === 3) hex = hex.split(\"\").map(function(c){ return c + c; }).join(\"\"); var r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16); return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? \"#111\" : \"#fff\"; }\nfunction toggleTheme(){ var dark = document.documentElement.getAttribute(\"data-theme\") === \"dark\" || (!document.documentElement.getAttribute(\"data-theme\") && matchMedia(\"(prefers-color-scheme: dark)\").matches); var t = dark ? \"light\" : \"dark\"; document.documentElement.setAttribute(\"data-theme\", t); try{ localStorage.setItem(\"aivapp.theme\", t); }catch(e){} }\n\n/* ---------- built-in: AI assistant that can use the app ---------- */\nfunction dataActions(){\n  (CFG.collections || []).forEach(function(c){\n    var one = c.name.replace(/s$/, \"\").toLowerCase(), fields = (c.fields || []).map(function(f){ return f.name + (f.type && f.type !== \"text\" ? \" (\" + f.type + \")\" : \"\"); }).join(\", \");\n    if(!actions[\"list_\" + c.id]) actions[\"list_\" + c.id] = { description:\"List the \" + c.name.toLowerCase() + \" (optionally with \\\"search\\\" text)\", params:{ search:\"optional text\" }, run:function(a){ return db.list(c.id, { search:a && a.search, limit:40 }).map(function(r){ var o = {}; Object.keys(r).forEach(function(k){ if(k[0] !== \"_\") o[k] = r[k]; }); return o; }); } };\n    if(!actions[\"add_\" + c.id]) actions[\"add_\" + c.id] = { description:\"Add a new \" + one + \". Fields: \" + fields, params:{ record:\"object with those fields\" }, run:function(a){ var r = db.add(c.id, (a && a.record) || {}); return { added:r.id }; } };\n    if(!actions[\"update_\" + c.id]) actions[\"update_\" + c.id] = { description:\"Change an existing \" + one + \" by id\", params:{ id:\"the id\", changes:\"object of fields to change\" }, run:function(a){ var r = db.update(c.id, a && a.id, (a && a.changes) || {}); return r ? { updated:r.id } : { error:\"not found\" }; } };\n    if(!actions[\"delete_\" + c.id]) actions[\"delete_\" + c.id] = { description:\"Delete a \" + one + \" by id (asks the user first)\", params:{ id:\"the id\" }, confirm:true, run:function(a){ return db.remove(c.id, a && a.id) ? { deleted:true } : { error:\"not found\" }; } };\n  });\n}\nvar CHAT = [];\nfunction assistantScreen(){\n  App.screen(\"assistant\", { title:(CFG.assistant && CFG.assistant.title) || \"Assistant\", short:\"Assistant\", icon:\"chat\", render:function(el){\n    var A = CFG.assistant || {};\n    try{ CHAT = JSON.parse(localStorage.getItem(\"aivapp.chat\") || \"[]\"); }catch(e){ CHAT = []; }\n    el.appendChild(ui.page((A.title || \"Assistant\"), A.subtitle || \"Ask anything. It can read and update what's saved in this app.\", [ui.button(\"New chat\", function(){ CHAT = []; try{ localStorage.setItem(\"aivapp.chat\", \"[]\"); }catch(e){} App.refresh(); }, { variant:\"ghost\", small:true, icon:\"refresh\" })]));\n    var box = h(\"div\", { class:\"kx-chat\" }), msgs = h(\"div\", { class:\"kx-msgs\", \"aria-live\":\"polite\" }), ta = h(\"textarea\", { class:\"ui-input\", rows:1, placeholder:\"Message\", \"aria-label\":\"Message\" });\n    function bubble(m){ var b = h(\"div\", { class:\"kx-msg \" + (m.role === \"user\" ? \"u\" : \"a\") }); if(m.role === \"user\") b.textContent = m.content; else { b.appendChild(ui.markdown(m.content)); if(m.did && m.did.length) b.appendChild(h(\"div\", { class:\"did\" }, \"Did: \" + m.did.join(\" \u00b7 \"))); } return b; }\n    function draw(){ msgs.innerHTML = \"\"; if(!CHAT.length){ msgs.appendChild(h(\"div\", { class:\"kx-msg a\" }, ui.markdown(A.greeting || (\"Hi, I'm the \" + (CFG.name || \"app\") + \" assistant. How can I help?\")))); var st = h(\"div\", { class:\"kx-starters\" }); (A.starters || []).slice(0, 4).forEach(function(s){ st.appendChild(h(\"button\", { type:\"button\", onclick:function(){ ta.value = s; send(); } }, s)); }); msgs.appendChild(st); } CHAT.forEach(function(m){ msgs.appendChild(bubble(m)); }); msgs.scrollTop = msgs.scrollHeight; }\n    var busy = false;\n    function send(){\n      var t = ta.value.trim(); if(!t || busy) return;\n      busy = true; ta.value = \"\"; CHAT.push({ role:\"user\", content:t }); draw();\n      var wait = h(\"div\", { class:\"kx-msg a\" }, ui.loading(\"Thinking\u2026\")); msgs.appendChild(wait); msgs.scrollTop = msgs.scrollHeight;\n      runAgent(t).then(function(r){ CHAT.push({ role:\"assistant\", content:r.text, did:r.did }); }).catch(function(e){ CHAT.push({ role:\"assistant\", content:\"Sorry, that didn't work: \" + (e && e.message ? e.message : \"try again.\") }); })\n        .finally(function(){ busy = false; CHAT = CHAT.slice(-40); try{ localStorage.setItem(\"aivapp.chat\", JSON.stringify(CHAT)); }catch(e){} draw(); });\n    }\n    ta.addEventListener(\"keydown\", function(e){ if(e.key === \"Enter\" && !e.shiftKey && !matchMedia(\"(max-width:760px)\").matches){ e.preventDefault(); send(); } });\n    box.appendChild(msgs); box.appendChild(h(\"div\", { class:\"kx-compose\" }, ta, ui.button(\"\", send, { variant:\"primary\", icon:\"send\", title:\"Send\" })));\n    el.appendChild(box); draw();\n  } });\n}\n// The assistant works like an agent: it can look at the app's data and use the app's actions, one step at a time.\nfunction runAgent(text){\n  needAIV();\n  var A = CFG.assistant || {}, did = [];\n  var acts = Object.keys(actions).map(function(k){ var a = actions[k]; return \"- \" + k + \": \" + (a.description || \"\") + (a.params ? \" Params: \" + JSON.stringify(a.params) : \"\"); }).join(\"\\n\");\n  var counts = (CFG.collections || []).map(function(c){ return c.name + \": \" + db.count(c.id); }).join(\", \");\n  var sys = (A.instructions || (\"You are the assistant inside the app \\\"\" + (CFG.name || \"App\") + \"\\\". \" + (CFG.tagline || \"\"))) +\n    \"\\n\\nToday is \" + new Date().toDateString() + \". Saved in the app right now: \" + (counts || \"nothing\") + \".\" +\n    (acts ? \"\\n\\nYou can use the app with these actions:\\n\" + acts + \"\\n\\nTo use one, reply with ONLY a JSON object like {\\\"action\\\":\\\"name\\\",\\\"args\\\":{...}}. You'll get the result back, then continue. Use one action at a time, at most 6. When you're done, reply normally in Markdown (no JSON) and say what you did. Never make up data you didn't read with an action.\" : \"\") +\n    \"\\nBe accurate and concise. If you're not sure, say so.\";\n  var msgs = [{ role:\"system\", content:sys }].concat(CHAT.slice(-12).map(function(m){ return { role:m.role, content:m.content }; }));\n  var steps = 0;\n  function loop(){\n    return window.AIV.chat(msgs, { followup: steps > 0 }).then(function(reply){\n      reply = String(reply || \"\").trim();\n      var j = null, m = reply.replace(/```(?:json)?/g, \"\").match(/^\\s*\\{[\\s\\S]*\\}\\s*$/);\n      if(m){ try{ j = JSON.parse(m[0]); }catch(e){} }\n      if(!j || !j.action || steps >= 6) return { text: j && j.action ? \"I couldn't finish that in a few steps. Try asking more specifically.\" : (reply || \"Done.\"), did:did };\n      steps++;\n      var a = actions[j.action];\n      msgs.push({ role:\"assistant\", content:JSON.stringify(j) });\n      if(!a){ msgs.push({ role:\"user\", content:\"RESULT: there is no action called \" + j.action + \". Use one from the list, or answer normally.\" }); return loop(); }\n      var go = a.confirm ? confirmBox(\"The assistant wants to: \" + (a.description || j.action).split(\" (\")[0].toLowerCase() + \" (\" + JSON.stringify(j.args || {}).slice(0, 120) + \"). Allow it?\", \"Allow\") : Promise.resolve(true);\n      return go.then(function(ok){\n        if(!ok){ msgs.push({ role:\"user\", content:\"RESULT: the user said no. Don't try that again; tell them you didn't do it.\" }); return loop(); }\n        return Promise.resolve().then(function(){ return a.run(j.args || {}); }).then(function(res){\n          did.push(j.action.replace(/_/g, \" \"));\n          msgs.push({ role:\"user\", content:\"RESULT: \" + JSON.stringify(res == null ? \"ok\" : res).slice(0, 6000) });\n          return loop();\n        }, function(err){ msgs.push({ role:\"user\", content:\"RESULT: error: \" + (err && err.message) }); return loop(); });\n      });\n    });\n  }\n  return loop().then(function(r){ if(r.did.length) emit(\"*\"); return r; });\n}\n\n/* ---------- built-in: settings ---------- */\nfunction settingsScreen(){\n  App.screen(\"settings\", { title:\"Settings\", icon:\"settings\", render:function(el){\n    el.appendChild(ui.page(\"Settings\", \"Your data stays with this app.\"));\n    var counts = (CFG.collections || []).map(function(c){ return c.name + \": \" + db.count(c.id); }).join(\" \u00b7 \");\n    el.appendChild(ui.card({ title:\"Your data\", body:h(\"div\", null, h(\"p\", { style:{ marginTop:0, color:\"var(--text2)\" } }, counts || \"Nothing saved yet.\"),\n      ui.row(ui.button(\"Export\", function(){ var b = new Blob([JSON.stringify({ app:CFG.name, at:new Date().toISOString(), data:db.all() }, null, 2)], { type:\"application/json\" }); var a = h(\"a\", { href:URL.createObjectURL(b), download:(CFG.name || \"app\").replace(/\\W+/g, \"-\").toLowerCase() + \"-data.json\" }); document.body.appendChild(a); a.click(); a.remove(); }, { icon:\"download\" }),\n        ui.button(\"Import\", function(){ var i = h(\"input\", { type:\"file\", accept:\".json,application/json\" }); i.onchange = function(){ var f = i.files[0]; if(!f) return; f.text().then(function(t){ var d = JSON.parse(t); db.setAll(d.data || d); toast(\"Imported\"); App.refresh(); }).catch(function(){ toast(\"That file couldn't be imported.\"); }); }; i.click(); }, { icon:\"upload\" }),\n        ui.button(\"Remove example data\", function(){ return confirmBox(\"Remove the example records that came with the app?\", \"Remove\").then(function(y){ if(!y) return; Object.keys(DB.data).forEach(function(k){ DB.data[k] = DB.data[k].filter(function(r){ return !r._sample; }); }); persist(); emit(\"*\"); toast(\"Example data removed\"); App.refresh(); }); }, { variant:\"ghost\" }),\n        ui.button(\"Erase everything\", function(){ return confirmBox(\"Erase all data saved in this app? This can't be undone.\", \"Erase\").then(function(y){ if(!y) return; db.setAll({}); try{ localStorage.setItem(\"aivapp.chat\", \"[]\"); }catch(e){} toast(\"Erased\"); App.refresh(); }); }, { variant:\"ghost danger\" }))) }));\n    el.appendChild(h(\"div\", { style:{ height:\"16px\" } }));\n    el.appendChild(ui.card({ title:\"About\", body:h(\"div\", null, h(\"p\", { style:{ margin:0 } }, (CFG.name || \"This app\") + (CFG.tagline ? \": \" + CFG.tagline : \"\")), CFG.disclaimer ? h(\"p\", { style:{ color:\"var(--text2)\", fontSize:\"13.5px\" } }, CFG.disclaimer) : null, h(\"p\", { style:{ color:\"var(--muted)\", fontSize:\"13px\", marginBottom:0 } }, \"Built with AIV X. AI answers can be wrong, so check anything important.\")) }));\n  } });\n}\n\n/* ---------- self-test: open every screen and report anything that breaks ---------- */\nfunction selfTest(){\n  var out = [], ids = order.slice();\n  return ids.reduce(function(p, id){\n    return p.then(function(){\n      var before = errors.length;\n      App.go(id);\n      return new Promise(function(r){ setTimeout(r, 350); }).then(function(){\n        var v = document.querySelector(\".kx-view\"), errs = errors.slice(before).map(function(e){ return e.message + (e.stack ? \"\\n\" + e.stack : \"\"); });\n        if(v && !v.textContent.trim() && !v.querySelector(\"canvas,input,textarea,img\")) errs.push(\"The screen rendered nothing.\");\n        out.push({ id:id, ok:!errs.length, errors:errs });\n      });\n    });\n  }, Promise.resolve()).then(function(){ App.go(order[0]); return out; });\n}\nwindow.addEventListener(\"message\", function(e){ var d = e.data || {}; if(d.__aivSelfTest) selfTest().then(function(r){ try{ e.source.postMessage({ __aivSelfTestResult:1, results:r }, \"*\"); }catch(x){} }); });\nwindow.addEventListener(\"error\", function(e){ report(e.error || e.message, \"script\"); });\nwindow.addEventListener(\"unhandledrejection\", function(e){ report(e.reason, \"async\"); });\n\nApp.start = function(){\n  if(App._started) return; App._started = true;\n  load(); seed(); dataActions();\n  if(CFG.assistant !== false) assistantScreen();\n  settingsScreen();\n  // keep the assistant and settings at the end of the menu\n  [\"assistant\", \"settings\"].forEach(function(id){ var i = order.indexOf(id); if(i >= 0){ order.splice(i, 1); order.push(id); } });\n  shell();\n  var hash = (location.hash || \"\").slice(1);\n  App.go(screens[hash] ? hash : order[0]);\n  db.on(\"*\", function(){ /* other screens pick up changes when opened */ });\n};\n// Common names AI-written screens reach for: map them to the real thing\nui.input = ui.field; ui.heading = ui.section; ui.header = ui.page; ui.text = function(t){ return h(\"p\", null, t); }; ui.modal = modal; ui.toast = toast; ui.confirm = confirmBox;\nui.select = function(o){ return ui.field(Object.assign({ type:\"select\" }, o)); }; ui.stat = function(s){ return ui.stats([s]); }; ui.spinner = ui.loading; ui.alert = ui.error; ui.md = ui.markdown;\nApp.navigate = App.go; App.notify = toast; App.data = db; App.store = db;\ndb.getAll = function(name){ return name ? db.list(name) : db.all(); }; db.create = db.add; db.insert = db.add; db.delete = db.remove; db.edit = db.update; db.query = db.list;\nai.chat = ai.ask; ai.generate = ai.ask; ai.complete = ai.ask;\n// Anything else that doesn't exist: keep the screen working, but report it so AIV X's test fixes the screen\nfunction guard(obj, label){\n  if(typeof Proxy !== \"function\") return obj;\n  return new Proxy(obj, { get:function(t, k){\n    if(k in t || typeof k === \"symbol\" || k === \"then\" || k === \"toJSON\") return t[k];\n    report(new Error(label + \".\" + String(k) + \" doesn't exist in the App Kit\"), current ? \"screen: \" + current : label);\n    return function(){ return h(\"div\"); };\n  } });\n}\nApp.db = guard(db, \"App.db\"); App.ai = guard(ai, \"App.ai\");\nwindow.App = guard(App, \"App\"); window.ui = guard(ui, \"ui\"); window.h = h; window.fmt = guard(fmt, \"fmt\");\n})();\n";
+const KIT_DOCS = "You write ONE screen of an app that runs on the AIV App Kit. The kit already provides the layout (sidebar on desktop, tab bar on phones), saved data, an AI assistant screen, and a settings screen. Use ONLY the APIs below. No frameworks, no imports, no HTML files.\n\nREGISTER THE SCREEN\nApp.screen(\"screen_id\", { title:\"Title\", icon:\"home\", render(el, params){ ... } });\n- render(el) builds the screen inside the element el (append children to it). It may be async.\n- To go to another screen: App.go(\"screen_id\", { any:\"params\" }); params arrive as render's 2nd argument.\n- After changing data, call App.refresh() to redraw the current screen (or redraw just a part you own).\n- Icons: home list calendar chart check user users book dollar heart star chat settings plus search edit trash clock folder bolt music camera map briefcase cart bell file sparkles target flag tag activity globe mail phone image box pill dumbbell food school\n\nELEMENTS\nh(tag, props, ...children) creates an element. props: class, style (object), text, html, value, checked, onclick/oninput/onchange (functions), any attribute. Children: strings, elements, arrays.\n  h(\"div\", { class:\"ui-row\" }, h(\"strong\", null, \"Hi\"), \" there\")\n\nSAVED DATA (collections are defined in the app plan; use their exact ids and field names)\nApp.db.list(col, { where:{field:value} | (r=>bool), search:\"text\", sort:\"field\" | \"-field\", limit:10 }) \u2192 array of records (newest first by default)\nApp.db.get(col, id) \u00b7 App.db.find(col, where) \u00b7 App.db.add(col, record) \u2192 record \u00b7 App.db.update(col, id, changes) \u00b7 App.db.remove(col, id)\nApp.db.count(col, where) \u00b7 App.db.sum(col, \"field\", where)\nEvery record has id, _created (ms timestamp), _updated. Dates are \"YYYY-MM-DD\" strings. Numbers/money are numbers. Checkboxes are true/false.\n\nUI BLOCKS (each returns an element you append)\nui.page(title, subtitle, [buttons])            page header; put it first on every screen\nui.section(\"Label\")                            small heading between parts\nui.card({ title, body: element|string, footer:[buttons] })\nui.grid([cards...], minWidthPx=260) \u00b7 ui.row(a, b, c) \u00b7 ui.stack([a, b, c])\nui.stats([{ label, value, hint }])              row of number tiles\nui.button(label, onClick, { variant:\"primary\"|\"ghost\"|\"danger\", icon:\"plus\", small:true })   onClick may be async (button disables while it runs; errors show a toast)\nui.badge(text, \"good\"|\"warn\"|\"bad\"|\"accent\") \u00b7 ui.progress(value, max) \u00b7 ui.empty(text, actionLabel, onAction)\nui.list(items, { title:r=>, subtitle:r=>, meta:r=>, badge:r=>text, avatar:r=>initials, onClick:r=>, actions:[{label, icon, onClick:r=>}], empty:\"text\", emptyAction:\"Add\", onEmptyAction:fn })\nui.table(rows, [{ key, label, format:(value,row)=>string }], { onClick:row=>, empty:\"text\" })\nui.form([{ name, label, type:\"text|textarea|number|money|date|time|select|checkbox|email|tel|url\", options:[...], required, placeholder, value, hint }], { submit:\"Save\", onSubmit: async values => {}, cancel:fn, reset:true })\nui.recordForm(col, record|null, { onSaved: r=>{} })   ready-made add/edit form from the collection's fields\nui.editRecord(col, record|null)                 opens that form in a dialog (returns a Promise)\nui.crud(col, { titleField, subtitleFields:[...], sort:\"-field\" })   complete searchable list with add/edit/delete\nui.tabs([{ label, render(el){...} }])\nui.chart({ type:\"bar\"|\"line\"|\"pie\"|\"doughnut\", labels:[...], datasets:[{ label, data:[...] }] })\nui.search(text=>{}, \"placeholder\") \u00b7 ui.markdown(text) \u00b7 ui.loading(\"text\") \u00b7 ui.error(\"text\") \u00b7 ui.kv({ Label: value })\nui.aiPanel({ label, placeholder, buttonLabel:\"Generate\", loadingText, multiline:true, noInput:false, run: async input => markdownString, onSave:(result,input)=>{}, saveLabel })\n   complete AI tool: input box \u2192 runs your function \u2192 shows the result with Copy/Save. Use it for most AI features.\n\nDIALOGS AND MESSAGES\nApp.toast(\"Saved\") \u00b7 await App.confirm(\"Delete this?\", \"Delete\") \u2192 true/false \u00b7 await App.modal(title, element, { actions:[{ label, value, variant }] })\n\nFORMATTING\nfmt.date(\"2026-05-01\") \u2192 \"May 1\" \u00b7 fmt.money(12.5) \u00b7 fmt.number(n, decimals) \u00b7 fmt.percent(n) \u00b7 fmt.ago(timestamp) \u00b7 fmt.today() \u2192 \"YYYY-MM-DD\" \u00b7 fmt.daysUntil(\"YYYY-MM-DD\") \u2192 number\n\nAI (runs on AIV-1; always show ui.loading while waiting, and catch errors)\nawait App.ai.ask(\"prompt\", { system:\"optional role\" }) \u2192 Markdown string\nawait App.ai.json(\"prompt\", { example:\"shape\" }) \u2192 parsed object or array in that shape\nawait App.ai.image(\"prompt\") \u2192 image data URL (use in h(\"img\", { src }))\nawait App.ai.search(\"query\") \u2192 [{ title, url, snippet }]   \u00b7 await App.ai.read(url) \u2192 { title, text }\nAlways give the AI the real data it needs (for example JSON.stringify(App.db.list(\"tasks\", { limit:30 }))). Never let it invent the user's data.\n\nLET THE ASSISTANT USE YOUR FEATURE (optional)\nApp.action(\"name\", { description:\"what it does\", params:{ field:\"meaning\" }, run: async args => result })\n\nRULES\n- Output ONLY one ```js code block containing App.screen(\"\u003cthe id you were given>\", ...). No HTML, no \u003cscript>, no explanation.\n- The screen must be complete and genuinely useful: real interactions, every feature listed for it, sensible empty states (\"No X yet\" with an Add button). No placeholders, no \"TODO\", no fake data written into the code (sample data is already saved).\n- Read data inside render so it is current. Never use localStorage directly; use App.db.\n- Use only the collections and fields in the plan. Don't define new collections.\n- Plain modern JavaScript. Only the kit globals above (App, ui, h, fmt) plus normal browser APIs. Keep it under about 220 lines.\n- Write for people, not developers: clear labels, short helpful text, no emojis.\n\nEXAMPLE\n```js\nApp.screen(\"dashboard\", { title:\"Dashboard\", icon:\"home\", render(el){\n  const open = App.db.list(\"tasks\", { where: t => !t.done });\n  const dueSoon = open.filter(t => t.due && fmt.daysUntil(t.due) \u003c= 3);\n  el.append(\n    ui.page(\"Good to see you\", \"Here's where things stand.\", [ui.button(\"New task\", () => ui.editRecord(\"tasks\", null), { variant:\"primary\", icon:\"plus\" })]),\n    ui.stats([{ label:\"Open tasks\", value:open.length }, { label:\"Due in 3 days\", value:dueSoon.length }, { label:\"Done\", value:App.db.count(\"tasks\", { done:true }) }]),\n    ui.section(\"Due soon\"),\n    ui.list(dueSoon, { title:t => t.title, subtitle:t => \"Due \" + fmt.date(t.due), badge:t => fmt.daysUntil(t.due) \u003c 0 ? \"Late\" : \"\", onClick:t => ui.editRecord(\"tasks\", t), empty:\"Nothing due soon.\" }),\n    ui.section(\"Plan my day\"),\n    ui.card({ body: ui.aiPanel({ noInput:true, buttonLabel:\"Plan my day\", loadingText:\"Planning\u2026\", run: () => App.ai.ask(\"Make a short, realistic plan for today from these open tasks: \" + JSON.stringify(open.map(t => ({ title:t.title, due:t.due }))) + \". Today is \" + fmt.today() + \".\") }) })\n  );\n}});\n```\n";
+const KIT_ICONS = "home list calendar chart check user users book dollar heart star chat settings plus search edit trash clock folder bolt music camera map briefcase cart bell file sparkles target flag tag activity globe mail phone image box pill dumbbell food school".split(" ");
+
+const APP_PLAN_SYSTEM = `You are AIV X App Builder, a senior product designer. Plan a COMPLETE, polished AI-powered web app from the user's request: the kind of app a real company would ship, with several screens, saved data, and useful AI features. Not a single chat box.
+Reply with JSON only, in exactly this shape:
+{
+ "name":"2-3 word app name", "tagline":"one short line", "icon":"one of: ${KIT_ICONS.join(" ")}", "accent":"#hex color that fits the app (readable on white)",
+ "currency":"USD", "disclaimer":"one sentence for legal, medical, money, or safety apps; otherwise empty",
+ "collections":[{"id":"snake_case_plural","name":"Display Name","fields":[{"name":"snake_case","label":"Label","type":"text|textarea|number|money|date|time|select|checkbox|email|tel|url","options":["for select only"],"required":true}]}],
+ "screens":[{"id":"snake_case","title":"Short Title","icon":"icon name","purpose":"one sentence","uses":["collection ids"],"features":["4-7 concrete things the user can see and do on this screen, including any AI feature and exactly what it produces"]}],
+ "assistant":{"title":"Assistant name","instructions":"how the app's built-in AI assistant behaves: role, tone, what it must never do","greeting":"one friendly line","starters":["3-4 things a user would ask it"]},
+ "aiStyle":"one sentence on how the app's AI features should write",
+ "sample":{"collection_id":[3-5 realistic example records using that collection's field names; dates near today]}
+}
+RULES
+- 4 to 6 screens. The first is a dashboard/home that summarizes everything (numbers, what's next, an AI insight). Then one screen per main job. The kit adds the assistant and settings screens itself, so don't list them.
+- 1 to 4 collections with 3 to 8 fields each. Every screen that manages data uses them. Field names are snake_case and never "id".
+- Put real AI features where they help, at least 3 across the app: for example summarize, draft, analyze, suggest, plan, explain, generate ideas, research the web, score or prioritize. Say exactly what each one produces.
+- Features must be specific to the user's request, not generic. Think about what the best app in this category does.
+- Sample records are realistic and varied. No real people's private data.
+- For legal, medical, financial, or safety topics, the app gives general information and organization help, not professional advice; say so in the disclaimer and in the assistant's instructions.`;
+
+const APP_EDIT_SYSTEM = `You are AIV X App Builder. You get an existing app's plan (JSON) and a change the user wants. Reply with JSON only:
+{"plan":{the full updated plan, same shape},"rebuild":["ids of screens that must be written or rewritten"],"summary":"one plain sentence describing the change"}
+RULES: keep screen ids and collection ids stable. Only list screens in "rebuild" that need new code: new screens, and screens whose features or data changed. Changing the name, colors, icon, assistant, or tagline needs no rebuild. Adding a field to a collection needs rebuilding only the screens that show that field. Keep 4 to 7 screens. Don't list the built-in assistant or settings screens.`;
+
+function cleanPlan(p){
+  p = p || {};
+  const snake = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 32);
+  const icon = i => KIT_ICONS.includes(i) ? i : "star";
+  const types = ["text","textarea","number","money","date","time","select","checkbox","email","tel","url"];
+  const out = {
+    name:String(p.name || "My App").slice(0, 40), tagline:String(p.tagline || "").slice(0, 90), icon:icon(p.icon),
+    accent:/^#[0-9a-f]{6}$/i.test(p.accent || "") ? p.accent : "#111111", currency:/^[A-Z]{3}$/.test(p.currency || "") ? p.currency : "USD",
+    disclaimer:String(p.disclaimer || "").slice(0, 240), aiStyle:String(p.aiStyle || "").slice(0, 300),
+    collections:[], screens:[], assistant:{}, sample:{}
+  };
+  const seenC = new Set();
+  (Array.isArray(p.collections) ? p.collections : []).slice(0, 5).forEach(c => {
+    const id = snake(c.id || c.name); if(!id || seenC.has(id)) return; seenC.add(id);
+    const seenF = new Set();
+    const fields = (Array.isArray(c.fields) ? c.fields : []).map(f => {
+      const name = snake(f.name || f.label); if(!name || name === "id" || seenF.has(name)) return null; seenF.add(name);
+      const type = types.includes(f.type) ? f.type : (f.type === "boolean" ? "checkbox" : "text");
+      const o = { name, label:String(f.label || name.replace(/_/g, " ").replace(/^./, x => x.toUpperCase())).slice(0, 40), type };
+      if(type === "select") o.options = (Array.isArray(f.options) ? f.options : []).map(x => String(x).slice(0, 40)).filter(Boolean).slice(0, 12);
+      if(type === "select" && !o.options.length) o.type = "text";
+      if(f.required) o.required = true;
+      return o;
+    }).filter(Boolean).slice(0, 10);
+    if(!fields.length) return;
+    if(!fields.some(f => f.required)) fields[0].required = true;
+    out.collections.push({ id, name:String(c.name || id).slice(0, 30), fields });
+  });
+  const seenS = new Set(["assistant", "settings"]);
+  (Array.isArray(p.screens) ? p.screens : []).forEach(s => {
+    const id = snake(s.id || s.title); if(!id || seenS.has(id) || out.screens.length >= 7) return; seenS.add(id);
+    out.screens.push({ id, title:String(s.title || id).slice(0, 24), icon:icon(s.icon), purpose:String(s.purpose || "").slice(0, 240),
+      uses:(Array.isArray(s.uses) ? s.uses : []).map(snake).filter(x => seenC.has(x)),
+      features:(Array.isArray(s.features) ? s.features : []).map(x => String(x).slice(0, 220)).filter(Boolean).slice(0, 8) });
+  });
+  const a = p.assistant || {};
+  out.assistant = { title:String(a.title || "Assistant").slice(0, 30), instructions:String(a.instructions || "").slice(0, 3000), greeting:String(a.greeting || "").slice(0, 200),
+    starters:(Array.isArray(a.starters) ? a.starters : []).map(x => String(x).slice(0, 100)).filter(Boolean).slice(0, 4) };
+  out.collections.forEach(c => {
+    const rows = p.sample && Array.isArray(p.sample[c.id]) ? p.sample[c.id] : [];
+    out.sample[c.id] = rows.slice(0, 6).map(r => { const o = {}; c.fields.forEach(f => { if(r && r[f.name] != null && r[f.name] !== "") o[f.name] = typeof r[f.name] === "object" ? JSON.stringify(r[f.name]) : r[f.name]; }); return o; }).filter(o => Object.keys(o).length);
+  });
+  return out;
+}
+function planForPrompt(plan){ const p = Object.assign({}, plan); p.sample = Object.fromEntries(Object.entries(plan.sample || {}).map(([k, v]) => [k, (v || []).slice(0, 2)])); return JSON.stringify(p); }
+function extractCode(reply){
+  const r = String(reply || "");
+  const m = r.match(/```(?:js|javascript)?\s*\n([\s\S]*?)```/i) || r.match(/```(?:js|javascript)?\s*\n([\s\S]*)$/i);
+  const code = (m ? m[1] : r).trim();
+  return code;
+}
+function checkScreenCode(code, id){
+  if(!code || code.length < 60) return "The reply had no code.";
+  if(!new RegExp("App\\.screen\\(\\s*[\"'`]" + id + "[\"'`]").test(code)) return `The code must call App.screen("${id}", ...).`;
+  if(new RegExp("<\\/?scr" + "ipt|<!doctype|<html", "i").test(code)) return "Only JavaScript is allowed, no HTML or script tags.";
+  if(/\blocalStorage\b/.test(code)) return "Use App.db instead of localStorage.";
+  try{ new Function(code); }catch(e){ return "Syntax error: " + e.message; }
+  return "";
+}
+function fallbackScreen(s){
+  // Used only if a screen still breaks after fixing: a simple but working version of it
+  const col = (s.uses || [])[0];
+  return `App.screen(${JSON.stringify(s.id)}, { title:${JSON.stringify(s.title)}, icon:${JSON.stringify(s.icon)}, render(el){
+  el.append(ui.page(${JSON.stringify(s.title)}, ${JSON.stringify(s.purpose || "")}));
+  ${col ? `el.append(ui.crud(${JSON.stringify(col)}));` : ""}
+  el.append(ui.section("Ask AI"), ui.card({ body: ui.aiPanel({ placeholder:"What do you need help with?", buttonLabel:"Ask", run: x => App.ai.ask(${JSON.stringify((s.purpose || s.title) + ". ")} + x) }) }));
+}});`;
+}
+async function writeScreen(plan, s, extra){
+  const others = plan.screens.filter(x => x.id !== s.id).map(x => `${x.id} (${x.title})`).join(", ");
+  const msgs = [
+    { role:"system", content:KIT_DOCS },
+    { role:"user", content:`APP PLAN:\n${planForPrompt(plan)}\n\nWrite the screen with id "${s.id}".\nTitle: ${s.title}\nIcon: ${s.icon}\nPurpose: ${s.purpose}\nCollections it uses: ${(s.uses || []).join(", ") || "none"}\nFeatures it must have:\n- ${(s.features || []).join("\n- ")}\nOther screens you can link to with App.go: ${others}, assistant, settings.` + (extra || "") }
+  ];
+  const d = await api("/chat", { messages:msgs, model:"code", max_tokens:7000 });
+  return extractCode(d.reply);
+}
+async function buildScreen(plan, s, onNote, extra){
+  let code = "", problem = "";
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{ code = await writeScreen(plan, s, (extra || "") + (problem ? `\n\nYOUR LAST ATTEMPT WAS REJECTED: ${problem}\nWrite the whole screen again, fixed.` + (code ? "\nLAST ATTEMPT:\n```js\n" + code.slice(0, 14000) + "\n```" : "") : "")); }
+    catch(e){ if(e.name === "AbortError") throw e; problem = "The request failed: " + e.message; continue; }
+    problem = checkScreenCode(code, s.id);
+    if(!problem) return { code, ok:true };
+    if(onNote) onNote(`${s.title}: ${problem.split(":")[0].toLowerCase()}, rewriting it`);
+  }
+  return { code:fallbackScreen(s), ok:false, problem };
+}
+function assembleApp(plan, screens){
+  const cfg = { name:plan.name, tagline:plan.tagline, icon:plan.icon, accent:plan.accent, currency:plan.currency, disclaimer:plan.disclaimer, aiStyle:plan.aiStyle,
+    collections:plan.collections, sample:plan.sample, assistant:plan.assistant };
+  // (written in pieces so this file itself never contains the HTML sequences that end or confuse a script tag)
+  const SO = "<scr" + "ipt>", SC = "</scr" + "ipt>";
+  const safe = s => String(s).replace(new RegExp("<" + "/script", "gi"), "<\\/script").replace(new RegExp("<" + "!--", "g"), "<\\!--");
+  const json = JSON.stringify(cfg).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+  const parts = plan.screens.map(s => {
+    const code = screens[s.id] || fallbackScreen(s);
+    return `${SO}/* screen: ${s.id} */\ntry{\n${safe(code)}\n}catch(e){ App.screen(${JSON.stringify(s.id)}, { title:${JSON.stringify(s.title)}, icon:${JSON.stringify(s.icon)}, render(el){ el.append(ui.page(${JSON.stringify(s.title)}), ui.error("This screen couldn't load.")); } }); }\n${SC}`;
+  });
+  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(plan.name)}</title>\n<style>${APPKIT_CSS}</style></head>\n<body>\n${SO}window.__APP_CONFIG = ${json};${SC}\n${SO}${safe(APPKIT_JS)}${SC}\n${parts.join("\n")}\n${SO}App.start();${SC}\n</body></html>`;
+}
+// Open the app in a hidden test copy and visit every screen
+function selfTestApp(html, timeoutMs = 25000){
+  return new Promise(resolve => {
+    const f = document.createElement("iframe");
+    f.setAttribute("sandbox", "allow-scripts");
+    f.style.cssText = "position:fixed;left:-10000px;top:0;width:1100px;height:800px;opacity:0;pointer-events:none";
+    f.setAttribute("aria-hidden", "true"); f.tabIndex = -1;
+    let done = false;
+    const finish = r => { if(done) return; done = true; window.removeEventListener("message", onMsg); clearTimeout(t); f.remove(); resolve(r); };
+    const onMsg = e => { if(e.source !== f.contentWindow) return; const d = e.data || {}; if(d.__aivSelfTestResult) finish(d.results || []); };
+    window.addEventListener("message", onMsg);
+    const t = setTimeout(() => finish(null), timeoutMs);
+    f.onload = () => setTimeout(() => { try{ f.contentWindow.postMessage({ __aivSelfTest:1 }, "*"); }catch(e){ finish(null); } }, 400);
+    f.srcdoc = injectBridge(html, {});
+    document.body.appendChild(f);
+  });
+}
+async function runPool(items, n, fn){
+  const out = new Array(items.length); let i = 0;
+  await Promise.all(Array.from({ length:Math.min(n, items.length) }, async () => { while(i < items.length){ const k = i++; out[k] = await fn(items[k], k); } }));
+  return out;
+}
+
+async function doFullApp(ai, userMsg){
+  const chat = S.chat;
+  const prev = chat.assistantId ? S.libMap[chat.assistantId] : null;
+  const editing = !!(prev && prev.full);
+  if(!editing && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error("You've used your free AI app build. Get AIV Pro to build more.");
+  const stop = () => { if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError"); };
+  const hist = historyFor(chat, chat.messages.indexOf(ai)).slice(-8).map(m => ({ role:m.role, content:typeof m.content === "string" ? m.content : m.content[0].text }));
+
+  // 1. Ask first, only for a new app with a vague idea (and only once)
+  if(!editing && !chat.buildAsked && !/\bjust build it\b/i.test(userMsg.content)){
+    chat.buildAsked = true;
+    ai.status = "Reading your idea"; updateMsg(ai);
+    let q = null;
+    try{ q = parseMemJSON(await ask([{ role:"system", content:BUILD_ASK_SYSTEM }, { role:"user", content:userMsg.content.slice(0, 2000) }], { model:"fast", max_tokens:300 })); }catch(e){}
+    stop();
+    const qs = q && q.ready === false && Array.isArray(q.questions) ? q.questions.filter(x => x && x.q).slice(0, 2) : [];
+    if(qs.length){
+      ai.buildQuestions = true;
+      ai.content = "Before I build it, " + (qs.length > 1 ? "two quick questions" : "one quick question") + " so it fits what you need:\n\n" +
+        qs.map((x, i) => `${i + 1}. ${String(x.q).slice(0, 200)}` + (Array.isArray(x.options) && x.options.length ? ` (for example: ${x.options.slice(0, 4).map(o => String(o).slice(0, 60)).join(", ")})` : "")).join("\n") +
+        "\n\nAnswer in a message and I'll build it, or tap the button to let me decide.\n\n```aiv-buttons\n" + JSON.stringify({ options:["Just build it"] }) + "\n```";
+      refund(1);
+      return;
+    }
+  }
+
+  const item = editing ? Object.assign({}, prev) : { id:uid("l_"), kind:"build", full:true, title:"New app", html:"", at:Date.now(), chat:chat.id };
+  ai.artifact = { lib:item.id, kind:"build", title:item.title };
+  ai.steps = [];
+  let plan, rebuild, summary = "";
+
+  // 2. Plan (or plan the change)
+  if(!editing){
+    addStep(ai, "Planning the app: screens, saved data, and AI features", false);
+    let raw = null;
+    for(let i = 0; i < 2 && !raw; i++){
+      try{ const p = parseMemJSON(await ask([{ role:"system", content:APP_PLAN_SYSTEM }, ...hist], { model:"think", max_tokens:4000 })); if(p && Array.isArray(p.screens) && p.screens.length >= 2) raw = p; }catch(e){}
+      stop();
+    }
+    if(!raw) throw new Error("The plan didn't come back complete. Try again, or describe the app a little differently.");
+    plan = cleanPlan(raw);
+    if(plan.screens.length < 2) throw new Error("The plan didn't have enough screens. Try again with a bit more detail.");
+    rebuild = plan.screens.map(s => s.id);
+    ai.steps[0] = { text:`Planned ${plan.name}: ${plan.screens.length} screens (${plan.screens.map(s => s.title).join(", ")}), ${plan.collections.length} saved list${plan.collections.length === 1 ? "" : "s"}, plus an AI assistant`, done:true };
+  }else{
+    addStep(ai, "Working out the change", false);
+    let r = null;
+    try{ r = parseMemJSON(await ask([{ role:"system", content:APP_EDIT_SYSTEM }, { role:"user", content:"CURRENT PLAN:\n" + JSON.stringify(prev.plan) + "\n\nCHANGE THE USER WANTS:\n" + userMsg.content.slice(0, 3000) }], { model:"think", max_tokens:4000 })); }catch(e){}
+    stop();
+    if(!r || !r.plan) throw new Error("I couldn't work out that change. Try saying it a little differently.");
+    plan = cleanPlan(Object.assign({}, prev.plan, r.plan, { sample:prev.plan.sample }));
+    const ids = new Set(plan.screens.map(s => s.id));
+    rebuild = (Array.isArray(r.rebuild) ? r.rebuild : []).map(String).filter(id => ids.has(id));
+    plan.screens.forEach(s => { if(!(prev.screens || {})[s.id] && !rebuild.includes(s.id)) rebuild.push(s.id); });   // brand-new screens always get written
+    summary = String(r.summary || "").slice(0, 300);
+    ai.steps[0] = { text:summary || "Planned the change", done:true };
+  }
+  ai.artifact.title = plan.name; updateMsg(ai, true);
+
+  // 3. Write the screens (two at a time)
+  const screens = Object.assign({}, editing ? prev.screens : {});
+  Object.keys(screens).forEach(id => { if(!plan.screens.some(s => s.id === id)) delete screens[id]; });
+  const todo = plan.screens.filter(s => rebuild.includes(s.id));
+  let fallbacks = [];
+  if(todo.length){
+    const stepAt = ai.steps.length;
+    let n = 0;
+    addStep(ai, `Writing ${todo.length} screen${todo.length === 1 ? "" : "s"} (0 of ${todo.length} done). This takes a minute or two.`, false);
+    await runPool(todo, 2, async s => {
+      stop();
+      const extra = editing && screens[s.id] ? `\n\nTHE CHANGE THE USER ASKED FOR: ${userMsg.content.slice(0, 1500)}\nCURRENT CODE OF THIS SCREEN (update it; keep what still works):\n\`\`\`js\n${screens[s.id].slice(0, 14000)}\n\`\`\`` : "";
+      const r = await buildScreen(plan, s, null, extra);
+      screens[s.id] = r.code;
+      if(!r.ok) fallbacks.push(s.title);
+      n++;
+      ai.steps[stepAt] = { text:`Writing ${todo.length} screen${todo.length === 1 ? "" : "s"} (${n} of ${todo.length} done: ${s.title})`, done:false };
+      updateMsg(ai, true);
+    });
+    stop();
+    ai.steps[stepAt] = { text:`Wrote ${todo.length} screen${todo.length === 1 ? "" : "s"}: ${todo.map(s => s.title).join(", ")}`, done:true };
+    updateMsg(ai, true);
+  }
+
+  // 4. Test every screen in a hidden copy, fix what breaks (up to 2 rounds), then fall back to a simple working screen
+  addStep(ai, "Testing every screen", false);
+  const testAt = ai.steps.length - 1;
+  let html = assembleApp(plan, screens), results = await selfTestApp(html), fixed = [];
+  for(let round = 0; round < 2 && results; round++){
+    const bad = results.filter(r => !r.ok && plan.screens.some(s => s.id === r.id));
+    if(!bad.length) break;
+    ai.steps[testAt] = { text:`Testing every screen: fixing ${bad.map(b => (plan.screens.find(s => s.id === b.id) || {}).title).join(", ")}`, done:false }; updateMsg(ai, true);
+    await runPool(bad, 2, async b => {
+      const s = plan.screens.find(x => x.id === b.id);
+      const r = await buildScreen(plan, s, null, `\n\nTHIS SCREEN BROKE WHEN OPENED. Errors:\n${b.errors.join("\n").slice(0, 1500)}\nCURRENT CODE:\n\`\`\`js\n${(screens[s.id] || "").slice(0, 14000)}\n\`\`\`\nFind the cause and write the whole screen again, fixed.`);
+      if(r.ok){ screens[s.id] = r.code; fixed.push(s.title); }
+    });
+    stop();
+    html = assembleApp(plan, screens); results = await selfTestApp(html);
+  }
+  if(results){
+    const still = results.filter(r => !r.ok && plan.screens.some(s => s.id === r.id));
+    still.forEach(b => { const s = plan.screens.find(x => x.id === b.id); screens[s.id] = fallbackScreen(s); fallbacks.push(s.title); });
+    if(still.length){ html = assembleApp(plan, screens); results = await selfTestApp(html); }
+  }
+  fixed = [...new Set(fixed)].filter(t => !fallbacks.includes(t)); fallbacks = [...new Set(fallbacks)];
+  const total = plan.screens.length + 2;
+  const passed = results ? results.filter(r => r.ok).length : null;
+  ai.steps[testAt] = { text: results == null ? "Couldn't finish the automatic test this time" : `Tested all ${total} screens: ${passed} of ${total} open without errors` + (fixed.length ? `, after fixing ${fixed.join(", ")}` : ""), done:true };
+  updateMsg(ai, true);
+
+  // 5. Save (keeping the last version so the change can be undone) and open it
+  if(editing) item.versions = (prev.versions || []).concat([{ at:prev.at || Date.now(), plan:prev.plan, screens:prev.screens, title:prev.title }]).slice(-3);
+  Object.assign(item, { kind:"build", full:true, plan, screens, html, title:plan.name, at:Date.now(), tests:{ at:Date.now(), results:results || [], fixed, fallbacks } });
+  ai.artifact.title = plan.name;
+  if(!editing){
+    chat.assistantId = item.id;
+    if(!S.pro){ S.profile.aiBuilds = (S.profile.aiBuilds || 0) + 1; await saveProfile(); }
+  }
+  const aiFeatures = plan.screens.flatMap(s => s.features.filter(f => /\bAI\b|generat|summar|draft|suggest|analy|research|plan|explain/i.test(f))).length;
+  const testLine = results == null ? "" : fallbacks.length ? ` ${fallbacks.join(", ")} kept breaking, so ${fallbacks.length === 1 ? "it has" : "they have"} a simpler version for now; tell me what ${fallbacks.length === 1 ? "it" : "they"} should do and I'll rebuild ${fallbacks.length === 1 ? "it" : "them"}.` : fixed.length ? ` I opened every screen in a test copy, found problems in ${fixed.join(", ")}, and fixed them.` : " I opened every screen in a test copy and they all work.";
+  ai.content = editing
+    ? `Updated **${plan.name}**. ${summary}${todo.length ? "" : " No screens needed rewriting."}${testLine}\n\nIf you don't like the change, say **undo** and I'll put the last version back.`
+    : `**${plan.name}** is ready. ${plan.tagline}\n\n` +
+      plan.screens.map(s => `- **${s.title}**: ${s.purpose}`).join("\n") +
+      `\n- **${plan.assistant.title || "Assistant"}**: an AI assistant that can read and update everything saved in the app\n- **Settings**: export, import, and clear your data\n\n` +
+      `It saves ${plan.collections.map(c => c.name.toLowerCase()).join(", ")}${aiFeatures ? `, and has ${aiFeatures} AI feature${aiFeatures === 1 ? "" : "s"} built into its screens` : ""}. I added a few example records so it isn't empty; remove them in Settings.${testLine}\n\n` +
+      `Try it in the panel, then tell me what to change: add a screen, change a feature, add a field, or restyle it.`;
+  await addLib(item);
+  openArtifact(item, "preview");
+}
+async function undoFullApp(ai){
+  const chat = S.chat, it = chat.assistantId ? S.libMap[chat.assistantId] : null;
+  if(!it || !(it.versions || []).length){ ai.content = "There's no earlier version to go back to yet."; refund(1); return; }
+  const item = Object.assign({}, it), v = item.versions[item.versions.length - 1];
+  item.versions = item.versions.slice(0, -1);
+  Object.assign(item, { plan:v.plan, screens:v.screens, title:v.title || v.plan.name, html:assembleApp(v.plan, v.screens), at:Date.now(), tests:null });
+  ai.artifact = { lib:item.id, kind:"build", title:item.title };
+  ai.content = `Done. **${item.title}** is back to the version from before your last change.`;
+  refund(1);
+  await addLib(item);
+  openArtifact(item, "preview");
+}
+// Apps built before the full builder still work: their chats keep using the assistant builder
+function buildFor(chat){ const it = chat && chat.assistantId ? S.libMap[chat.assistantId] : null; return it && it.kind === "assistant" ? "assistant" : "full"; }
 </script>
 
 <script>
@@ -4589,13 +5099,13 @@ function openBuild(){
     openUpgrade("You've built your free AI app. Get AIV Pro to build more.");
     return;
   }
-  const examples = ["An AI lawyer that researches laws and tracks my cases and deadlines","A study coach that quizzes me from my class notes","A grant writer that researches funders and tracks applications","A small-business assistant that tracks invoices and answers customer questions","A trip planner that researches places and keeps my itinerary","An EMS protocol helper that searches my protocol PDFs"];
+  const examples = ["A case manager for my law practice: clients, cases, deadlines, and AI research and drafting","A study app that turns my notes into flashcards and quizzes and tracks my exam dates","A small-business app for invoices, customers, and AI-written follow-up emails","A workout and meal tracker with AI weekly plans and progress charts"];
   const left = S.pro ? "AIV Pro: build as many AI apps as you like." : "Your free plan includes 1 AI app. After that, building more needs AIV Pro.";
   modal(`<div class="mh2"><h3>Build your AI app</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb">
-      <p class="muted small" style="margin-bottom:6px">Describe the AI app you want. AIV X designs it — its instructions, tools, and screens — and you can try it, refine it, and keep using it. Apps can research the web, read the files you upload, and keep their own records.</p>
-      <label class="label">What should your AI app do?</label>
-      <textarea class="input" id="buildDesc" placeholder="Who is it for? What should it help with? How should it sound? Anything it should never do?"></textarea>
+      <p class="muted small" style="margin-bottom:6px">Describe the app you want. AIV X plans a complete app with several screens, saved lists, AI features, and its own AI assistant, writes every screen, opens each one in a test copy to fix anything that breaks, then hands it to you. It takes a couple of minutes. Change it any time just by chatting.</p>
+      <label class="label">What app should AIV X build?</label>
+      <textarea class="input" id="buildDesc" placeholder="Who is it for? What should it keep track of? What should the AI do for you?"></textarea>
       <div class="starters" id="buildEx" style="justify-content:flex-start;margin-top:10px">${examples.map(x => `<button class="starter">${esc(x)}</button>`).join("")}</div>
       <p class="small" style="margin-top:16px;color:var(--text2)">${esc(left)}</p>
     </div>
