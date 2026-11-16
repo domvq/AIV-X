@@ -684,6 +684,16 @@ button:focus-visible,a:focus-visible,[role=button]:focus-visible,summary:focus-v
 .agsteps li.think{list-style:circle}
 .agrun.quiet .agrt{color:var(--text2)}
 .agnotes{padding-left:18px;font-size:13.5px;color:var(--text2);line-height:1.6;margin:4px 0 6px}
+/* smooth streaming */
+.tw-caret{display:inline-block;width:.55em;height:.55em;margin-left:3px;border-radius:50%;background:var(--text);vertical-align:.05em;animation:twpulse 1.1s ease-in-out infinite}
+@keyframes twpulse{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+.md.body.tw-in{animation:twfade .22s ease-out}
+@keyframes twfade{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:none}}
+.m.ai .thinking{animation:twfade .2s ease-out}
+.shimmer{background:linear-gradient(90deg,var(--muted) 0%,var(--muted) 40%,var(--text) 50%,var(--muted) 60%,var(--muted) 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 1.8s linear infinite;font-weight:500}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-150% 0}}
+#scroll{overflow-anchor:none}
+@media (prefers-reduced-motion: reduce){.tw-caret,.shimmer,.md.body.tw-in{animation:none}.shimmer{color:var(--muted);background:none}}
 </style>
 </head>
 <body>
@@ -4970,6 +4980,140 @@ async function undoFullApp(ai){
 }
 // Apps built before the full builder still work: their chats keep using the assistant builder
 function buildFor(chat){ const it = chat && chat.assistantId ? S.libMap[chat.assistantId] : null; return it && it.kind === "assistant" ? "assistant" : "full"; }
+</script>
+<script>
+/* =====================================================================
+   SMOOTH STREAMING
+   AI providers send text in uneven bursts. Instead of redrawing the whole message on every burst,
+   AIV X now reveals the answer at a steady pace (speeding up when it falls behind), only redraws the
+   text itself, and shows a soft cursor. Before the first words arrive it shows "Working on it".
+   ===================================================================== */
+const TW = new Map();          // message id -> typewriter state
+let twLoop = 0;
+const fullRaf = new Map();     // message id -> pending full redraw (one per message, so two messages never block each other)
+const GENERIC_STATUS = /^(thinking|working( on it)?)\.*$/i;
+
+function drawFull(m){
+  const old = $("thread").querySelector(`.m[data-id="${m.id}"]`);
+  const nu = msgEl(m); paintIcons(nu);
+  if(old) old.replaceWith(nu); else { const e = $("thread").querySelector(".empty"); if(e){ $("thread").innerHTML = ""; leaveCentered(); } $("thread").appendChild(nu); }
+  scrollDown();
+  return nu;
+}
+// Close anything left open in half-written Markdown so it looks right while it streams
+function tidyPartial(t){
+  let s = String(t);
+  if(((s.match(/```/g) || []).length) % 2) s += "\n```";
+  else {
+    const line = s.slice(s.lastIndexOf("\n") + 1);
+    if(((line.match(/\*\*/g) || []).length) % 2) s += "**";
+    if(((line.replace(/\*\*/g, "").match(/`/g) || []).length) % 2) s += "`";
+    s = s.replace(/\[[^\]\n]*$/, m => m.length < 60 ? "" : m).replace(/\]\([^)\n]*$/, "]");   // hide a link that's still being written
+  }
+  return s;
+}
+function placeCursor(body){
+  body.querySelectorAll(".tw-caret").forEach(c => c.remove());
+  let last = body.lastElementChild;
+  while(last && last.lastElementChild && !/^(PRE|TABLE|IMG|SVG|CANVAS)$/i.test(last.lastElementChild.tagName) && last.lastElementChild.tagName !== "BR") last = last.lastElementChild;
+  if(!last || /^(PRE|TABLE)$/i.test(last.tagName)) last = body;
+  const c = document.createElement("span"); c.className = "tw-caret"; c.setAttribute("aria-hidden", "true");
+  last.appendChild(c);
+}
+function twRender(st){
+  const m = st.m;
+  const visible = st.target.slice(0, st.shown);
+  const el = $("thread").querySelector(`.m[data-id="${m.id}"]`);
+  let body = el && el.querySelector(".md.body.tw");
+  if(!body){
+    // first words: draw the message once, then only the text is updated
+    const temp = Object.assign({}, m, { content: visible, status: m.status });
+    const nu = drawFull(temp);
+    body = nu.querySelector(".md.body");
+    if(body){ body.classList.add("tw", "tw-in"); body.classList.remove("cursor"); }
+  }
+  if(body){
+    body.innerHTML = renderMarkdown(tidyPartial(visible), m.sources);
+    placeCursor(body);
+    scrollDown();
+  }
+}
+function twTick(){
+  twLoop = 0;
+  const now = performance.now();
+  let more = false;
+  for(const [id, st] of TW){
+    const backlog = st.target.length - st.shown;
+    if(backlog > 0){
+      const dt = Math.min(64, now - (st.at || now)); st.at = now;
+      // steady pace (about 75 characters a second at minimum), catching up smoothly when the AI sends a big burst
+      const base = Math.max(1.2, backlog / (st.finalize ? 5 : 22));
+      st.acc = (st.acc || 0) + base * (dt / 16.7 || 1);
+      let step = Math.floor(st.acc);
+      if(step >= 1){
+        st.acc -= step;
+        let next = Math.min(st.target.length, st.shown + step);
+        // finish the current word instead of stopping mid-word, when it's close
+        const sp = st.target.slice(next, next + 8).search(/\s/);
+        if(sp > 0 && sp < 8 && !st.finalize) next += sp;
+        st.shown = Math.min(st.target.length, next);
+        const long = st.shown > 12000;
+        if(!long || (st.frame = (st.frame || 0) + 1) % 3 === 0 || st.shown === st.target.length) twRender(st);
+      }
+      more = true;
+    }
+    if(st.finalize && (st.shown >= st.target.length || now > st.deadline)){
+      TW.delete(id);
+      drawFull(st.m);             // the finished message, with its buttons, sources, and interactive parts
+      continue;
+    }
+    if(backlog > 0 || st.finalize) more = true;
+  }
+  if(more) twLoop = requestAnimationFrame(twTick);
+}
+function twKick(){ if(!twLoop) twLoop = requestAnimationFrame(twTick); }
+
+updateMsg = function(m, immediate){
+  if(m.role !== "user"){
+    const sp = splitThought(m.content || "");
+    const answer = sp.answer;
+    const plain = !sp.thought && !(m.images && m.images.length);
+    const streaming = m.pending && answer && plain && !m.error;
+    const st = TW.get(m.id);
+    if(streaming){
+      if(!st) TW.set(m.id, { m, target:answer, shown:0, at:performance.now() });
+      else { st.m = m; st.target = answer.length >= st.shown ? answer : answer; if(st.shown > answer.length) st.shown = answer.length; }
+      twKick();
+      return;
+    }
+    if(st){
+      if(!m.pending && plain && answer && answer.startsWith(st.target.slice(0, st.shown).slice(0, 200)) && st.shown < answer.length){
+        // the answer is complete: finish revealing it quickly, then draw the final message
+        st.m = m; st.target = answer; st.finalize = true; st.deadline = performance.now() + 450;
+        twKick();
+        return;
+      }
+      TW.delete(m.id);
+    }
+  }
+  // everything else (status changes, steps, images, the finished message) is drawn in full, at most once a frame per message
+  const draw = () => { fullRaf.delete(m.id); drawFull(m); };
+  if(immediate){ const r = fullRaf.get(m.id); if(r) cancelAnimationFrame(r); fullRaf.delete(m.id); draw(); }
+  else if(!fullRaf.has(m.id)) fullRaf.set(m.id, requestAnimationFrame(draw));
+};
+
+// "Working on it" while AIV X gets started; specific steps (searching, reading, looking at your image) keep their own words
+const _msgElBase = msgEl;
+msgEl = function(m){
+  if(m.role !== "user" && m.pending && (!m.status || GENERIC_STATUS.test(m.status))) m = Object.assign({}, m, { status:"Working on it" });
+  const el = _msgElBase(m);
+  const th = el.querySelector(".thinking:not(.steps .thinking)");
+  if(th && !th.querySelector(".shimmer")){
+    const label = [...th.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+    if(label){ const s = document.createElement("span"); s.className = "shimmer"; s.textContent = label.textContent.replace(/[.…]+$/, ""); label.replaceWith(s); }
+  }
+  return el;
+};
 </script>
 
 <script>
