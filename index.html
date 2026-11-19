@@ -880,8 +880,8 @@ const APPS = [
   { id:"fitness", name:"AI Health and Fitness", url:APP_BASE + "ai-health-and-fitness.html", desc:"Workouts, progression, nutrition, and coaching.",
     persona:"You are now in AI Health and Fitness mode: a supportive training and nutrition coach. Build workout programs with sets, reps, and progression, explain exercise form, design balanced meal plans, and answer fitness questions. Keep advice safe and evidence-based; suggest a professional for injuries, medical conditions, or pain.",
     starters:["Build a 4-day gym split","High-protein meal ideas","How do I progress my squat?","Make a beginner running plan"] },
-  { id:"photo", name:"AI Photo", url:APP_BASE + "ai-photo.html", desc:"Create and edit images with AI.",
-    persona:"You are now in AI Photo mode: a creative image partner. Help people create images, write vivid image prompts, plan photo edits, pick styles, color palettes, and compositions, and give feedback on photos they upload. When someone wants a picture, suggest switching on Create image or write a ready-to-use prompt.",
+  { id:"photo", name:"AI Photo and Art", url:APP_BASE + "ai-photo.html", desc:"Create and edit images with AI.",
+    persona:"You are now in AI Photo and Art mode: a creative image partner. Help people create images, write vivid image prompts, plan photo edits, pick styles, color palettes, and compositions, and give feedback on photos they upload. When someone wants a picture, suggest switching on Create image or write a ready-to-use prompt.",
     starters:["Create an image of a neon city at night","Give feedback on my photo","Write a prompt for a product shot","Ideas for a logo style"] },
   { id:"career", name:"AI Career", url:APP_BASE + "ai-career.html", desc:"Resumes, cover letters, job matching, interviews.",
     persona:"You are now in AI Career mode: a career coach. Improve resumes with strong bullet points and metrics, write tailored cover letters, match skills to jobs, prepare interview answers using the STAR method, run mock interviews one question at a time, and plan career moves.",
@@ -1984,7 +1984,7 @@ Rules:
 - For multi-step jobs, first say your plan in one short line, then work through it step by step. You can use several tools in one block and keep going for several rounds.
 - After you act in an app, check the updated screen in the system message to confirm each change actually happened. If it didn't, try another way (a different button, field, or screen) before telling the user. Only say something is done when you've seen it on the screen.
 - When the user shares a goal or wants a plan (losing weight, saving money, studying for an exam, finding a job, setting plans or routines), build the plan right here first, then recommend the matching app to keep going.
-- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in AI Photo, budgets and stocks in AI Stock and Finance, workouts and meals in AI Health and Fitness, flashcards and studying in AI Study and Research, resumes and jobs in AI Career, songs, beats, and music in AI Music, tasks, reminders, calendar, and email in AI Personal Assistant), open that app and do it there.
+- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in AI Photo and Art, budgets and stocks in AI Stock and Finance, workouts and meals in AI Health and Fitness, flashcards and studying in AI Study and Research, resumes and jobs in AI Career, songs, beats, and music in AI Music, tasks, reminders, calendar, and email in AI Personal Assistant), open that app and do it there.
 - You can move between apps in one job (for example, read a budget in one app, then add a task in AI Personal Assistant).
 - Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.
 
@@ -3787,10 +3787,10 @@ async function doRouted(ai, userMsg){
     if(im && linked){
       try{
         const r = await appAsk("addimage", { src:im.src, name:im.title, prompt:im.prompt }, 30000);
-        if(r && r.ok){ ai.steps.push({ text:"Added it to AI Photo", done:true }); ai.content = "Here's your picture. It's also open in AI Photo, so you can keep editing it there: remove the background, change the style, add text, or make more versions."; return; }
+        if(r && r.ok){ ai.steps.push({ text:"Added it to AI Photo and Art", done:true }); ai.content = "Here's your picture. It's also open in AI Photo and Art, so you can keep editing it there: remove the background, change the style, add text, or make more versions."; return; }
       }catch(e){}
     }
-    ai.content = "Here's your picture. I opened AI Photo too, so you can edit it there. Save the image and open it in the app, or ask me for changes here.";
+    ai.content = "Here's your picture. I opened AI Photo and Art too, so you can edit it there. Save the image and open it in the app, or ask me for changes here.";
     return;
   }
   if(!linked){
