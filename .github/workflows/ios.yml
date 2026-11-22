@@ -33,13 +33,13 @@ jobs:
       run:
         working-directory: mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -56,12 +56,26 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
-          printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" > ios/App/App/GoogleService-Info.plist
+          printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" | tr -d '\r' > ios/App/App/GoogleService-Info.plist
           plutil -lint ios/App/App/GoogleService-Info.plist
           REVERSED=$(/usr/libexec/PlistBuddy -c "Print :REVERSED_CLIENT_ID" ios/App/App/GoogleService-Info.plist)
           echo "GOOGLE_REVERSED_CLIENT_ID=$REVERSED" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
+          KEY_FILE="$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
+          # Clean up the pasted key: drop Windows line endings, the BEGIN/END lines and spaces,
+          # then rebuild a proper PEM file (works whether it was pasted with or without those lines)
+          BODY=$(printf '%s' "$ASC_KEY_P8" | tr -d '\r' | sed 's/-----[^-]*-----//g' | tr -d ' \n\t')
+          {
+            echo "-----BEGIN PRIVATE KEY-----"
+            printf '%s' "$BODY" | fold -w 64
+            echo
+            echo "-----END PRIVATE KEY-----"
+          } > "$KEY_FILE"
+          if ! openssl pkey -in "$KEY_FILE" -noout 2>/dev/null; then
+            echo "::error::ASC_KEY_P8 is not a valid private key. Open AuthKey_${ASC_KEY_ID}.p8 (the App Store Connect API key, not the push key) in Notepad and paste ALL of it into the ASC_KEY_P8 secret again."
+            exit 1
+          fi
+          echo "App Store Connect API key looks valid."
 
       - name: Archive (signed automatically with the API key)
         env:
@@ -69,6 +83,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
+          set -o pipefail
           xcodebuild archive \
             -project ios/App/App.xcodeproj \
             -scheme App \
@@ -121,11 +136,11 @@ jobs:
       run:
         working-directory: mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Build for the iPhone Simulator
@@ -133,12 +148,12 @@ jobs:
           GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
         run: |
           npm ci && npx cap sync ios
-          printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" > ios/App/App/GoogleService-Info.plist
+          printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" | tr -d '\r' > ios/App/App/GoogleService-Info.plist
           REVERSED=$(/usr/libexec/PlistBuddy -c "Print :REVERSED_CLIENT_ID" ios/App/App/GoogleService-Info.plist)
           xcodebuild build -project ios/App/App.xcodeproj -scheme App -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO \
-            GOOGLE_REVERSED_CLIENT_ID="$REVERSED" | tail -n 30
+            GOOGLE_REVERSED_CLIENT_ID="$REVERSED" | tail -n 30; test ${PIPESTATUS[0]} -eq 0
       - name: Take 6.9-inch iPhone screenshots
         run: |
           DEV=$(xcrun simctl list devices available | grep -E "iPhone 1[6-9] Pro Max" | tail -1 | grep -oE '[0-9A-F-]{36}')
@@ -150,7 +165,7 @@ jobs:
           xcrun simctl launch "$DEV" com.aiverse.aivx
           sleep 25
           xcrun simctl io "$DEV" screenshot "$GITHUB_WORKSPACE/screenshots/1-launch.png"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: app-store-screenshots
           path: screenshots/
