@@ -1,0 +1,60 @@
+{
+  "appId": "com.aiverse.aivx",
+  "appName": "AIV X",
+  "webDir": "www",
+  "server": {
+    "url": "https://aiv-x.com",
+    "allowNavigation": [
+      "aiv-x.com",
+      "www.aiv-x.com",
+      "aiv-x-21aba.firebaseapp.com"
+    ],
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0a0a0b",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "backgroundColor": "#0a0a0b",
+      "showSpinner": false
+    },
+    "FirebaseAuthentication": {
+      "skipNativeAuth": true,
+      "providers": [
+        "google.com",
+        "apple.com"
+      ]
+    },
+    "FirebaseMessaging": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
+  },
+  "experimental": {
+    "ios": {
+      "spm": {
+        "swiftToolsVersion": "6.1",
+        "packageOptions": {
+          "@capacitor-firebase/authentication": {
+            "symlink": true
+          },
+          "@capacitor-firebase/messaging": {
+            "symlink": true
+          }
+        },
+        "packageTraits": {
+          "@capacitor-firebase/authentication": [
+            "Google"
+          ]
+        }
+      }
+    }
+  }
+}
