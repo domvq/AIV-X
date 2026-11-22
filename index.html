@@ -811,7 +811,6 @@ img,video,iframe,canvas,svg{max-width:100%}
         <div class="sub">Sign up or log in to continue.</div>
       <label class="agree" id="agreeRow" style="margin:0 -8px 14px"><input type="checkbox" id="agree"><span>I'm 18 or older and agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Use</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
         <button class="prov" data-prov="google"><svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.3H12v4.3h5.9c-.3 1.4-1 2.5-2.2 3.3v2.8h3.6c2.1-1.9 3.2-4.8 3.2-8.1z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.9C3.9 20.6 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.8 14.1c-.2-.7-.4-1.4-.4-2.1s.1-1.4.4-2.1V7H2.1C1.4 8.5 1 10.2 1 12s.4 3.5 1.1 5l3.7-2.9z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2C17.5 2.1 15 1 12 1 7.7 1 3.9 3.4 2.1 7l3.7 2.9C6.7 7.3 9.1 5.4 12 5.4z"/></svg>Continue with Google</button>
-        <button class="prov hidden" data-prov="apple"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.4.8c1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.7-1-2.7-4.1zM13.9 5c.7-.9 1.2-2 1.1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.1.1 2.3-.6 3-1.5z"/></svg>Continue with Apple</button>
         <button class="prov" data-prov="phone"><svg viewBox="0 0 24 24" class="i"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Continue with phone</button>
         <div class="or">or</div>
         <input class="input" id="authEmail" type="email" placeholder="Email address" autocomplete="email">
@@ -946,10 +945,6 @@ img,video,iframe,canvas,svg{max-width:100%}
    ===================================================================== */
 // 1) AIV X's own API: the Cloudflare Worker URL (aivx-worker.js) and AIV X's app key.
 //    The app key identifies AIV X to its API — it must match the AIVX_APP_KEY secret in the Worker.
-// 0) Running inside the AIV X iPhone app? (Capacitor). False on the website.
-const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-const NP = NATIVE ? (window.Capacitor.Plugins || {}) : {};
-if(NATIVE) document.documentElement.classList.add("native-ios");
 const AIV_API_URL = "https://aivx-api.domhasaball.workers.dev";
 const AIVX_APP_KEY = "aivx_iGsNWk4eHXokoW8awHmMVZpm";
 const AIV_BROWSE_URL = "https://api.aiverse.it.com/v1/browse";   // AIV Browse engine (aiv-browse repo), used by AIV-1 Eco
@@ -1294,12 +1289,10 @@ const Auth = {
 
   async google(){
     if(DEMO){ const name = prompt("Demo mode — your name:", "") ; if(name === null) return; return this.demoSignIn({ uid:"demo_" + (await sha256("g:" + name.toLowerCase())).slice(0,16), name, email:"", provider:"google.com" }); }
-    if(NATIVE) return nativeSignIn("google");
     try{ await fb.auth().signInWithPopup(new fb.auth.GoogleAuthProvider()); }catch(e){ this.err(e); }
   },
   async apple(){
     if(DEMO){ const name = prompt("Demo mode — your name:", ""); if(name === null) return; return this.demoSignIn({ uid:"demo_" + (await sha256("a:" + name.toLowerCase())).slice(0,16), name, email:"", provider:"apple.com" }); }
-    if(NATIVE) return nativeSignIn("apple");
     try{
       const p = new fb.auth.OAuthProvider("apple.com"); p.addScope("email"); p.addScope("name");
       await fb.auth().signInWithPopup(p);
@@ -1364,7 +1357,6 @@ const Auth = {
     }
   },
   async signOut(){
-    if(NATIVE && NP.FirebaseAuthentication){ try{ await NP.FirebaseAuthentication.signOut(); }catch(e){} }
     if(S.user && S.user.guest){ LSX.del("aivx_guest_on"); this._onChange(null); return; }
     if(DEMO){ LSX.del("aivx_session"); this._onChange(null); return; }
     await fb.auth().signOut();
@@ -1390,9 +1382,7 @@ $("agree").checked = LSX.get("aivx_agreed", "") === TERMS_VERSION;
 $("authGuest").onclick = () => { if(!agreed()) return; Auth.guest(); };
 $("agree").onchange = () => { if($("agree").checked){ $("agreeRow").classList.remove("need"); $("authErr").textContent = ""; } };
 document.querySelector('[data-prov="google"]').onclick = () => { if(agreed()) Auth.google(); };
-// Apple sign-in: shown in the iPhone app (App Store rule 4.8). To show it on the website too, set up Apple in Firebase and remove the NATIVE check.
-if(NATIVE) document.querySelector('[data-prov="apple"]').classList.remove("hidden");
-document.querySelector('[data-prov="apple"]').onclick = () => { if(agreed()) Auth.apple(); };
+// Apple sign-in is ready in Auth.apple(); add its button back once Apple is set up in Firebase.
 document.querySelector('[data-prov="phone"]').onclick = () => { if(!agreed()) return; authShow("authPhoneStep"); $("phoneCodeWrap").classList.add("hidden"); $("authPhone").focus(); };
 function setEmailMode(m){
   Auth.emailMode = m;
@@ -1913,8 +1903,6 @@ async function send(textOverride){
   if(!text && !S.pending.length) return;
   if(S.tool === "build" && !canBuildAssistant()) return;
   if(!canUse()) return;
-  if(!aiConsentOk()) return askAIConsent(() => send(textOverride));
-  nativeHaptic();
 
   const chat = ensureChat();
   // "Build me an AI assistant that…" typed in a normal chat goes to Build when this person can still build one
@@ -6385,7 +6373,12 @@ window.addEventListener("message", async e => {
   if(d.type === "pull"){ try{ reply(d.id, await Store.getAppData(d.app)); }catch(err){ reply(d.id, null, err.message); } return; }
   if(d.type === "push"){ try{ await Store.setAppData(d.app, d.at, d.data); Link.synced = "saved"; renderLink(); reply(d.id, true); }catch(err){ reply(d.id, null, err.message); } return; }
   if(d.type === "synced"){ Link.synced = d.result; renderLink(); return; }
-  if(d.type === "close"){ closeApp(); return; }
+  if(d.type === "close"){
+    closeApp();
+    // "Back to AIV X" in an app: come back to a fresh chat
+    if(d.newChat && !S.busy){ newChat(); if(innerWidth < 820 && typeof closeSide === "function") closeSide(); }
+    return;
+  }
   if(d.type === "answer" && Link.waiting[d.id]){ const w = Link.waiting[d.id]; delete Link.waiting[d.id]; w(d.result); }
 });
 function appAsk(type, extra, timeout = 12000){
@@ -6669,100 +6662,9 @@ async function onSignedIn(u){
   $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
   renderMe(); renderUsage(); setMode("aivx", true); newChat();
   try{ agentsBoot(); }catch(e){}
-  if(NATIVE) setTimeout(() => pushSetup(), 4000);
   const hm = location.hash.match(/^#app\/(\w+)/);
   if(hm){ const a = APPS.find(x => x.id === hm[1]); if(a && a.url) setTimeout(() => openFullApp(a), 0); }
   if(innerWidth < 820) closeSide(); else $("sideOpen").classList.add("hidden");
-}
-/* =====================================================================
-   iPHONE APP (Capacitor)  — only runs inside the AIV X App Store app.
-   On the website, NATIVE is false and none of this does anything.
-   ===================================================================== */
-// NATIVE and NP are set at the top of the script (CONFIG section).
-
-// App Store rule 5.1.2(i): name the AI services that receive people's messages and ask first.
-// Keep this list matching what aivx-worker.js really calls. Bump the version whenever it changes.
-const AI_PROVIDERS = "Cloudflare Workers AI and Groq";
-const AI_CONSENT_VERSION = "2026-11-21";
-function aiConsentOk(){ return !NATIVE || LSX.get("aivx_ai_consent", "") === AI_CONSENT_VERSION; }
-function askAIConsent(then){
-  const m = modal(`<div class="mh2"><h3>Before you chat with AI</h3></div>
-    <div class="mb"><p class="muted" style="margin-bottom:10px">To answer you, AIV X sends what you type, plus any files, photos, or voice you add, to the AI services that run its models: ${esc(AI_PROVIDERS)}. Web searches are sent to search providers.</p>
-    <p class="muted small" style="margin-bottom:6px">They process it only to create your answer. Read more in our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. You can turn off "Use my chats to improve AIV X" in Settings.</p></div>
-    <div class="mf"><button class="btn" id="aicNo">Not now</button><button class="btn primary" id="aicYes">Allow and continue</button></div>`);
-  m.onclick = null;
-  $("aicNo").onclick = () => closeModal();
-  $("aicYes").onclick = () => { LSX.set("aivx_ai_consent", AI_CONSENT_VERSION); closeModal(); if(then) then(); };
-}
-
-function nativeHaptic(){ try{ if(NP.Haptics) NP.Haptics.impact({ style:"LIGHT" }); }catch(e){} }
-
-// Native Google / Apple sign-in, then hand the result to Firebase on the web side (Google blocks its popup inside apps)
-async function nativeSignIn(kind){
-  const FA = NP.FirebaseAuthentication;
-  if(!FA){ $("authErr").textContent = "Sign-in isn't available in this version of the app. Try email."; return; }
-  try{
-    if(kind === "google"){
-      const r = await FA.signInWithGoogle();
-      await fb.auth().signInWithCredential(fb.auth.GoogleAuthProvider.credential(r.credential.idToken, r.credential.accessToken || null));
-    }else{
-      const r = await FA.signInWithApple();
-      const cred = new fb.auth.OAuthProvider("apple.com").credential({ idToken:r.credential.idToken, rawNonce:r.credential.nonce });
-      const res = await fb.auth().signInWithCredential(cred);
-      // Apple only shares the name the first time someone signs in
-      const nm = r.user && r.user.displayName;
-      if(nm && res.user && !res.user.displayName) try{ await res.user.updateProfile({ displayName:nm }); }catch(e){}
-    }
-  }catch(e){
-    if(/cancel/i.test(String(e && (e.message || e.code)))){ $("authErr").textContent = "Sign-in was cancelled."; return; }
-    Auth.err(e);
-  }
-}
-
-// Push notifications (Firebase Cloud Messaging). Every phone joins the "all" topic, so you can
-// send a notification to everyone from Firebase console > Messaging. Signed-in users' devices are
-// also saved under users/{uid}/devices so the server can send one person their agent reports.
-async function pushSetup(){
-  const FM = NP.FirebaseMessaging;
-  if(!FM || !S.user) return;
-  try{
-    let p = await FM.checkPermissions();
-    if(p.receive === "prompt" || p.receive === "prompt-with-rationale"){
-      if(LSX.get("aivx_push_asked", false)) return;
-      LSX.set("aivx_push_asked", true);
-      const yes = await new Promise(res => {
-        const m = modal(`<div class="mh2"><h3>Turn on notifications?</h3></div>
-          <div class="mb"><p class="muted">Get a notification when your agents finish a report, and hear about new AIV X features. You can turn this off anytime in your iPhone's Settings.</p></div>
-          <div class="mf"><button class="btn" id="pnNo">Not now</button><button class="btn primary" id="pnYes">Turn on</button></div>`);
-        m.onclick = null;
-        $("pnNo").onclick = () => { closeModal(); res(false); };
-        $("pnYes").onclick = () => { closeModal(); res(true); };
-      });
-      if(!yes) return;
-      p = await FM.requestPermissions();
-    }
-    if(p.receive !== "granted") return;
-    const { token } = await FM.getToken();
-    if(!token) return;
-    await FM.subscribeToTopic({ topic:"all" }).catch(() => {});
-    await FM.subscribeToTopic({ topic:"ios" }).catch(() => {});
-    if(!DEMO && fb && !S.user.guest){
-      const id = (await sha256(token)).slice(0, 32);
-      await fb.firestore().collection("users").doc(S.user.uid).collection("devices").doc(id)
-        .set({ token, platform:"ios", updatedAt:Date.now() }, { merge:true }).catch(() => {});
-    }
-  }catch(e){ console.warn("push", e); }
-}
-// Tapping a notification: send "url" (a full link) or "app" (an app id like "study") in the notification's data
-if(NATIVE && NP.FirebaseMessaging){
-  NP.FirebaseMessaging.addListener("notificationActionPerformed", ev => {
-    const d = (ev && ev.notification && ev.notification.data) || {};
-    if(d.app){ const a = APPS.find(x => x.id === d.app); if(a && S.user) return openFullApp(a); }
-    if(d.url && /^https:\/\/(www\.)?aiv-x\.com\//.test(d.url)) location.href = d.url;
-  });
-  NP.FirebaseMessaging.addListener("notificationReceived", ev => {
-    const n = ev && ev.notification; if(n && n.title) toast(n.title);
-  });
 }
 paintIcons();
 paintBrand();
