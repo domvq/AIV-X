@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>AIV X — Build Your Personal AI. Your Way. Free to Start</title>
 <meta name="description" content="Build your own personal AI with AIV X, free to start. Create custom AI apps and get AI for health, fitness, study, research, finance, photos, music, and career.">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -764,6 +766,24 @@ button:focus-visible,a:focus-visible,[role=button]:focus-visible,summary:focus-v
 .ft-b{display:flex;gap:8px}
 .ft-dots{display:flex;gap:5px}.ft-dots i{width:6px;height:6px;border-radius:50%;background:var(--line2)}.ft-dots i.on{background:var(--text);width:16px;border-radius:4px}
 .mh2 .ft-help{margin-left:auto}
+/* ===== feel like a native app on phones and tablets ===== */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior:none}
+html,body{max-width:100%;overflow-x:hidden}
+body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+img,video,iframe,canvas,svg{max-width:100%}
+.md{overflow-wrap:anywhere}
+.md pre,.md table,.md .katex-display{max-width:100%}
+.md .katex-display{overflow-x:auto;overflow-y:hidden}
+#scroll,.modal .mb,#cvBody,.side-scroll,#sidebar nav{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+@media (hover:none) and (pointer:coarse){
+  html{touch-action:pan-x pan-y;height:100%;overflow:hidden}
+  body{position:fixed;inset:0;width:100%;height:100%;overflow:hidden}
+  #app{position:fixed;left:0;right:0;top:0;height:var(--app-h,100dvh)}
+  /* iPhone zooms in on any box with text smaller than 16px, so every box is 16px */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),textarea,select,[contenteditable=true]{font-size:16px!important}
+  button,a,.navitem,.qa,.chip-btn,.starter,.mi,.tk-chip,label{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  button,a,[role=button],.navitem,.qa{touch-action:manipulation}
+}
 .ap-log{font-size:13px;display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto;margin-top:6px}
 </style>
 </head>
@@ -6049,6 +6069,42 @@ function endFeatureTour(){
 }
 // Escape closes the window, so the tour goes with it (it comes back next time until it's finished)
 document.addEventListener("keydown", e => { if(e.key === "Escape") setTimeout(() => { if(!$("modal")) endFeatureTour(); }, 0); });
+</script>
+<script>
+/* =====================================================================
+   NATIVE-APP FEEL ON PHONES: no pinch or double-tap zoom, no sideways
+   scrolling, and the chat box stays right above the keyboard.
+   ===================================================================== */
+(function(){
+  const touch = matchMedia("(hover:none) and (pointer:coarse)").matches;
+  if(!touch) return;
+  const root = document.documentElement;
+  // Safari ignores "user-scalable=no", so stop pinch zoom here
+  ["gesturestart", "gesturechange", "gestureend"].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive:false }));
+  document.addEventListener("touchmove", e => { if(e.touches && e.touches.length > 1) e.preventDefault(); }, { passive:false });
+  // double-tap zoom is off through touch-action in the CSS, so quick taps on buttons still work
+  // the page itself never scrolls: only the chat and panels inside it do
+  const pin = () => { if(window.scrollX || window.scrollY) window.scrollTo(0, 0); };
+  addEventListener("scroll", pin, { passive:true });
+  // keep the app exactly the size of what's visible, so the keyboard pushes the chat box up instead of the page sliding
+  const vv = window.visualViewport;
+  const fit = () => {
+    const h = vv ? vv.height : innerHeight;
+    root.style.setProperty("--app-h", Math.round(h) + "px");
+    const app = document.getElementById("app");
+    if(app) app.style.transform = vv && vv.offsetTop ? `translateY(${Math.round(vv.offsetTop)}px)` : "";
+    root.classList.toggle("kb-open", !!(vv && innerHeight - vv.height > 120));
+  };
+  if(vv){ vv.addEventListener("resize", fit); vv.addEventListener("scroll", fit); }
+  addEventListener("resize", fit); addEventListener("orientationchange", () => setTimeout(fit, 250));
+  fit();
+  // when a box gets focus, keep the page pinned and the box in view inside its own panel
+  document.addEventListener("focusin", e => {
+    if(!e.target.matches("input,textarea,select,[contenteditable=true]")) return;
+    setTimeout(() => { pin(); fit(); if(e.target.id !== "input") e.target.scrollIntoView({ block:"nearest" }); }, 300);
+  });
+  document.addEventListener("focusout", () => setTimeout(() => { pin(); fit(); }, 100));
+})();
 </script>
 
 <script>
