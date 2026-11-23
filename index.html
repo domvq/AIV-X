@@ -6394,7 +6394,7 @@ window.addEventListener("message", async e => {
   const reply = (id, result, error) => { try{ e.source.postMessage({ aivx:1, type:"reply", id, result, error }, e.origin); }catch(x){} };
   if(d.type === "hello"){
     Link.app = d.app; Link.ready = true; renderLink();
-    e.source.postMessage({ aivx:1, type:"welcome", signedIn:!!S.user }, e.origin);
+    e.source.postMessage({ aivx:1, type:"welcome", signedIn:!!S.user, theme:effectiveTheme() }, e.origin);
     if(S.chat && S.chat.messages.length && S.openApp === d.app) persistChat();
     return;
   }
@@ -6410,6 +6410,20 @@ window.addEventListener("message", async e => {
   }
   if(d.type === "answer" && Link.waiting[d.id]){ const w = Link.waiting[d.id]; delete Link.waiting[d.id]; w(d.result); }
 });
+// Light or dark, as AIV X is showing it right now (its Theme setting, or the device's setting)
+function effectiveTheme(){
+  const t = document.documentElement.getAttribute("data-theme");
+  if(t === "light" || t === "dark") return t;
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+// Tell the open AI Verse app to use the same theme as AIV X
+function sendThemeToApp(){
+  const f = $("appIframe");
+  if(!Link.ready || !f || !f.contentWindow) return;
+  try{ f.contentWindow.postMessage({ aivx:1, type:"theme", theme:effectiveTheme() }, Link.origin || APP_ORIGIN); }catch(e){}
+}
+try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sendThemeToApp); }catch(e){}
+document.addEventListener("visibilitychange", () => { if(!document.hidden) sendThemeToApp(); });
 function appAsk(type, extra, timeout = 12000){
   return new Promise((res, rej) => {
     const f = $("appIframe");
@@ -6585,6 +6599,7 @@ function drawSettings(sec){
 function applyTheme(){
   const t = S.profile && S.profile.settings.theme;
   if(t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme");
+  if(typeof sendThemeToApp === "function") sendThemeToApp();
 }
 
 function askConsent(){
