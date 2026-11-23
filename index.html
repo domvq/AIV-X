@@ -486,7 +486,7 @@ th.sortable:hover{color:var(--text)}
 .actions .iconbtn.on{color:var(--text);background:var(--bg3)}
 /* ---- voice mode ---- */
 .voice{position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
-.vm-top{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.vm-top{position:absolute;top:max(16px,calc(env(safe-area-inset-top) + 8px));left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
 .vm-nat{font-weight:400;font-size:13px;color:var(--text2);display:flex;gap:6px;align-items:center}
 .vm-orb{width:150px;height:150px;border-radius:50%;background:var(--text);display:flex;align-items:center;justify-content:center;transition:transform .3s}
 .vm-orb span{width:56px;height:56px;border-radius:50%;background:var(--bg)}
@@ -569,6 +569,13 @@ th.sortable:hover{color:var(--text)}
   .modal{padding:0;align-items:flex-end}
   .modal .box{max-height:94dvh;border-radius:22px 22px 0 0;border:0;padding-bottom:env(safe-area-inset-bottom)}
   .modal .box.wide{height:100dvh;max-height:100dvh;border-radius:0}
+  /* keep headers clear of the iPhone status bar and Dynamic Island (the iOS app draws edge to edge) */
+  .modal .box{max-height:min(94dvh,calc(100dvh - env(safe-area-inset-top) - 8px))}
+  .modal .box.wide{max-height:100dvh}
+  .modal .box.wide .mh2{padding-top:max(14px,calc(env(safe-area-inset-top) + 6px))}
+  .side-top{padding-top:max(12px,calc(env(safe-area-inset-top) + 4px))}
+  #auth{padding-top:env(safe-area-inset-top)}
+  #lightbox{padding-top:max(20px,env(safe-area-inset-top))}
   .modal .mh2{padding:14px 16px}
   .modal .mb{padding:16px}
   .modal .mf{padding:12px 16px}
@@ -682,7 +689,7 @@ th.sortable:hover{color:var(--text)}
 .agact .agbtns{margin-top:0}
 .agact.done .agactt,.agact.skipped .agactt{color:var(--text2)}
 .qa .qabadge{min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--text);color:var(--bg);font-size:10.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;margin-left:2px}
-.netbanner{position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--text);color:var(--bg);text-align:center;font-size:13.5px;padding:8px 14px}
+.netbanner{position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--text);color:var(--bg);text-align:center;font-size:13.5px;padding:8px 14px;padding-top:max(8px,calc(env(safe-area-inset-top) + 4px))}
 button:focus-visible,a:focus-visible,[role=button]:focus-visible,summary:focus-visible{outline:2px solid var(--text);outline-offset:2px}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 .aglive{list-style:none;padding:0 6px 10px;margin:0 auto;max-width:560px;font-size:13.5px;line-height:1.55;color:var(--text2);max-height:240px;overflow-y:auto}
