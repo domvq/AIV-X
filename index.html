@@ -250,6 +250,7 @@ textarea.input{resize:vertical;min-height:90px}
 .cursor::after{content:"▍";animation:blink 1s infinite;color:var(--muted)}
 @keyframes blink{50%{opacity:0}}
 .thinking{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+html.no-pay #upBtn,html.no-pay #usageUp,html.no-pay #pUp,html.no-pay #agUp{display:none!important}
 .thinking .orb{width:13px;height:13px;flex:0 0 13px;background:var(--text);border-radius:3px;animation:aivThink 1.8s cubic-bezier(.45,0,.25,1) infinite}
 @keyframes aivThink{0%{transform:rotate(0deg) scale(.7);border-radius:3px;opacity:.85}25%{transform:rotate(90deg) scale(1);border-radius:50% 3px 50% 3px;opacity:1}50%{transform:rotate(180deg) scale(.8);border-radius:50%;opacity:.7}75%{transform:rotate(270deg) scale(1);border-radius:3px 50% 3px 50%;opacity:1}100%{transform:rotate(360deg) scale(.7);border-radius:3px;opacity:.85}}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -952,6 +953,9 @@ img,video,iframe,canvas,svg{max-width:100%}
 const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 const NP = NATIVE ? (window.Capacitor.Plugins || {}) : {};
 if(NATIVE) document.documentElement.classList.add("native-ios");
+// iPhone app: no purchases or upgrade offers for now (payments get added later with Apple In-App Purchase)
+const NO_PAY = NATIVE;
+if(NO_PAY) document.documentElement.classList.add("no-pay");
 const AIV_API_URL = "https://aivx-api.domhasaball.workers.dev";
 const AIVX_APP_KEY = "aivx_iGsNWk4eHXokoW8awHmMVZpm";
 const AIV_BROWSE_URL = "https://api.aiverse.it.com/v1/browse";   // AIV Browse engine (aiv-browse repo), used by AIV-1 Eco
@@ -2608,7 +2612,7 @@ async function doAssistant(ai, userMsg){
   const chat = S.chat;
   const prev = chat.assistantId ? S.libMap[chat.assistantId] : null;
   const isNew = !prev;
-  if(isNew && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error("You've used your free AI app build. Get AIV Pro to build more.");
+  if(isNew && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error((NO_PAY ? "You've used your free AI app build." : "You've used your free AI app build. Get AIV Pro to build more."));
   const hist = historyFor(chat, chat.messages.indexOf(ai)).slice(-8).map(m => ({ role:m.role, content:typeof m.content === "string" ? m.content : m.content[0].text }));
   const stop = () => { if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError"); };
 
@@ -3204,7 +3208,7 @@ window.addEventListener("message", async e => {
   if(!d.__aivReq) return;
   const reply = (result, error) => e.source.postMessage({ __aivRes:1, id:d.id, result, error }, "*");
   const counted = d.type === "image" || (d.type === "chat" && !(d.opts && d.opts.followup));
-  if(counted && !S.pro && usageCount() >= FREE_DAILY_LIMIT){ openUpgrade("This app used your free messages for today."); return reply(null, "You've used today's free messages. Get AIV Pro for unlimited use."); }
+  if(counted && !S.pro && usageCount() >= FREE_DAILY_LIMIT){ openUpgrade("This app used your free messages for today."); return reply(null, (NO_PAY ? "You've used today's free messages. They reset tomorrow." : "You've used today's free messages. Get AIV Pro for unlimited use.")); }
   try{
     if(counted) bump();
     if(d.type === "image"){ const r = await api("/image", { prompt:String(d.payload).slice(0, 2000) }); reply(r.image); }
@@ -4476,7 +4480,7 @@ function drawAgentList(){
       ${(a.apps || []).length ? `<div class="agapps">${a.apps.map(id => `<span class="agtag">${esc((appById(id) || {}).name || id)}</span>`).join("")}</div>` : ""}
       ${a.lastRun ? `<div class="muted small">Last run ${esc(agTime(a.lastRun))}${a.lastStatus && a.lastStatus !== "ok" ? " · " + esc(a.lastStatus) : ""}</div>` : `<div class="muted small">Hasn't run yet</div>`}
       <div class="agbtns"><button class="btn sm" data-run>Run now</button><button class="btn sm" data-rep>Reports</button><button class="btn sm" data-edit>Edit</button><button class="btn sm agdel" data-del>Delete</button></div>
-    </div>`).join("") + `<p class="muted small" style="margin-top:14px">${AG.plan === "pro" ? "AIV Pro: up to " + AG.limits.agents + " agents, as often as every hour." : "Free plan: 1 agent that runs up to once a day. <a href='#' id='agUp'>Get AIV Pro</a> for up to 10 agents that run as often as every hour."} ${AG.runsLeft !== undefined ? AG.runsLeft + " of " + AG.limits.runsPerDay + " runs left today. " : ""}Agents search the web and the apps you let them use. They only change your apps after you approve, and never send messages, buy, or delete anything.</p>`;
+    </div>`).join("") + `<p class="muted small" style="margin-top:14px">${AG.plan === "pro" ? "AIV Pro: up to " + AG.limits.agents + " agents, as often as every hour." : (NO_PAY ? "Free plan: 1 agent that runs up to once a day." : "Free plan: 1 agent that runs up to once a day. <a href='#' id='agUp'>Get AIV Pro</a> for up to 10 agents that run as often as every hour.")} ${AG.runsLeft !== undefined ? AG.runsLeft + " of " + AG.limits.runsPerDay + " runs left today. " : ""}Agents search the web and the apps you let them use. They only change your apps after you approve, and never send messages, buy, or delete anything.</p>`;
   const up = $("agUp"); if(up) up.onclick = e => { e.preventDefault(); closeModal(); openUpgrade("Get more agents with AIV Pro."); };
   b.querySelectorAll(".agcard").forEach(c => {
     const a = AG.list.find(x => x.id === c.dataset.id);
@@ -4979,7 +4983,7 @@ async function doFullApp(ai, userMsg){
   const chat = S.chat;
   const prev = chat.assistantId ? S.libMap[chat.assistantId] : null;
   const editing = !!(prev && prev.full);
-  if(!editing && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error("You've used your free AI app build. Get AIV Pro to build more.");
+  if(!editing && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error((NO_PAY ? "You've used your free AI app build." : "You've used your free AI app build. Get AIV Pro to build more."));
   const stop = () => { if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError"); };
   const hist = historyFor(chat, chat.messages.indexOf(ai)).slice(-8).map(m => ({ role:m.role, content:typeof m.content === "string" ? m.content : m.content[0].text }));
 
@@ -6254,7 +6258,7 @@ function openBuild(){
     return;
   }
   const examples = ["A case manager for my law practice: clients, cases, deadlines, and AI research and drafting","A study app that turns my notes into flashcards and quizzes and tracks my exam dates","A small-business app for invoices, customers, and AI-written follow-up emails","A workout and meal tracker with AI weekly plans and progress charts"];
-  const left = S.pro ? "AIV Pro: build as many AI apps as you like." : "Your free plan includes 1 AI app. After that, building more needs AIV Pro.";
+  const left = S.pro ? "AIV Pro: build as many AI apps as you like." : (NO_PAY ? "Your free plan includes 1 AI app." : "Your free plan includes 1 AI app. After that, building more needs AIV Pro.");
   modal(`<div class="mh2"><h3>Build your AI app</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb">
       <p class="muted small" style="margin-bottom:6px">Describe the app you want. AIV X plans a complete app with several screens, saved lists, AI features, and its own AI assistant, writes every screen, opens each one in a test copy to fix anything that breaks, then hands it to you. It takes a couple of minutes. Change it any time just by chatting.</p>
@@ -6600,7 +6604,7 @@ $("meBtn").onclick = e => {
     { label:"Settings", fn:() => openSettings() },
     { label:"Memory", fn:() => openSettings("memory") },
     { label:"Personalization", fn:() => openSettings("personal") },
-    { label:S.pro ? "AIV Pro" : "Upgrade to AIV Pro", fn:() => openUpgrade() },
+    ...(NO_PAY ? [] : [{ label:S.pro ? "AIV Pro" : "Upgrade to AIV Pro", fn:() => openUpgrade() }]),
     { sep:true },
     { label:"Terms of Use", fn:() => window.open("terms.html", "_blank", "noopener") },
     { label:"Privacy Policy", fn:() => window.open("privacy.html", "_blank", "noopener") },
@@ -6690,16 +6694,26 @@ async function onSignedIn(u){
    On the website, NATIVE is false and none of this does anything.
    ===================================================================== */
 // NATIVE and NP are set at the top of the script (CONFIG section).
+if(NO_PAY){
+  const freeText = t => String(t || "").replace(/\s*(Get|Upgrade to) AIV Pro[^.]*\.?/gi, "").replace(/\s*building more needs AIV Pro\.?/gi, "").trim();
+  openUpgrade = function(reason){
+    const r = freeText(reason) || "You've reached today's free limit.";
+    const m = modal(`<div class="mh2"><h3>Free limit reached</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
+      <div class="mb"><p class="muted">${esc(r)}</p>${/message|today|daily/i.test(r) ? '<p class="muted small" style="margin-top:8px">Free messages reset every day.</p>' : ""}</div>
+      <div class="mf"><button class="btn primary" data-close>OK</button></div>`);
+    try{ paintIcons(m); }catch(e){}
+  };
+}
 
 // App Store rule 5.1.2(i): name the AI services that receive people's messages and ask first.
 // Keep this list matching what aivx-worker.js really calls. Bump the version whenever it changes.
-const AI_PROVIDERS = "Cloudflare Workers AI and Groq";
-const AI_CONSENT_VERSION = "2026-11-21";
+const AI_PROVIDERS = "Cloudflare Workers AI, Cerebras, Groq, Google (Gemini), Mistral AI, GitHub Models (Microsoft), NVIDIA, OpenRouter, Pollinations and Deepgram";
+const AI_CONSENT_VERSION = "2026-11-22";
 function aiConsentOk(){ return !NATIVE || LSX.get("aivx_ai_consent", "") === AI_CONSENT_VERSION; }
 function askAIConsent(then){
   const m = modal(`<div class="mh2"><h3>Before you chat with AI</h3></div>
     <div class="mb"><p class="muted" style="margin-bottom:10px">To answer you, AIV X sends what you type, plus any files, photos, or voice you add, to the AI services that run its models: ${esc(AI_PROVIDERS)}. Web searches are sent to search providers.</p>
-    <p class="muted small" style="margin-bottom:6px">They process it only to create your answer. Read more in our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. You can turn off "Use my chats to improve AIV X" in Settings.</p></div>
+    <p class="muted small" style="margin-bottom:6px">They process it only to create your answer. Read more in our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. You can turn off "Improve AIV X for everyone" in Settings, under Memory.</p></div>
     <div class="mf"><button class="btn" id="aicNo">Not now</button><button class="btn primary" id="aicYes">Allow and continue</button></div>`);
   m.onclick = null;
   $("aicNo").onclick = () => closeModal();
