@@ -250,7 +250,8 @@ textarea.input{resize:vertical;min-height:90px}
 .cursor::after{content:"▍";animation:blink 1s infinite;color:var(--muted)}
 @keyframes blink{50%{opacity:0}}
 .thinking{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
-.thinking .orb{width:14px;height:14px;border-radius:50%;background:conic-gradient(from 0deg,var(--glow),transparent);animation:spin 1s linear infinite}
+.thinking .orb{width:13px;height:13px;flex:0 0 13px;background:var(--text);border-radius:3px;animation:aivThink 1.8s cubic-bezier(.45,0,.25,1) infinite}
+@keyframes aivThink{0%{transform:rotate(0deg) scale(.7);border-radius:3px;opacity:.85}25%{transform:rotate(90deg) scale(1);border-radius:50% 3px 50% 3px;opacity:1}50%{transform:rotate(180deg) scale(.8);border-radius:50%;opacity:.7}75%{transform:rotate(270deg) scale(1);border-radius:3px 50% 3px 50%;opacity:1}100%{transform:rotate(360deg) scale(.7);border-radius:3px;opacity:.85}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .steps{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px;color:var(--text2)}
 .steps div{display:flex;gap:8px;align-items:center;padding:3px 0}
@@ -693,12 +694,13 @@ button:focus-visible,a:focus-visible,[role=button]:focus-visible,summary:focus-v
 .tw-caret{display:inline-block;width:.55em;height:.55em;margin-left:3px;border-radius:50%;background:var(--text);vertical-align:.05em;animation:twpulse 1.1s ease-in-out infinite}
 @keyframes twpulse{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
 .md.body.tw-in{animation:twfade .22s ease-out}
+.md.body.tw > *:last-child{animation:twfade .28s ease-out}
 @keyframes twfade{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:none}}
 .m.ai .thinking{animation:twfade .2s ease-out}
 .shimmer{background:linear-gradient(90deg,var(--muted) 0%,var(--muted) 40%,var(--text) 50%,var(--muted) 60%,var(--muted) 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 1.8s linear infinite;font-weight:500}
 @keyframes shimmer{from{background-position:100% 0}to{background-position:-150% 0}}
 #scroll{overflow-anchor:none}
-@media (prefers-reduced-motion: reduce){.tw-caret,.shimmer,.md.body.tw-in{animation:none}.shimmer{color:var(--muted);background:none}}
+@media (prefers-reduced-motion: reduce){.tw-caret,.shimmer,.md.body.tw-in,.thinking .orb{animation:none}.shimmer{color:var(--muted);background:none}}
 /* task agent */
 .tk{padding:18px 20px 28px;max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .tk-top{display:flex;gap:10px;align-items:flex-start}
@@ -5176,7 +5178,6 @@ function twRender(st){
   }
   if(body){
     body.innerHTML = renderMarkdown(tidyPartial(visible), m.sources);
-    placeCursor(body);
     scrollDown();
   }
 }
@@ -5187,6 +5188,11 @@ function twTick(){
   for(const [id, st] of TW){
     const backlog = st.target.length - st.shown;
     if(backlog > 0){
+      // show everything that has arrived so far, at once (like Claude), instead of typing it out
+      st.shown = st.target.length; st.at = now;
+      twRender(st);
+    }
+    if(false){
       const dt = Math.min(64, now - (st.at || now)); st.at = now;
       // steady pace (about 75 characters a second at minimum), catching up smoothly when the AI sends a big burst
       const framesLeft = Math.max(1, (st.deadline - now) / 16.7 - 2);
@@ -5231,7 +5237,7 @@ updateMsg = function(m, immediate){
       const alreadyShown = el ? el.textContent.length : 0;
       if(alreadyShown < answer.length * 0.6){
         const now = performance.now();
-        st = { m, target:answer, shown:0, at:now, finalize:true, paced:true, deadline: now + Math.min(1600, 350 + answer.length * 1.2) };
+        st = { m, target:answer, shown:0, at:now, finalize:true, paced:true, deadline: now };
         TW.set(m.id, st); twKick();
         return;
       }
@@ -5246,7 +5252,7 @@ updateMsg = function(m, immediate){
     if(st){
       if(!m.pending && plain && answer && answer.startsWith(st.target.slice(0, st.shown).slice(0, 200)) && st.shown < answer.length){
         // the answer is complete: finish revealing it quickly, then draw the final message
-        st.m = m; st.target = answer; st.finalize = true; st.deadline = performance.now() + 450;
+        st.m = m; st.target = answer; st.finalize = true; st.deadline = performance.now();
         twKick();
         return;
       }
