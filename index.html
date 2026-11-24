@@ -1813,7 +1813,7 @@ function renderUsage(){
     $("usageUp").onclick = () => openGuestWall(true);
     $("mePlan").textContent = "Guest"; $("upBtn").classList.add("hidden"); return;
   }
-  if(S.pro){ $("usage").innerHTML = `<span>${NO_PAY ? "Unlimited" : "AIV Pro · unlimited"}</span>`; $("mePlan").textContent = NO_PAY ? "Unlimited" : "AIV Pro"; $("upBtn").classList.add("hidden"); return; }
+  if(S.pro){ $("usage").innerHTML = `<span>AIV Pro · unlimited</span>`; $("mePlan").textContent = "AIV Pro"; $("upBtn").classList.add("hidden"); return; }
   const c = usageCount(), pct = Math.min(100, c / FREE_DAILY_LIMIT * 100);
   $("usage").innerHTML = `<span>${c}/${FREE_DAILY_LIMIT} today</span><span class="bar"><i style="width:${pct}%"></i></span><button class="linkbtn small" id="usageUp">Upgrade</button>`;
   $("usageUp").onclick = () => openUpgrade();
@@ -4697,7 +4697,7 @@ function openAgentEditor(a, note){
     <div class="agappsel">${APPS.filter(x => x.url).map(x => `<label class="agchk"><input type="checkbox" value="${x.id}" ${(a.apps || []).includes(x.id) ? "checked" : ""}> ${esc(x.name)}</label>`).join("")}</div>
     <div class="muted small" style="margin-top:6px">It can read what you've saved in these apps and suggest changes, like adding tasks or jobs. Nothing changes until you approve it.</div>
     <label class="label">When it runs</label>
-    <div class="agwhen"><select class="input" id="agKind"><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekly">Once a week</option><option value="hours" ${free ? "disabled" : ""}>Every few hours${free ? (NO_PAY ? " (not on free plan)" : " (AIV Pro)") : ""}</option></select>
+    <div class="agwhen"><select class="input" id="agKind"><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekly">Once a week</option><option value="hours" ${free ? "disabled" : ""}>Every few hours${free ? " (AIV Pro)" : ""}</option></select>
       <select class="input" id="agDay">${AG_DAYS.map((d, i) => `<option value="${i}">${d}</option>`).join("")}</select>
       <input class="input" id="agTime" type="time" value="${esc(sch.time)}">
       <select class="input" id="agEvery">${[1, 2, 3, 4, 6, 8, 12].map(n => `<option value="${n}">Every ${n} hour${n > 1 ? "s" : ""}</option>`).join("")}</select></div>
@@ -4854,6 +4854,45 @@ RULES
 const APP_EDIT_SYSTEM = `You are AIV X App Builder. You get an existing app's plan (JSON) and a change the user wants. Reply with JSON only:
 {"plan":{the full updated plan, same shape},"rebuild":["ids of screens that must be written or rewritten"],"summary":"one plain sentence describing the change"}
 RULES: keep screen ids and collection ids stable. Only list screens in "rebuild" that need new code: new screens, and screens whose features or data changed. Changing the name, colors, icon, assistant, persona, setup, tour, or tagline needs no rebuild. To recolor the app, change both "accent" and "gradient" (buttons stay black, like every AI Verse app). Keep "tour" with one entry per screen. Adding a field to a collection needs rebuilding only the screens that show that field. Keep 4 to 7 screens. Don't list the built-in assistant or settings screens.`;
+
+/* ---------- before planning: look at the popular apps in that field and pull out their key features ---------- */
+const APP_RESEARCH_PICK = `You help plan a new app by studying the popular apps people already use for the same job.
+Read the request and reply with JSON only:
+{"category":"what kind of app this is, 2-5 words","apps":["3 or 4 of the best-known apps in this field"],"queries":["2 or 3 web searches that find those apps' main features, like 'Zoom key features'"]}`;
+const APP_RESEARCH_BRIEF = `You study popular apps so a new app can include what users value most.
+From the search results, write a feature brief as JSON only:
+{"apps":["the apps you actually found information on"],
+ "features":[{"name":"short feature name","why":"why users value it, one line","in":["which of the apps have it"],"web":true}],
+ "notes":"one or two lines on what people complain about in these apps that the new app can do better"}
+Rules: 8 to 12 features, most important first. Use only what the results support. Set "web" to false for features a single-page web app that saves data in the browser cannot really do on its own (live video or calls between people, payments, sending real texts or emails, syncing between users). Describe features generically; never copy brand names, logos, or wording.`;
+async function researchApp(ai, hist){
+  const want = hist.filter(m => m.role === "user").map(m => m.content).join("\n").slice(-3000);
+  const pick = planJSON(await ask([{ role:"system", content:APP_RESEARCH_PICK }, { role:"user", content:want }], { model:"auto", max_tokens:500 }));
+  if(!pick || !Array.isArray(pick.queries) || !pick.queries.length) return null;
+  const apps = (pick.apps || []).map(String).filter(Boolean).slice(0, 4);
+  ai.steps[ai.steps.length - 1] = { text:"Looking at popular " + (pick.category || "apps") + (apps.length ? ": " + apps.join(", ") : ""), done:false }; updateMsg(ai, true);
+  const found = [];
+  await Promise.all(pick.queries.slice(0, 3).map(q => api("/search", { q:String(q).slice(0, 200) }).then(r => { (r.results || []).slice(0, 5).forEach(x => found.push(x)); }).catch(() => {})));
+  const seen = new Set(), res = found.filter(x => x && x.url && !seen.has(x.url) && seen.add(x.url)).slice(0, 12);
+  if(!res.length) return null;
+  const text = res.map((x, i) => `[${i + 1}] ${x.title} — ${x.url}\n${String(x.snippet || "").slice(0, 400)}`).join("\n\n");
+  const brief = planJSON(await ask([{ role:"system", content:APP_RESEARCH_BRIEF }, { role:"user", content:"WHAT THE USER WANTS:\n" + want + "\n\nAPPS: " + apps.join(", ") + "\n\nSEARCH RESULTS:\n" + text }], { model:"auto", max_tokens:1800 }));
+  if(!brief || !Array.isArray(brief.features) || !brief.features.length) return null;
+  brief.features = brief.features.filter(f => f && f.name).slice(0, 12).map(f => ({ name:String(f.name).slice(0, 60), why:String(f.why || "").slice(0, 160), in:(Array.isArray(f.in) ? f.in : []).map(String).slice(0, 4), web:f.web !== false }));
+  brief.apps = (Array.isArray(brief.apps) && brief.apps.length ? brief.apps : apps).map(String).slice(0, 4);
+  brief.category = String(pick.category || "");
+  brief.sources = res.slice(0, 6).map(x => ({ title:x.title, url:x.url, snippet:x.snippet || "" }));
+  return brief;
+}
+function researchForPlan(b){
+  if(!b) return "";
+  const can = b.features.filter(f => f.web), cant = b.features.filter(f => !f.web);
+  return `\n\nFEATURE RESEARCH (popular ${b.category || "apps"} people use: ${b.apps.join(", ")}):\n` +
+    can.map((f, i) => `${i + 1}. ${f.name}: ${f.why}`).join("\n") +
+    (cant.length ? `\nNeeds an outside service, so design a helpful version that works in this app (for example plan it, schedule it, keep notes, or hand off with a link), and say so in the screen's purpose: ${cant.map(f => f.name).join("; ")}.` : "") +
+    (b.notes ? `\nWhat users complain about (do better): ${b.notes}` : "") +
+    `\nBuild the most important of these into the screens, starting with the top of the list. Describe features in your own words; never use another app's name, logo, or branding in this app.`;
+}
 
 // reads the plan even when the AI wraps it in text, adds its reasoning, leaves trailing commas, or gets cut off mid-way
 function planJSON(out){
@@ -5064,7 +5103,18 @@ async function doFullApp(ai, userMsg){
 
   // 2. Plan (or plan the change)
   if(!editing){
+    // look at popular apps in this field first, so the app gets the features people value most
+    let research = null;
+    addStep(ai, "Looking at popular apps like this one", false);
+    try{ research = await researchApp(ai, hist); }catch(e){ if(e.name === "AbortError") throw e; }
+    stop();
+    ai.steps[ai.steps.length - 1] = research
+      ? { text:`Studied ${research.apps.join(", ")}: ${research.features.length} key features to build in`, done:true }
+      : { text:"Couldn't look up similar apps, so planning from your description", done:true };
+    if(research){ ai.sources = research.sources; item.research = { apps:research.apps, category:research.category, features:research.features.filter(f => f.web).map(f => f.name), outside:research.features.filter(f => !f.web).map(f => f.name) }; }
     addStep(ai, "Planning the app: screens, saved data, and AI features", false);
+    const pi = ai.steps.length - 1;
+    const planHist = research ? [...hist.slice(0, -1), { role:"user", content:hist[hist.length - 1].content + researchForPlan(research) }] : hist;
     let raw = null, partial = null;
     // try the careful model with plenty of room, then a faster one with a shorter plan; repair cut-off JSON either way
     const tries = [
@@ -5075,21 +5125,21 @@ async function doFullApp(ai, userMsg){
     for(let i = 0; i < tries.length && !raw; i++){
       try{
         const t = tries[i];
-        const p = planJSON(await ask([{ role:"system", content:APP_PLAN_SYSTEM + t.extra }, ...hist], { model:t.model, max_tokens:t.max_tokens }));
+        const p = planJSON(await ask([{ role:"system", content:APP_PLAN_SYSTEM + t.extra }, ...planHist], { model:t.model, max_tokens:t.max_tokens }));
         if(p && Array.isArray(p.screens) && p.screens.filter(x => x && (x.id || x.title)).length >= 2){
           // a plan that got cut off is kept as a fallback while the next try aims for a complete one
           if(p.__repaired && i < tries.length - 1){ partial = partial || p; } else raw = p;
         }
       }catch(e){ if(e.name === "AbortError") throw e; }
       stop();
-      if(!raw && i < tries.length - 1) ai.steps[0] = { text:"Planning the app (trying again)", done:false }, updateMsg(ai, true);
+      if(!raw && i < tries.length - 1) ai.steps[pi] = { text:"Planning the app (trying again)", done:false }, updateMsg(ai, true);
     }
     if(!raw) raw = partial;
     if(!raw){ delete ai.artifact; throw new Error("I couldn't finish planning that app. Tap retry, or describe it in a sentence or two (who it's for and what it should keep track of)."); }
     plan = cleanPlan(raw);
     if(plan.screens.length < 2) throw new Error("The plan didn't have enough screens. Try again with a bit more detail.");
     rebuild = plan.screens.map(s => s.id);
-    ai.steps[0] = { text:`Planned ${plan.name}: ${plan.screens.length} screens (${plan.screens.map(s => s.title).join(", ")}), ${plan.collections.length} saved list${plan.collections.length === 1 ? "" : "s"}, plus an AI assistant`, done:true };
+    ai.steps[pi] = { text:`Planned ${plan.name}: ${plan.screens.length} screens (${plan.screens.map(s => s.title).join(", ")}), ${plan.collections.length} saved list${plan.collections.length === 1 ? "" : "s"}, plus an AI assistant`, done:true };
   }else{
     addStep(ai, "Working out the change", false);
     let r = null;
@@ -5169,6 +5219,11 @@ async function doFullApp(ai, userMsg){
   ai.content = editing
     ? `Updated **${plan.name}**. ${summary}${todo.length ? "" : " No screens needed rewriting."}${testLine}\n\nIf you don't like the change, say **undo** and I'll put the last version back.`
     : `**${plan.name}** is ready. ${plan.tagline}\n\n` +
+      (item.research && item.research.features.length
+        ? `### Built from what works\nI looked at popular ${item.research.category || "apps like this"} (${item.research.apps.join(", ")}) and built in the features people rely on most: ${item.research.features.slice(0, 8).map(x => x.toLowerCase()).join(", ")}.` +
+          (item.research.outside.length ? ` Some of their features need outside services this app can't run on its own (${item.research.outside.slice(0, 3).map(x => x.toLowerCase()).join(", ")}), so it helps you plan and organize around them instead.` : "") +
+          ` It's your own app, not connected to any of them.\n\n`
+        : "") +
       `### How it works\n` +
       (plan.tour && plan.tour.length ? plan.tour : plan.screens.map(s => ({ screen:s.id, text:s.purpose }))).map((t, i) => { const sc = plan.screens.find(x => x.id === t.screen) || {}; return `${i + 1}. **${sc.title || t.screen}**: ${t.text}`; }).join("\n") +
       `\n${plan.screens.length + 1}. **${plan.assistant.title || "Assistant"}**: ${plan.persona ? plan.persona + ", your " + (plan.role || "AI assistant") + ", " : "an AI assistant that "}can read and update everything saved in the app. Just ask.\n${plan.screens.length + 2}. **Settings**: export, import, or clear your data, and run setup or the tour again.\n\n` +
@@ -6326,7 +6381,7 @@ function openBuild(){
     return;
   }
   const examples = ["A case manager for my law practice: clients, cases, deadlines, and AI research and drafting","A study app that turns my notes into flashcards and quizzes and tracks my exam dates","A small-business app for invoices, customers, and AI-written follow-up emails","A workout and meal tracker with AI weekly plans and progress charts"];
-  const left = S.pro ? (NO_PAY ? "Build as many AI apps as you like." : "AIV Pro: build as many AI apps as you like.") : (NO_PAY ? "Your free plan includes 1 AI app." : "Your free plan includes 1 AI app. After that, building more needs AIV Pro.");
+  const left = S.pro ? "AIV Pro: build as many AI apps as you like." : (NO_PAY ? "Your free plan includes 1 AI app." : "Your free plan includes 1 AI app. After that, building more needs AIV Pro.");
   modal(`<div class="mh2"><h3>Build your AI app</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb">
       <p class="muted small" style="margin-bottom:6px">Describe the app you want. AIV X plans a complete app with several screens, saved lists, AI features, and its own AI assistant, writes every screen, opens each one in a test copy to fix anything that breaks, then hands it to you. It takes a couple of minutes. Change it any time just by chatting.</p>
@@ -6398,7 +6453,8 @@ function openFullApp(app, opts = {}){
   setMode(app.id, true);
   if(innerWidth >= 820 && !$("side").classList.contains("collapsed")){ S._sideWasOpen = true; closeSide(); }
   $("appLoading").classList.remove("hidden");
-  freshAppFrame(app.url);
+  $("appIframe").onload = () => $("appLoading").classList.add("hidden");
+  $("appIframe").src = app.url;
   $("appNewTab").href = app.url + "?from=aivx&back=" + encodeURIComponent(location.origin + location.pathname + "#app/" + app.id);
   $("appPane").classList.remove("hidden");
   $("workspace").classList.add("appmode");
@@ -6408,33 +6464,12 @@ function openFullApp(app, opts = {}){
   renderCopilot();
   try{ history.replaceState(null, "", "#app/" + app.id); }catch(e){}
 }
-// Each app gets a brand-new frame, hidden until that app has loaded, so the app you opened before
-// (or a page from the frame's history) never flashes up first.
-let appFrameSeq = 0;
-function freshAppFrame(url){
-  const old = $("appIframe");
-  const f = document.createElement("iframe");
-  f.id = "appIframe"; f.title = "AI Verse app";
-  f.setAttribute("allow", old ? (old.getAttribute("allow") || "") : "microphone; camera; clipboard-read; clipboard-write; geolocation; fullscreen; autoplay");
-  const seq = ++appFrameSeq;
-  if(url){
-    f.style.visibility = "hidden";
-    f.onload = () => {
-      if(seq !== appFrameSeq) return;            // a newer app was opened meanwhile
-      f.style.visibility = "";
-      $("appLoading").classList.add("hidden");
-    };
-    f.src = url;
-  }
-  if(old) old.replaceWith(f); else $("appPane").appendChild(f);
-  return f;
-}
 function closeApp(keepMode){
   if(!S.openApp) return;
   const td = $("taskDock"); if(td) td.remove();
   S.openApp = null;
   Link.ready = false; Link.app = null; renderLink();
-  freshAppFrame("");
+  $("appIframe").src = "about:blank";
   $("appPane").classList.add("hidden");
   $("workspace").classList.remove("appmode", "cop-hidden");
   $("appCtl").classList.add("hidden");
@@ -6640,7 +6675,7 @@ function drawSettings(sec){
     if($("mClear")) $("mClear").onclick = async () => { if(!confirm("Delete everything AIV X remembers about you?")) return; S.profile.memories = []; await saveProfile(); drawSettings("memory"); };
   }
   if(sec === "plan"){
-    b.innerHTML = `<div class="set-row"><div class="lt">Current plan<small>${S.pro ? "Unlimited usage" : usageCount() + " of " + FREE_DAILY_LIMIT + " free messages used today"}</small></div><b>${S.pro ? (NO_PAY ? "Unlimited" : "AIV Pro") : "Free"}</b></div>
+    b.innerHTML = `<div class="set-row"><div class="lt">Current plan<small>${S.pro ? "Unlimited usage" : usageCount() + " of " + FREE_DAILY_LIMIT + " free messages used today"}</small></div><b>${S.pro ? "AIV Pro" : "Free"}</b></div>
       <div style="margin-top:16px">${S.pro ? '<button class="btn sm" id="pRemove">Remove AIV key</button>' : '<button class="btn primary sm" id="pUp">Upgrade or enter key</button>'}</div>`;
     if($("pUp")) $("pUp").onclick = () => openUpgrade();
     if($("pRemove")) $("pRemove").onclick = async () => { S.profile.proKey = ""; S.pro = false; await saveProfile(); renderUsage(); drawSettings("plan"); };
