@@ -4855,6 +4855,41 @@ const APP_EDIT_SYSTEM = `You are AIV X App Builder. You get an existing app's pl
 {"plan":{the full updated plan, same shape},"rebuild":["ids of screens that must be written or rewritten"],"summary":"one plain sentence describing the change"}
 RULES: keep screen ids and collection ids stable. Only list screens in "rebuild" that need new code: new screens, and screens whose features or data changed. Changing the name, colors, icon, assistant, persona, setup, tour, or tagline needs no rebuild. To recolor the app, change both "accent" and "gradient" (buttons stay black, like every AI Verse app). Keep "tour" with one entry per screen. Adding a field to a collection needs rebuilding only the screens that show that field. Keep 4 to 7 screens. Don't list the built-in assistant or settings screens.`;
 
+// reads the plan even when the AI wraps it in text, adds its reasoning, leaves trailing commas, or gets cut off mid-way
+function planJSON(out){
+  if(out && typeof out === "object") return out;
+  let s = String(out || "").replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/```(?:json)?/gi, "");
+  const a = s.indexOf("{"); if(a < 0) return null;
+  s = s.slice(a);
+  const tryParse = t => { try{ return JSON.parse(t); }catch(e){ try{ return JSON.parse(t.replace(/,\s*([}\]])/g, "$1")); }catch(e2){ return null; } } };
+  const b = s.lastIndexOf("}");
+  if(b > 0){ const p = tryParse(s.slice(0, b + 1)); if(p) return p; }
+  // cut off: walk the text, then close whatever is still open, dropping the last unfinished piece
+  for(let cut = s.length; cut > 0; ){
+    let stack = [], inStr = false, esc = false, lastSafe = -1;
+    for(let i = 0; i < cut; i++){
+      const c = s[i];
+      if(inStr){ if(esc) esc = false; else if(c === "\\") esc = true; else if(c === '"') inStr = false; continue; }
+      if(c === '"') inStr = true;
+      else if(c === "{" || c === "[") stack.push(c === "{" ? "}" : "]");
+      else if(c === "}" || c === "]"){ stack.pop(); lastSafe = i; }
+      else if(c === ",") lastSafe = i - 1;
+    }
+    if(lastSafe < 0) return null;
+    let t = s.slice(0, lastSafe + 1).replace(/,\s*$/, "");
+    // recount what's open at the safe point and close it
+    stack = []; inStr = false; esc = false;
+    for(const c of t){
+      if(inStr){ if(esc) esc = false; else if(c === "\\") esc = true; else if(c === '"') inStr = false; continue; }
+      if(c === '"') inStr = true; else if(c === "{" || c === "[") stack.push(c === "{" ? "}" : "]"); else if(c === "}" || c === "]") stack.pop();
+    }
+    if(inStr){ cut = lastSafe; continue; }
+    const p = tryParse(t.replace(/[,:]\s*$/, "") + stack.reverse().join(""));
+    if(p){ try{ Object.defineProperty(p, "__repaired", { value:true }); }catch(e){} return p; }
+    cut = lastSafe;
+  }
+  return null;
+}
 function cleanPlan(p){
   p = p || {};
   const snake = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 32);
@@ -5030,12 +5065,27 @@ async function doFullApp(ai, userMsg){
   // 2. Plan (or plan the change)
   if(!editing){
     addStep(ai, "Planning the app: screens, saved data, and AI features", false);
-    let raw = null;
-    for(let i = 0; i < 2 && !raw; i++){
-      try{ const p = parseMemJSON(await ask([{ role:"system", content:APP_PLAN_SYSTEM }, ...hist], { model:"think", max_tokens:4000 })); if(p && Array.isArray(p.screens) && p.screens.length >= 2) raw = p; }catch(e){}
+    let raw = null, partial = null;
+    // try the careful model with plenty of room, then a faster one with a shorter plan; repair cut-off JSON either way
+    const tries = [
+      { model:"think", max_tokens:8000, extra:"" },
+      { model:"auto", max_tokens:8000, extra:"\n\nKeep the plan compact: at most 6 screens and 2 sample records per list. Reply with the JSON only." },
+      { model:"auto", max_tokens:6000, extra:"\n\nKeep it short: 3 to 5 screens, 1 sample record per list, short purposes. Reply with the JSON only, no other text." },
+    ];
+    for(let i = 0; i < tries.length && !raw; i++){
+      try{
+        const t = tries[i];
+        const p = planJSON(await ask([{ role:"system", content:APP_PLAN_SYSTEM + t.extra }, ...hist], { model:t.model, max_tokens:t.max_tokens }));
+        if(p && Array.isArray(p.screens) && p.screens.filter(x => x && (x.id || x.title)).length >= 2){
+          // a plan that got cut off is kept as a fallback while the next try aims for a complete one
+          if(p.__repaired && i < tries.length - 1){ partial = partial || p; } else raw = p;
+        }
+      }catch(e){ if(e.name === "AbortError") throw e; }
       stop();
+      if(!raw && i < tries.length - 1) ai.steps[0] = { text:"Planning the app (trying again)", done:false }, updateMsg(ai, true);
     }
-    if(!raw) throw new Error("The plan didn't come back complete. Try again, or describe the app a little differently.");
+    if(!raw) raw = partial;
+    if(!raw){ delete ai.artifact; throw new Error("I couldn't finish planning that app. Tap retry, or describe it in a sentence or two (who it's for and what it should keep track of)."); }
     plan = cleanPlan(raw);
     if(plan.screens.length < 2) throw new Error("The plan didn't have enough screens. Try again with a bit more detail.");
     rebuild = plan.screens.map(s => s.id);
