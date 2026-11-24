@@ -250,7 +250,9 @@ textarea.input{resize:vertical;min-height:90px}
 .cursor::after{content:"▍";animation:blink 1s infinite;color:var(--muted)}
 @keyframes blink{50%{opacity:0}}
 .thinking{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
-.thinking .orb{width:14px;height:14px;border-radius:50%;background:conic-gradient(from 0deg,var(--glow),transparent);animation:spin 1s linear infinite}
+html.no-pay #upBtn,html.no-pay #usageUp,html.no-pay #pUp,html.no-pay #agUp{display:none!important}
+.thinking .orb{width:13px;height:13px;flex:0 0 13px;background:var(--text);border-radius:3px;animation:aivThink 1.8s cubic-bezier(.45,0,.25,1) infinite}
+@keyframes aivThink{0%{transform:rotate(0deg) scale(.7);border-radius:3px;opacity:.85}25%{transform:rotate(90deg) scale(1);border-radius:50% 3px 50% 3px;opacity:1}50%{transform:rotate(180deg) scale(.8);border-radius:50%;opacity:.7}75%{transform:rotate(270deg) scale(1);border-radius:3px 50% 3px 50%;opacity:1}100%{transform:rotate(360deg) scale(.7);border-radius:3px;opacity:.85}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .steps{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px;color:var(--text2)}
 .steps div{display:flex;gap:8px;align-items:center;padding:3px 0}
@@ -484,7 +486,7 @@ th.sortable:hover{color:var(--text)}
 .actions .iconbtn.on{color:var(--text);background:var(--bg3)}
 /* ---- voice mode ---- */
 .voice{position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
-.vm-top{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.vm-top{position:absolute;top:max(16px,calc(env(safe-area-inset-top) + 8px));left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
 .vm-nat{font-weight:400;font-size:13px;color:var(--text2);display:flex;gap:6px;align-items:center}
 .vm-orb{width:150px;height:150px;border-radius:50%;background:var(--text);display:flex;align-items:center;justify-content:center;transition:transform .3s}
 .vm-orb span{width:56px;height:56px;border-radius:50%;background:var(--bg)}
@@ -567,6 +569,13 @@ th.sortable:hover{color:var(--text)}
   .modal{padding:0;align-items:flex-end}
   .modal .box{max-height:94dvh;border-radius:22px 22px 0 0;border:0;padding-bottom:env(safe-area-inset-bottom)}
   .modal .box.wide{height:100dvh;max-height:100dvh;border-radius:0}
+  /* keep headers clear of the iPhone status bar and Dynamic Island (the iOS app draws edge to edge) */
+  .modal .box{max-height:min(94dvh,calc(100dvh - env(safe-area-inset-top) - 8px))}
+  .modal .box.wide{max-height:100dvh}
+  .modal .box.wide .mh2{padding-top:max(14px,calc(env(safe-area-inset-top) + 6px))}
+  .side-top{padding-top:max(12px,calc(env(safe-area-inset-top) + 4px))}
+  #auth{padding-top:env(safe-area-inset-top)}
+  #lightbox{padding-top:max(20px,env(safe-area-inset-top))}
   .modal .mh2{padding:14px 16px}
   .modal .mb{padding:16px}
   .modal .mf{padding:12px 16px}
@@ -680,7 +689,7 @@ th.sortable:hover{color:var(--text)}
 .agact .agbtns{margin-top:0}
 .agact.done .agactt,.agact.skipped .agactt{color:var(--text2)}
 .qa .qabadge{min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--text);color:var(--bg);font-size:10.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;margin-left:2px}
-.netbanner{position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--text);color:var(--bg);text-align:center;font-size:13.5px;padding:8px 14px}
+.netbanner{position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--text);color:var(--bg);text-align:center;font-size:13.5px;padding:8px 14px;padding-top:max(8px,calc(env(safe-area-inset-top) + 4px))}
 button:focus-visible,a:focus-visible,[role=button]:focus-visible,summary:focus-visible{outline:2px solid var(--text);outline-offset:2px}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 .aglive{list-style:none;padding:0 6px 10px;margin:0 auto;max-width:560px;font-size:13.5px;line-height:1.55;color:var(--text2);max-height:240px;overflow-y:auto}
@@ -693,12 +702,13 @@ button:focus-visible,a:focus-visible,[role=button]:focus-visible,summary:focus-v
 .tw-caret{display:inline-block;width:.55em;height:.55em;margin-left:3px;border-radius:50%;background:var(--text);vertical-align:.05em;animation:twpulse 1.1s ease-in-out infinite}
 @keyframes twpulse{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
 .md.body.tw-in{animation:twfade .22s ease-out}
+.md.body.tw > *:last-child{animation:twfade .28s ease-out}
 @keyframes twfade{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:none}}
 .m.ai .thinking{animation:twfade .2s ease-out}
 .shimmer{background:linear-gradient(90deg,var(--muted) 0%,var(--muted) 40%,var(--text) 50%,var(--muted) 60%,var(--muted) 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 1.8s linear infinite;font-weight:500}
 @keyframes shimmer{from{background-position:100% 0}to{background-position:-150% 0}}
 #scroll{overflow-anchor:none}
-@media (prefers-reduced-motion: reduce){.tw-caret,.shimmer,.md.body.tw-in{animation:none}.shimmer{color:var(--muted);background:none}}
+@media (prefers-reduced-motion: reduce){.tw-caret,.shimmer,.md.body.tw-in,.thinking .orb{animation:none}.shimmer{color:var(--muted);background:none}}
 /* task agent */
 .tk{padding:18px 20px 28px;max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .tk-top{display:flex;gap:10px;align-items:flex-start}
@@ -950,6 +960,9 @@ img,video,iframe,canvas,svg{max-width:100%}
 const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 const NP = NATIVE ? (window.Capacitor.Plugins || {}) : {};
 if(NATIVE) document.documentElement.classList.add("native-ios");
+// iPhone app: no purchases or upgrade offers for now (payments get added later with Apple In-App Purchase)
+const NO_PAY = NATIVE;
+if(NO_PAY) document.documentElement.classList.add("no-pay");
 const AIV_API_URL = "https://aivx-api.domhasaball.workers.dev";
 const AIVX_APP_KEY = "aivx_iGsNWk4eHXokoW8awHmMVZpm";
 const AIV_BROWSE_URL = "https://api.aiverse.it.com/v1/browse";   // AIV Browse engine (aiv-browse repo), used by AIV-1 Eco
@@ -992,8 +1005,8 @@ const APPS = [
   { id:"fitness", name:"AI Health and Fitness", url:APP_BASE + "ai-health-and-fitness.html", desc:"Workouts, progression, nutrition, and coaching.",
     persona:"You are now in AI Health and Fitness mode: a supportive training and nutrition coach. Build workout programs with sets, reps, and progression, explain exercise form, design balanced meal plans, and answer fitness questions. Keep advice safe and evidence-based; suggest a professional for injuries, medical conditions, or pain.",
     starters:["Build a 4-day gym split","High-protein meal ideas","How do I progress my squat?","Make a beginner running plan"] },
-  { id:"photo", name:"AI Photo and Art", url:APP_BASE + "ai-photo.html", desc:"Edit photos, create art, headshots, and social posts.",
-    persona:"You are now in AI Photo and Art mode: a creative image partner. Help people create images, write vivid image prompts, plan photo edits, pick styles, color palettes, and compositions, and give feedback on photos they upload. When someone wants a picture, suggest switching on Create image or write a ready-to-use prompt.",
+  { id:"photo", name:"AI Photo", url:APP_BASE + "ai-photo.html", desc:"Create and edit images with AI.",
+    persona:"You are now in AI Photo mode: a creative image partner. Help people create images, write vivid image prompts, plan photo edits, pick styles, color palettes, and compositions, and give feedback on photos they upload. When someone wants a picture, suggest switching on Create image or write a ready-to-use prompt.",
     starters:["Create an image of a neon city at night","Give feedback on my photo","Write a prompt for a product shot","Ideas for a logo style"] },
   { id:"career", name:"AI Career", url:APP_BASE + "ai-career.html", desc:"Resumes, cover letters, job matching, interviews.",
     persona:"You are now in AI Career mode: a career coach. Improve resumes with strong bullet points and metrics, write tailored cover letters, match skills to jobs, prepare interview answers using the STAR method, run mock interviews one question at a time, and plan career moves.",
@@ -1118,10 +1131,15 @@ const LSX = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } },
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
+// one load per script: a second caller waits for the same load instead of going ahead before the script is ready
+const SCRIPT_LOADS = {};
 function loadScript(src){
-  return new Promise((res, rej) => {
-    if(document.querySelector('script[src="'+src+'"]')) return res();
-    const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Couldn't load " + src)); document.head.appendChild(s);
+  if(SCRIPT_LOADS[src]) return SCRIPT_LOADS[src];
+  if(document.querySelector('script[src="' + src + '"]')) return SCRIPT_LOADS[src] = Promise.resolve();   // already in the page
+  return SCRIPT_LOADS[src] = new Promise((res, rej) => {
+    const s = document.createElement("script"); s.src = src; s.onload = () => res();
+    s.onerror = () => { delete SCRIPT_LOADS[src]; s.remove(); rej(new Error("Couldn't load " + src)); };
+    document.head.appendChild(s);
   });
 }
 function resizeImage(dataUrl, max, quality = 0.85){
@@ -2115,7 +2133,7 @@ Rules:
 - For multi-step jobs, first say your plan in one short line, then work through it step by step. You can use several tools in one block and keep going for several rounds.
 - After you act in an app, check the updated screen in the system message to confirm each change actually happened. If it didn't, try another way (a different button, field, or screen) before telling the user. Only say something is done when you've seen it on the screen.
 - When the user shares a goal or wants a plan (losing weight, saving money, studying for an exam, finding a job, setting plans or routines), build the plan right here first, then recommend the matching app to keep going.
-- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in AI Photo and Art, budgets and stocks in AI Stock and Finance, workouts and meals in AI Health and Fitness, flashcards and studying in AI Study and Research, resumes and jobs in AI Career, songs, beats, and music in AI Music, tasks, reminders, calendar, and email in AI Personal Assistant), open that app and do it there.
+- When the user asks you to make or do something one of their apps is built for (pictures and photo edits in AI Photo, budgets and stocks in AI Stock and Finance, workouts and meals in AI Health and Fitness, flashcards and studying in AI Study and Research, resumes and jobs in AI Career, songs, beats, and music in AI Music, tasks, reminders, calendar, and email in AI Personal Assistant), open that app and do it there.
 - You can move between apps in one job (for example, read a budget in one app, then add a task in AI Personal Assistant).
 - Never delete, clear, reset, or sign out of anything unless the user explicitly asked for it.
 
@@ -2606,7 +2624,7 @@ async function doAssistant(ai, userMsg){
   const chat = S.chat;
   const prev = chat.assistantId ? S.libMap[chat.assistantId] : null;
   const isNew = !prev;
-  if(isNew && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error("You've used your free AI app build. Get AIV Pro to build more.");
+  if(isNew && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error((NO_PAY ? "You've used your free AI app build." : "You've used your free AI app build. Get AIV Pro to build more."));
   const hist = historyFor(chat, chat.messages.indexOf(ai)).slice(-8).map(m => ({ role:m.role, content:typeof m.content === "string" ? m.content : m.content[0].text }));
   const stop = () => { if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError"); };
 
@@ -3204,7 +3222,7 @@ window.addEventListener("message", async e => {
   if(!d.__aivReq) return;
   const reply = (result, error) => e.source.postMessage({ __aivRes:1, id:d.id, result, error }, "*");
   const counted = d.type === "image" || (d.type === "chat" && !(d.opts && d.opts.followup));
-  if(counted && !S.pro && usageCount() >= FREE_DAILY_LIMIT){ openUpgrade("This app used your free messages for today."); return reply(null, "You've used today's free messages. Get AIV Pro for unlimited use."); }
+  if(counted && !S.pro && usageCount() >= FREE_DAILY_LIMIT){ openUpgrade("This app used your free messages for today."); return reply(null, (NO_PAY ? "You've used today's free messages. They reset tomorrow." : "You've used today's free messages. Get AIV Pro for unlimited use.")); }
   try{
     if(counted) bump();
     if(d.type === "image"){ const r = await api("/image", { prompt:String(d.payload).slice(0, 2000) }); reply(r.image); }
@@ -4076,7 +4094,7 @@ async function doRouted(ai, userMsg){
     if(im && linked){
       try{
         const r = await appAsk("addimage", { src:im.src, name:im.title, prompt:im.prompt }, 30000);
-        if(r && r.ok){ ai.steps.push({ text:"Added it to AI Photo", done:true }); ai.content = "Here's your picture. It's also open in AI Photo and Art, so you can keep editing it there: remove the background, change the style, add text, or make more versions."; return; }
+        if(r && r.ok){ ai.steps.push({ text:"Added it to AI Photo", done:true }); ai.content = "Here's your picture. It's also open in AI Photo, so you can keep editing it there: remove the background, change the style, add text, or make more versions."; return; }
       }catch(e){}
     }
     ai.content = "Here's your picture. I opened AI Photo too, so you can edit it there. Save the image and open it in the app, or ask me for changes here.";
@@ -4476,7 +4494,7 @@ function drawAgentList(){
       ${(a.apps || []).length ? `<div class="agapps">${a.apps.map(id => `<span class="agtag">${esc((appById(id) || {}).name || id)}</span>`).join("")}</div>` : ""}
       ${a.lastRun ? `<div class="muted small">Last run ${esc(agTime(a.lastRun))}${a.lastStatus && a.lastStatus !== "ok" ? " · " + esc(a.lastStatus) : ""}</div>` : `<div class="muted small">Hasn't run yet</div>`}
       <div class="agbtns"><button class="btn sm" data-run>Run now</button><button class="btn sm" data-rep>Reports</button><button class="btn sm" data-edit>Edit</button><button class="btn sm agdel" data-del>Delete</button></div>
-    </div>`).join("") + `<p class="muted small" style="margin-top:14px">${AG.plan === "pro" ? "AIV Pro: up to " + AG.limits.agents + " agents, as often as every hour." : "Free plan: 1 agent that runs up to once a day. <a href='#' id='agUp'>Get AIV Pro</a> for up to 10 agents that run as often as every hour."} ${AG.runsLeft !== undefined ? AG.runsLeft + " of " + AG.limits.runsPerDay + " runs left today. " : ""}Agents search the web and the apps you let them use. They only change your apps after you approve, and never send messages, buy, or delete anything.</p>`;
+    </div>`).join("") + `<p class="muted small" style="margin-top:14px">${AG.plan === "pro" ? "AIV Pro: up to " + AG.limits.agents + " agents, as often as every hour." : (NO_PAY ? "Free plan: 1 agent that runs up to once a day." : "Free plan: 1 agent that runs up to once a day. <a href='#' id='agUp'>Get AIV Pro</a> for up to 10 agents that run as often as every hour.")} ${AG.runsLeft !== undefined ? AG.runsLeft + " of " + AG.limits.runsPerDay + " runs left today. " : ""}Agents search the web and the apps you let them use. They only change your apps after you approve, and never send messages, buy, or delete anything.</p>`;
   const up = $("agUp"); if(up) up.onclick = e => { e.preventDefault(); closeModal(); openUpgrade("Get more agents with AIV Pro."); };
   b.querySelectorAll(".agcard").forEach(c => {
     const a = AG.list.find(x => x.id === c.dataset.id);
@@ -4676,7 +4694,7 @@ function openAgentEditor(a, note){
     <label class="label">Anything it should know about you <span class="muted small">— optional</span></label><textarea class="input" id="agAbout" rows="2" maxlength="1500" placeholder="I'm a beginner investor. I care most about tech stocks.">${esc(a.about || "")}</textarea>
     ${(S.profile.memories || []).length ? `<button class="linkbtn small" id="agMem" type="button" style="margin-top:6px">Add what AIV X remembers about me</button>` : ""}
     <label class="label">Apps it can use <span class="muted small">— optional</span></label>
-    <div class="agappsel">${APPS.filter(x => x.url).map(x => `<label class="agchk"><input type="checkbox" value="${x.id}" ${(a.apps || []).includes(x.id) ? "checked" : ""}> ${appLogo(x.id) ? `<img class="alogo" src="${esc(appLogo(x.id))}" alt="" style="width:18px;height:18px;border-radius:5px;vertical-align:-4px;margin-right:4px">` : ""}${esc(x.name)}</label>`).join("")}</div>
+    <div class="agappsel">${APPS.filter(x => x.url).map(x => `<label class="agchk"><input type="checkbox" value="${x.id}" ${(a.apps || []).includes(x.id) ? "checked" : ""}> ${esc(x.name)}</label>`).join("")}</div>
     <div class="muted small" style="margin-top:6px">It can read what you've saved in these apps and suggest changes, like adding tasks or jobs. Nothing changes until you approve it.</div>
     <label class="label">When it runs</label>
     <div class="agwhen"><select class="input" id="agKind"><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekly">Once a week</option><option value="hours" ${free ? "disabled" : ""}>Every few hours${free ? " (AIV Pro)" : ""}</option></select>
@@ -4982,7 +5000,7 @@ async function doFullApp(ai, userMsg){
   const chat = S.chat;
   const prev = chat.assistantId ? S.libMap[chat.assistantId] : null;
   const editing = !!(prev && prev.full);
-  if(!editing && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error("You've used your free AI app build. Get AIV Pro to build more.");
+  if(!editing && !S.pro && (S.profile.aiBuilds || 0) >= FREE_ASSISTANT_BUILDS) throw new Error((NO_PAY ? "You've used your free AI app build." : "You've used your free AI app build. Get AIV Pro to build more."));
   const stop = () => { if(S.abort && S.abort.signal.aborted) throw new DOMException("Stopped", "AbortError"); };
   const hist = historyFor(chat, chat.messages.indexOf(ai)).slice(-8).map(m => ({ role:m.role, content:typeof m.content === "string" ? m.content : m.content[0].text }));
 
@@ -5181,7 +5199,6 @@ function twRender(st){
   }
   if(body){
     body.innerHTML = renderMarkdown(tidyPartial(visible), m.sources);
-    placeCursor(body);
     scrollDown();
   }
 }
@@ -5192,6 +5209,11 @@ function twTick(){
   for(const [id, st] of TW){
     const backlog = st.target.length - st.shown;
     if(backlog > 0){
+      // show everything that has arrived so far, at once (like Claude), instead of typing it out
+      st.shown = st.target.length; st.at = now;
+      twRender(st);
+    }
+    if(false){
       const dt = Math.min(64, now - (st.at || now)); st.at = now;
       // steady pace (about 75 characters a second at minimum), catching up smoothly when the AI sends a big burst
       const framesLeft = Math.max(1, (st.deadline - now) / 16.7 - 2);
@@ -5210,7 +5232,8 @@ function twTick(){
       }
       more = true;
     }
-    if(st.finalize && (st.shown >= st.target.length || now > st.deadline + (st.paced ? 200 : 0))){
+    // finish only once the answer is complete (not still pending), so charts, quizzes and buttons get drawn
+    if(st.finalize && !st.m.pending && (st.shown >= st.target.length || now > st.deadline + (st.paced ? 200 : 0))){
       TW.delete(id);
       drawFull(st.m);             // the finished message, with its buttons, sources, and interactive parts
       continue;
@@ -5236,7 +5259,7 @@ updateMsg = function(m, immediate){
       const alreadyShown = el ? el.textContent.length : 0;
       if(alreadyShown < answer.length * 0.6){
         const now = performance.now();
-        st = { m, target:answer, shown:0, at:now, finalize:true, paced:true, deadline: now + Math.min(1600, 350 + answer.length * 1.2) };
+        st = { m, target:answer, shown:0, at:now, finalize:true, paced:true, deadline: now };
         TW.set(m.id, st); twKick();
         return;
       }
@@ -5251,7 +5274,7 @@ updateMsg = function(m, immediate){
     if(st){
       if(!m.pending && plain && answer && answer.startsWith(st.target.slice(0, st.shown).slice(0, 200)) && st.shown < answer.length){
         // the answer is complete: finish revealing it quickly, then draw the final message
-        st.m = m; st.target = answer; st.finalize = true; st.deadline = performance.now() + 450;
+        st.m = m; st.target = answer; st.finalize = true; st.deadline = performance.now();
         twKick();
         return;
       }
@@ -6253,7 +6276,7 @@ function openBuild(){
     return;
   }
   const examples = ["A case manager for my law practice: clients, cases, deadlines, and AI research and drafting","A study app that turns my notes into flashcards and quizzes and tracks my exam dates","A small-business app for invoices, customers, and AI-written follow-up emails","A workout and meal tracker with AI weekly plans and progress charts"];
-  const left = S.pro ? "AIV Pro: build as many AI apps as you like." : "Your free plan includes 1 AI app. After that, building more needs AIV Pro.";
+  const left = S.pro ? "AIV Pro: build as many AI apps as you like." : (NO_PAY ? "Your free plan includes 1 AI app." : "Your free plan includes 1 AI app. After that, building more needs AIV Pro.");
   modal(`<div class="mh2"><h3>Build your AI app</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb">
       <p class="muted small" style="margin-bottom:6px">Describe the app you want. AIV X plans a complete app with several screens, saved lists, AI features, and its own AI assistant, writes every screen, opens each one in a test copy to fix anything that breaks, then hands it to you. It takes a couple of minutes. Change it any time just by chatting.</p>
@@ -6288,7 +6311,7 @@ $("modeChip").onclick = e => {
   e.stopPropagation();
   showMenu(e.currentTarget, [
     { head:"Open an app — AIV X stays beside you" },
-    ...APPS.filter(a => a.url).map(a => ({ label:a.name, img:appLogo(a.id), check:S.openApp === a.id, fn:() => openFullApp(a) })),
+    ...APPS.filter(a => a.url).map(a => ({ label:a.name, check:S.openApp === a.id, fn:() => openFullApp(a) })),
     { sep:true },
     { label:"AIV X", desc:"Just chat", check:!S.openApp && S.mode === "aivx", fn:() => { if(S.openApp) closeApp(); else setMode("aivx"); } },
     { label:"Browse AI Verse apps", fn:() => openApps() },
@@ -6398,7 +6421,7 @@ window.addEventListener("message", async e => {
   }
   if(d.type === "answer" && Link.waiting[d.id]){ const w = Link.waiting[d.id]; delete Link.waiting[d.id]; w(d.result); }
 });
-// The theme AIV X is showing right now (its own setting, or the device's setting)
+// Light or dark, as AIV X is showing it right now (its Theme setting, or the device's setting)
 function effectiveTheme(){
   const t = document.documentElement.getAttribute("data-theme");
   if(t === "light" || t === "dark") return t;
@@ -6614,7 +6637,7 @@ $("meBtn").onclick = e => {
     { label:"Settings", fn:() => openSettings() },
     { label:"Memory", fn:() => openSettings("memory") },
     { label:"Personalization", fn:() => openSettings("personal") },
-    { label:S.pro ? "AIV Pro" : "Upgrade to AIV Pro", fn:() => openUpgrade() },
+    ...(NO_PAY ? [] : [{ label:S.pro ? "AIV Pro" : "Upgrade to AIV Pro", fn:() => openUpgrade() }]),
     { sep:true },
     { label:"Terms of Use", fn:() => window.open("terms.html", "_blank", "noopener") },
     { label:"Privacy Policy", fn:() => window.open("privacy.html", "_blank", "noopener") },
@@ -6704,16 +6727,26 @@ async function onSignedIn(u){
    On the website, NATIVE is false and none of this does anything.
    ===================================================================== */
 // NATIVE and NP are set at the top of the script (CONFIG section).
+if(NO_PAY){
+  const freeText = t => String(t || "").replace(/\s*(Get|Upgrade to) AIV Pro[^.]*\.?/gi, "").replace(/\s*building more needs AIV Pro\.?/gi, "").trim();
+  openUpgrade = function(reason){
+    const r = freeText(reason) || "You've reached today's free limit.";
+    const m = modal(`<div class="mh2"><h3>Free limit reached</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
+      <div class="mb"><p class="muted">${esc(r)}</p>${/message|today|daily/i.test(r) ? '<p class="muted small" style="margin-top:8px">Free messages reset every day.</p>' : ""}</div>
+      <div class="mf"><button class="btn primary" data-close>OK</button></div>`);
+    try{ paintIcons(m); }catch(e){}
+  };
+}
 
 // App Store rule 5.1.2(i): name the AI services that receive people's messages and ask first.
 // Keep this list matching what aivx-worker.js really calls. Bump the version whenever it changes.
-const AI_PROVIDERS = "Cloudflare Workers AI and Groq";
-const AI_CONSENT_VERSION = "2026-11-21";
+const AI_PROVIDERS = "Cloudflare Workers AI, Cerebras, Groq, Google (Gemini), Mistral AI, GitHub Models (Microsoft), NVIDIA, OpenRouter, Pollinations and Deepgram";
+const AI_CONSENT_VERSION = "2026-11-22";
 function aiConsentOk(){ return !NATIVE || LSX.get("aivx_ai_consent", "") === AI_CONSENT_VERSION; }
 function askAIConsent(then){
   const m = modal(`<div class="mh2"><h3>Before you chat with AI</h3></div>
     <div class="mb"><p class="muted" style="margin-bottom:10px">To answer you, AIV X sends what you type, plus any files, photos, or voice you add, to the AI services that run its models: ${esc(AI_PROVIDERS)}. Web searches are sent to search providers.</p>
-    <p class="muted small" style="margin-bottom:6px">They process it only to create your answer. Read more in our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. You can turn off "Use my chats to improve AIV X" in Settings.</p></div>
+    <p class="muted small" style="margin-bottom:6px">They process it only to create your answer. Read more in our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. You can turn off "Improve AIV X for everyone" in Settings, under Memory.</p></div>
     <div class="mf"><button class="btn" id="aicNo">Not now</button><button class="btn primary" id="aicYes">Allow and continue</button></div>`);
   m.onclick = null;
   $("aicNo").onclick = () => closeModal();
