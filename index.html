@@ -1813,7 +1813,7 @@ function renderUsage(){
     $("usageUp").onclick = () => openGuestWall(true);
     $("mePlan").textContent = "Guest"; $("upBtn").classList.add("hidden"); return;
   }
-  if(S.pro){ $("usage").innerHTML = `<span>AIV Pro · unlimited</span>`; $("mePlan").textContent = "AIV Pro"; $("upBtn").classList.add("hidden"); return; }
+  if(S.pro){ $("usage").innerHTML = `<span>${NO_PAY ? "Unlimited" : "AIV Pro · unlimited"}</span>`; $("mePlan").textContent = NO_PAY ? "Unlimited" : "AIV Pro"; $("upBtn").classList.add("hidden"); return; }
   const c = usageCount(), pct = Math.min(100, c / FREE_DAILY_LIMIT * 100);
   $("usage").innerHTML = `<span>${c}/${FREE_DAILY_LIMIT} today</span><span class="bar"><i style="width:${pct}%"></i></span><button class="linkbtn small" id="usageUp">Upgrade</button>`;
   $("usageUp").onclick = () => openUpgrade();
@@ -4697,7 +4697,7 @@ function openAgentEditor(a, note){
     <div class="agappsel">${APPS.filter(x => x.url).map(x => `<label class="agchk"><input type="checkbox" value="${x.id}" ${(a.apps || []).includes(x.id) ? "checked" : ""}> ${esc(x.name)}</label>`).join("")}</div>
     <div class="muted small" style="margin-top:6px">It can read what you've saved in these apps and suggest changes, like adding tasks or jobs. Nothing changes until you approve it.</div>
     <label class="label">When it runs</label>
-    <div class="agwhen"><select class="input" id="agKind"><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekly">Once a week</option><option value="hours" ${free ? "disabled" : ""}>Every few hours${free ? " (AIV Pro)" : ""}</option></select>
+    <div class="agwhen"><select class="input" id="agKind"><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekly">Once a week</option><option value="hours" ${free ? "disabled" : ""}>Every few hours${free ? (NO_PAY ? " (not on free plan)" : " (AIV Pro)") : ""}</option></select>
       <select class="input" id="agDay">${AG_DAYS.map((d, i) => `<option value="${i}">${d}</option>`).join("")}</select>
       <input class="input" id="agTime" type="time" value="${esc(sch.time)}">
       <select class="input" id="agEvery">${[1, 2, 3, 4, 6, 8, 12].map(n => `<option value="${n}">Every ${n} hour${n > 1 ? "s" : ""}</option>`).join("")}</select></div>
@@ -6326,7 +6326,7 @@ function openBuild(){
     return;
   }
   const examples = ["A case manager for my law practice: clients, cases, deadlines, and AI research and drafting","A study app that turns my notes into flashcards and quizzes and tracks my exam dates","A small-business app for invoices, customers, and AI-written follow-up emails","A workout and meal tracker with AI weekly plans and progress charts"];
-  const left = S.pro ? "AIV Pro: build as many AI apps as you like." : (NO_PAY ? "Your free plan includes 1 AI app." : "Your free plan includes 1 AI app. After that, building more needs AIV Pro.");
+  const left = S.pro ? (NO_PAY ? "Build as many AI apps as you like." : "AIV Pro: build as many AI apps as you like.") : (NO_PAY ? "Your free plan includes 1 AI app." : "Your free plan includes 1 AI app. After that, building more needs AIV Pro.");
   modal(`<div class="mh2"><h3>Build your AI app</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
     <div class="mb">
       <p class="muted small" style="margin-bottom:6px">Describe the app you want. AIV X plans a complete app with several screens, saved lists, AI features, and its own AI assistant, writes every screen, opens each one in a test copy to fix anything that breaks, then hands it to you. It takes a couple of minutes. Change it any time just by chatting.</p>
@@ -6398,8 +6398,7 @@ function openFullApp(app, opts = {}){
   setMode(app.id, true);
   if(innerWidth >= 820 && !$("side").classList.contains("collapsed")){ S._sideWasOpen = true; closeSide(); }
   $("appLoading").classList.remove("hidden");
-  $("appIframe").onload = () => $("appLoading").classList.add("hidden");
-  $("appIframe").src = app.url;
+  freshAppFrame(app.url);
   $("appNewTab").href = app.url + "?from=aivx&back=" + encodeURIComponent(location.origin + location.pathname + "#app/" + app.id);
   $("appPane").classList.remove("hidden");
   $("workspace").classList.add("appmode");
@@ -6409,12 +6408,33 @@ function openFullApp(app, opts = {}){
   renderCopilot();
   try{ history.replaceState(null, "", "#app/" + app.id); }catch(e){}
 }
+// Each app gets a brand-new frame, hidden until that app has loaded, so the app you opened before
+// (or a page from the frame's history) never flashes up first.
+let appFrameSeq = 0;
+function freshAppFrame(url){
+  const old = $("appIframe");
+  const f = document.createElement("iframe");
+  f.id = "appIframe"; f.title = "AI Verse app";
+  f.setAttribute("allow", old ? (old.getAttribute("allow") || "") : "microphone; camera; clipboard-read; clipboard-write; geolocation; fullscreen; autoplay");
+  const seq = ++appFrameSeq;
+  if(url){
+    f.style.visibility = "hidden";
+    f.onload = () => {
+      if(seq !== appFrameSeq) return;            // a newer app was opened meanwhile
+      f.style.visibility = "";
+      $("appLoading").classList.add("hidden");
+    };
+    f.src = url;
+  }
+  if(old) old.replaceWith(f); else $("appPane").appendChild(f);
+  return f;
+}
 function closeApp(keepMode){
   if(!S.openApp) return;
   const td = $("taskDock"); if(td) td.remove();
   S.openApp = null;
   Link.ready = false; Link.app = null; renderLink();
-  $("appIframe").src = "about:blank";
+  freshAppFrame("");
   $("appPane").classList.add("hidden");
   $("workspace").classList.remove("appmode", "cop-hidden");
   $("appCtl").classList.add("hidden");
@@ -6620,7 +6640,7 @@ function drawSettings(sec){
     if($("mClear")) $("mClear").onclick = async () => { if(!confirm("Delete everything AIV X remembers about you?")) return; S.profile.memories = []; await saveProfile(); drawSettings("memory"); };
   }
   if(sec === "plan"){
-    b.innerHTML = `<div class="set-row"><div class="lt">Current plan<small>${S.pro ? "Unlimited usage" : usageCount() + " of " + FREE_DAILY_LIMIT + " free messages used today"}</small></div><b>${S.pro ? "AIV Pro" : "Free"}</b></div>
+    b.innerHTML = `<div class="set-row"><div class="lt">Current plan<small>${S.pro ? "Unlimited usage" : usageCount() + " of " + FREE_DAILY_LIMIT + " free messages used today"}</small></div><b>${S.pro ? (NO_PAY ? "Unlimited" : "AIV Pro") : "Free"}</b></div>
       <div style="margin-top:16px">${S.pro ? '<button class="btn sm" id="pRemove">Remove AIV key</button>' : '<button class="btn primary sm" id="pUp">Upgrade or enter key</button>'}</div>`;
     if($("pUp")) $("pUp").onclick = () => openUpgrade();
     if($("pRemove")) $("pRemove").onclick = async () => { S.profile.proKey = ""; S.pro = false; await saveProfile(); renderUsage(); drawSettings("plan"); };
