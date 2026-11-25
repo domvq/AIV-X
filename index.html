@@ -1501,6 +1501,7 @@ function statusText(code){
   return "That didn't go through (" + code + "). Try again.";
 }
 async function api(path, body){
+  if(NATIVE && !/^\/(verify|feedback)\b/.test(path) && !(await needAIConsent())) throw new Error(AI_DECLINED);
   const res = await fetch(AIV_API_URL + path, {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify(Object.assign({}, body, { key: S.profile && S.profile.proKey || undefined, appKey: AIVX_APP_KEY, train: !(S.profile && S.profile.settings && S.profile.settings.improve === false) }))
@@ -1514,6 +1515,7 @@ async function ask(messages, opts = {}){
   return d.reply || "";
 }
 async function streamChat(messages, { model = "auto", onToken, signal, max_tokens = 2048, onStatus, onMeta } = {}){
+  if(NATIVE && !(await needAIConsent())) throw new Error(AI_DECLINED);
   const res = await fetch(AIV_API_URL + "/chat", {
     method:"POST", headers:{ "Content-Type":"application/json" }, signal,
     body: JSON.stringify({ messages, model, stream:true, max_tokens, key: S.profile.proKey || undefined, appKey: AIVX_APP_KEY, train: S.profile.settings.improve !== false })
@@ -1942,7 +1944,7 @@ async function send(textOverride){
   if(!text && !S.pending.length) return;
   if(S.tool === "build" && !canBuildAssistant()) return;
   if(!canUse()) return;
-  if(!aiConsentOk()) return askAIConsent(() => send(textOverride));
+  if(!aiConsentOk()) return needAIConsent().then(ok => { if(ok) send(textOverride); });
   nativeHaptic();
 
   const chat = ensureChat();
@@ -6497,6 +6499,7 @@ function openApps(){
 /* ---------------- APP ON SCREEN + AIV X COPILOT ---------------- */
 function openFullApp(app, opts = {}){
   if(!app || !app.url) return;
+  if(NATIVE && !aiConsentOk()){ needAIConsent().then(ok => { if(ok) openFullApp(app, opts); }); return; }
   closeMenu(); closeModal(); closeCanvas();
   const switching = S.openApp && S.openApp !== app.id;
   S.openApp = app.id;
@@ -6895,6 +6898,7 @@ async function onSignedIn(u){
   $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
   renderMe(); renderUsage(); setMode("aivx", true); newChat();
   try{ agentsBoot(); }catch(e){}
+  aiConsentAfterSignIn();
   if(NATIVE) setTimeout(() => pushSetup(), 4000);
   const hm = location.hash.match(/^#app\/(\w+)/);
   if(hm){ const a = APPS.find(x => x.id === hm[1]); if(a && a.url) setTimeout(() => openFullApp(a), 0); }
@@ -6921,14 +6925,33 @@ if(NO_PAY){
 const AI_PROVIDERS = "Cloudflare Workers AI, Cerebras, Groq, Google (Gemini), Mistral AI, GitHub Models (Microsoft), NVIDIA, OpenRouter, Pollinations and Deepgram";
 const AI_CONSENT_VERSION = "2026-11-22";
 function aiConsentOk(){ return !NATIVE || LSX.get("aivx_ai_consent", "") === AI_CONSENT_VERSION; }
-function askAIConsent(then){
-  const m = modal(`<div class="mh2"><h3>Before you chat with AI</h3></div>
-    <div class="mb"><p class="muted" style="margin-bottom:10px">To answer you, AIV X sends what you type, plus any files, photos, or voice you add, to the AI services that run its models: ${esc(AI_PROVIDERS)}. Web searches are sent to search providers.</p>
+function askAIConsent(then, onNo){
+  // Its own layer (not modal()), so it never closes a screen that's already open, like Build
+  const old = $("aicModal"); if(old) old.remove();
+  const m = document.createElement("div"); m.className = "modal"; m.id = "aicModal"; m.style.zIndex = "100000";
+  m.innerHTML = `<div class="box"><div class="mh2"><h3>Before you use AI</h3></div>
+    <div class="mb"><p class="muted" style="margin-bottom:10px">To answer you, AIV X sends what you type, plus any files, photos, or voice you add, to the AI services that run its models: ${esc(AI_PROVIDERS)}. Web searches are sent to search providers. This applies to chat, Build, Agents, voice, and the AI apps.</p>
     <p class="muted small" style="margin-bottom:6px">They process it only to create your answer. Read more in our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. You can turn off "Improve AIV X for everyone" in Settings, under Memory.</p></div>
-    <div class="mf"><button class="btn" id="aicNo">Not now</button><button class="btn primary" id="aicYes">Allow and continue</button></div>`);
-  m.onclick = null;
-  $("aicNo").onclick = () => closeModal();
-  $("aicYes").onclick = () => { LSX.set("aivx_ai_consent", AI_CONSENT_VERSION); closeModal(); if(then) then(); };
+    <div class="mf"><button class="btn" id="aicNo">Not now</button><button class="btn primary" id="aicYes">Allow and continue</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelector("#aicNo").onclick = () => { m.remove(); if(onNo) onNo(); };
+  m.querySelector("#aicYes").onclick = () => { LSX.set("aivx_ai_consent", AI_CONSENT_VERSION); m.remove(); if(then) then(); };
+}
+// Resolves true once the person allows AI, false if they choose "Not now"
+let aiConsentWait = null;
+function needAIConsent(){
+  if(aiConsentOk()) return Promise.resolve(true);
+  if(aiConsentWait) return aiConsentWait;
+  aiConsentWait = new Promise(res => askAIConsent(() => { aiConsentWait = null; res(true); }, () => { aiConsentWait = null; res(false); }));
+  return aiConsentWait;
+}
+const AI_DECLINED = "AI features need your OK first. Tap Allow on the AI data prompt to use them.";
+// Ask right after sign-in in the iPhone app, once the Terms prompt (if any) is closed
+function aiConsentAfterSignIn(){
+  if(!NATIVE || aiConsentOk()) return;
+  let tries = 0;
+  const go = () => { if($("modal") && tries++ < 600){ setTimeout(go, 500); return; } needAIConsent(); };
+  setTimeout(go, 600);
 }
 
 function nativeHaptic(){ try{ if(NP.Haptics) NP.Haptics.impact({ style:"LIGHT" }); }catch(e){} }
