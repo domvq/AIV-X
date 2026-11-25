@@ -6823,7 +6823,7 @@ function drawSettings(sec){
       try{ r = await Auth.deleteAccount(); }catch(e){ r = false; why = (e && (e.code || e.message)) || ""; }
       if(r === "cancelled"){ alert("Your data has been deleted. Your sign-in wasn't confirmed, so your account is still there. Open Settings > Account > Delete my account to finish."); return; }
       if(!r){ alert("Your data has been deleted, but your sign-in account couldn't be removed" + (why ? " (" + why + ")" : "") + ". Try Delete again, or email team@aiverse.it.com and we'll remove it."); return; }
-      alert("Your account has been deleted.");
+      try{ sessionStorage.setItem("aivx_deleted", "1"); }catch(e){}
       location.reload();
     };
     $("aOut").onclick = async () => { closeModal(); await Auth.signOut(); };
@@ -6995,6 +6995,20 @@ function aiConsentAfterSignIn(){
   const go = () => { if($("cAgree") && tries++ < 1200){ setTimeout(go, 500); return; } needAIConsent(); };
   setTimeout(go, 800);
 }
+
+// After an account is deleted, the page reloads to the sign-in screen and shows this
+function showDeletedNotice(){
+  let flag = null; try{ flag = sessionStorage.getItem("aivx_deleted"); sessionStorage.removeItem("aivx_deleted"); }catch(e){}
+  if(!flag) return;
+  const m = document.createElement("div"); m.className = "modal"; m.id = "delModal"; m.style.zIndex = "100000";
+  m.innerHTML = `<div class="box"><div class="mh2"><h3>Account deleted</h3></div>
+    <div class="mb"><p class="muted" style="margin-bottom:8px">Your AIV X account and all of its data have been permanently deleted. This includes your chats, memories, library, the AI apps you built, agents, and settings.</p>
+    <p class="muted small">Thanks for trying AIV X. You're welcome back anytime. Questions? <a href="mailto:team@aiverse.it.com">team@aiverse.it.com</a></p></div>
+    <div class="mf"><button class="btn primary" id="delOk">OK</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelector("#delOk").onclick = () => m.remove();
+}
+setTimeout(showDeletedNotice, 300);
 
 function nativeHaptic(){ try{ if(NP.Haptics) NP.Haptics.impact({ style:"LIGHT" }); }catch(e){} }
 
