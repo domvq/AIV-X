@@ -1386,11 +1386,51 @@ const Auth = {
       Object.keys(accts).forEach(k => { if(accts[k].uid === Store.uid) delete accts[k]; });
       LSX.set("aivx_demo_accts", accts); LSX.del("aivx_session"); this._onChange(null); return true;
     }
-    try{ await fb.auth().currentUser.delete(); return true; }
+    const fu = fb.auth().currentUser;
+    if(!fu){
+      if(S.user && S.user.guest){ LSX.del("aivx_guest_on"); LSX.del("aivx_guest"); return true; }
+      throw Object.assign(new Error("Not signed in"), { code:"no-current-user" });
+    }
+    const uidWas = fu.uid;
+    try{ await fu.delete(); }
     catch(e){
-      if(e.code === "auth/requires-recent-login"){ await fb.auth().signOut(); return "relogin"; }
+      // Firebase only deletes a sign-in that happened recently. Confirm who it is right here, then try again.
+      if(!/requires-recent-login|credential-too-old|user-token-expired|invalid-user-token/.test(e.code || "")) throw e;
+      if(!(await this.reauth(fu))) return "cancelled";
+      await fu.delete();
+    }
+    LSX.del("aivx_ai_consent_" + uidWas);
+    if(NATIVE && NP.FirebaseAuthentication){ try{ await NP.FirebaseAuthentication.signOut(); }catch(e){} }
+    return true;
+  },
+  // Ask the person to confirm their sign-in again (Google, Apple or password), so the account can be deleted
+  async reauth(fu){
+    const prov = ((fu.providerData || [])[0] || {}).providerId || "";
+    try{
+      if(prov === "google.com" || prov === "apple.com"){
+        alert("For your security, confirm it's you by signing in once more. Your account will then be deleted.");
+        if(NATIVE && NP.FirebaseAuthentication){
+          const FA = NP.FirebaseAuthentication;
+          let cred;
+          if(prov === "google.com"){ const r = await FA.signInWithGoogle(); cred = fb.auth.GoogleAuthProvider.credential(r.credential.idToken, r.credential.accessToken || null); }
+          else{ const r = await FA.signInWithApple(); cred = new fb.auth.OAuthProvider("apple.com").credential({ idToken:r.credential.idToken, rawNonce:r.credential.nonce }); }
+          await fu.reauthenticateWithCredential(cred);
+        }else{
+          await fu.reauthenticateWithPopup(prov === "google.com" ? new fb.auth.GoogleAuthProvider() : new fb.auth.OAuthProvider("apple.com"));
+        }
+        return true;
+      }
+      if(prov === "password"){
+        const pw = prompt("For your security, enter your password to delete your account.");
+        if(!pw) return false;
+        await fu.reauthenticateWithCredential(fb.auth.EmailAuthProvider.credential(fu.email, pw));
+        return true;
+      }
+    }catch(e){
+      if(/cancel/i.test(String(e && (e.message || e.code)))) return false;
       throw e;
     }
+    return false;
   },
   async signOut(){
     if(NATIVE && NP.FirebaseAuthentication){ try{ await NP.FirebaseAuthentication.signOut(); }catch(e){} }
@@ -6779,10 +6819,11 @@ function drawSettings(sec){
       if(!confirm("Delete your AIV X account and all of its data permanently? This can't be undone.")) return;
       try{ await Store.wipe(); }catch(e){ return toast("Couldn't delete your data: " + friendlyError(e)); }
       closeModal();
-      let r = true;
-      try{ r = await Auth.deleteAccount(); }catch(e){ r = false; }
-      if(r === "relogin") alert("Your data has been deleted. To also remove your sign-in account, sign in once more and choose Delete again — this is a security step.");
-      else if(!r){ alert("Your data has been deleted, but your sign-in account couldn't be removed. Email team@aiverse.it.com and we'll remove it."); await Auth.signOut(); }
+      let r = true, why = "";
+      try{ r = await Auth.deleteAccount(); }catch(e){ r = false; why = (e && (e.code || e.message)) || ""; }
+      if(r === "cancelled"){ alert("Your data has been deleted. Your sign-in wasn't confirmed, so your account is still there. Open Settings > Account > Delete my account to finish."); return; }
+      if(!r){ alert("Your data has been deleted, but your sign-in account couldn't be removed" + (why ? " (" + why + ")" : "") + ". Try Delete again, or email team@aiverse.it.com and we'll remove it."); return; }
+      alert("Your account has been deleted.");
       location.reload();
     };
     $("aOut").onclick = async () => { closeModal(); await Auth.signOut(); };
@@ -6923,8 +6964,9 @@ if(NO_PAY){
 // App Store rule 5.1.2(i): name the AI services that receive people's messages and ask first.
 // Keep this list matching what aivx-worker.js really calls. Bump the version whenever it changes.
 const AI_PROVIDERS = "Cloudflare Workers AI, Cerebras, Groq, Google (Gemini), Mistral AI, GitHub Models (Microsoft), NVIDIA, OpenRouter, Pollinations and Deepgram";
-const AI_CONSENT_VERSION = "2026-11-22";
-function aiConsentOk(){ return !NATIVE || LSX.get("aivx_ai_consent", "") === AI_CONSENT_VERSION; }
+const AI_CONSENT_VERSION = "2026-11-25";
+function aiConsentKey(){ return "aivx_ai_consent_" + ((S.user && S.user.uid) || "anon"); }
+function aiConsentOk(){ return !NATIVE || LSX.get(aiConsentKey(), "") === AI_CONSENT_VERSION; }
 function askAIConsent(then, onNo){
   // Its own layer (not modal()), so it never closes a screen that's already open, like Build
   const old = $("aicModal"); if(old) old.remove();
@@ -6935,7 +6977,7 @@ function askAIConsent(then, onNo){
     <div class="mf"><button class="btn" id="aicNo">Not now</button><button class="btn primary" id="aicYes">Allow and continue</button></div></div>`;
   document.body.appendChild(m);
   m.querySelector("#aicNo").onclick = () => { m.remove(); if(onNo) onNo(); };
-  m.querySelector("#aicYes").onclick = () => { LSX.set("aivx_ai_consent", AI_CONSENT_VERSION); m.remove(); if(then) then(); };
+  m.querySelector("#aicYes").onclick = () => { LSX.set(aiConsentKey(), AI_CONSENT_VERSION); m.remove(); if(then) then(); };
 }
 // Resolves true once the person allows AI, false if they choose "Not now"
 let aiConsentWait = null;
@@ -6950,8 +6992,8 @@ const AI_DECLINED = "AI features need your OK first. Tap Allow on the AI data pr
 function aiConsentAfterSignIn(){
   if(!NATIVE || aiConsentOk()) return;
   let tries = 0;
-  const go = () => { if($("modal") && tries++ < 600){ setTimeout(go, 500); return; } needAIConsent(); };
-  setTimeout(go, 600);
+  const go = () => { if($("cAgree") && tries++ < 1200){ setTimeout(go, 500); return; } needAIConsent(); };
+  setTimeout(go, 800);
 }
 
 function nativeHaptic(){ try{ if(NP.Haptics) NP.Haptics.impact({ style:"LIGHT" }); }catch(e){} }
