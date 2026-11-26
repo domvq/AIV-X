@@ -757,6 +757,21 @@ button:focus-visible,a:focus-visible,[role=button]:focus-visible,summary:focus-v
 @media (max-width:640px){.tk{padding:14px 14px 24px}.tk-row{flex-wrap:wrap}.tk-row .input{flex:1 1 100%}.tk-row .btn{flex:1}.tk-card textarea.input{max-height:32vh}.tk-card .tk-btns{position:sticky;bottom:0;background:var(--panel);padding:10px 0 2px;margin-top:6px;z-index:2}.tk-btns .btn{flex:1 1 auto}.tk-chip{max-width:none}}
 /* no AIV X copilot inside AI Verse apps on phones (computers keep it) */
 @media (max-width:819px){#copilotBtn,#copFab{display:none!important}#workspace.appmode #chatcol{display:none!important}}
+/* a built app full screen on phones: same look as the AI Verse apps (logo, name, Edit, close), no Preview/Code */
+#cvEditApp{border:1px solid var(--line2);padding:0 12px;font-weight:600;gap:6px}
+#cvEditApp.hidden{display:none}
+@media (max-width:819px){
+  #workspace.cvapp #canvas{position:fixed!important;left:0!important;right:0!important;top:var(--app-top,0px)!important;height:var(--app-h,100dvh)!important;bottom:auto!important;width:auto!important;z-index:70;display:flex;flex-direction:column;background:var(--bg);box-shadow:none}
+  #workspace.cvapp .cv-head{border-bottom:0;padding:8px 8px 6px 14px;padding-top:max(8px,env(safe-area-inset-top));min-height:52px;gap:8px}
+  #workspace.cvapp #cvTabs,#workspace.cvapp #cvFull,#workspace.cvapp #cvMore{display:none!important}
+  #workspace.cvapp #cvIcon{display:flex;align-items:center}
+  #workspace.cvapp #cvIcon .mclogo{width:26px;height:26px;margin-right:2px;vertical-align:0}
+  #workspace.cvapp #cvTitle{font-size:16.5px;font-weight:500}
+  #workspace.cvapp #cvEditApp .lbl{display:inline!important}
+  #workspace.cvapp .cv-body{flex:1;min-height:0}
+  #workspace.cvapp #cvFrame{width:100%;height:100%;border:0;display:block}
+  html.kb-open #workspace.cvapp .cv-head{padding-top:8px}
+}
 /* task dock: shows a running task's steps and approvals on top of an open AI Verse app */
 #taskDock{position:fixed;right:16px;bottom:16px;width:min(380px,calc(100vw - 32px));max-height:min(70vh,560px);overflow:auto;z-index:70;background:var(--panel);border:1px solid var(--line2);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.28);padding:14px}
 #taskDock .tkd-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -947,6 +962,7 @@ img,video,iframe,canvas,svg{max-width:100%}
         <div class="cv-head">
           <span id="cvIcon"></span><div class="tt" id="cvTitle"></div>
           <div class="cv-tabs" id="cvTabs"></div>
+          <button class="cbtn hidden" id="cvEditApp" title="Change this app with AI"><span data-i="pencil"></span><span class="lbl">Edit</span></button>
           <button class="iconbtn" id="cvFull" title="Full screen"><span data-i="expand"></span></button><button class="iconbtn" id="cvMore" title="More"><span data-i="dots"></span></button>
           <button class="iconbtn" id="cvClose" title="Close"><span data-i="x"></span></button>
         </div>
@@ -1386,51 +1402,11 @@ const Auth = {
       Object.keys(accts).forEach(k => { if(accts[k].uid === Store.uid) delete accts[k]; });
       LSX.set("aivx_demo_accts", accts); LSX.del("aivx_session"); this._onChange(null); return true;
     }
-    const fu = fb.auth().currentUser;
-    if(!fu){
-      if(S.user && S.user.guest){ LSX.del("aivx_guest_on"); LSX.del("aivx_guest"); return true; }
-      throw Object.assign(new Error("Not signed in"), { code:"no-current-user" });
-    }
-    const uidWas = fu.uid;
-    try{ await fu.delete(); }
+    try{ await fb.auth().currentUser.delete(); return true; }
     catch(e){
-      // Firebase only deletes a sign-in that happened recently. Confirm who it is right here, then try again.
-      if(!/requires-recent-login|credential-too-old|user-token-expired|invalid-user-token/.test(e.code || "")) throw e;
-      if(!(await this.reauth(fu))) return "cancelled";
-      await fu.delete();
-    }
-    LSX.del("aivx_ai_consent_" + uidWas);
-    if(NATIVE && NP.FirebaseAuthentication){ try{ await NP.FirebaseAuthentication.signOut(); }catch(e){} }
-    return true;
-  },
-  // Ask the person to confirm their sign-in again (Google, Apple or password), so the account can be deleted
-  async reauth(fu){
-    const prov = ((fu.providerData || [])[0] || {}).providerId || "";
-    try{
-      if(prov === "google.com" || prov === "apple.com"){
-        alert("For your security, confirm it's you by signing in once more. Your account will then be deleted.");
-        if(NATIVE && NP.FirebaseAuthentication){
-          const FA = NP.FirebaseAuthentication;
-          let cred;
-          if(prov === "google.com"){ const r = await FA.signInWithGoogle(); cred = fb.auth.GoogleAuthProvider.credential(r.credential.idToken, r.credential.accessToken || null); }
-          else{ const r = await FA.signInWithApple(); cred = new fb.auth.OAuthProvider("apple.com").credential({ idToken:r.credential.idToken, rawNonce:r.credential.nonce }); }
-          await fu.reauthenticateWithCredential(cred);
-        }else{
-          await fu.reauthenticateWithPopup(prov === "google.com" ? new fb.auth.GoogleAuthProvider() : new fb.auth.OAuthProvider("apple.com"));
-        }
-        return true;
-      }
-      if(prov === "password"){
-        const pw = prompt("For your security, enter your password to delete your account.");
-        if(!pw) return false;
-        await fu.reauthenticateWithCredential(fb.auth.EmailAuthProvider.credential(fu.email, pw));
-        return true;
-      }
-    }catch(e){
-      if(/cancel/i.test(String(e && (e.message || e.code)))) return false;
+      if(e.code === "auth/requires-recent-login"){ await fb.auth().signOut(); return "relogin"; }
       throw e;
     }
-    return false;
   },
   async signOut(){
     if(NATIVE && NP.FirebaseAuthentication){ try{ await NP.FirebaseAuthentication.signOut(); }catch(e){} }
@@ -1541,7 +1517,6 @@ function statusText(code){
   return "That didn't go through (" + code + "). Try again.";
 }
 async function api(path, body){
-  if(NATIVE && !/^\/(verify|feedback)\b/.test(path) && !(await needAIConsent())) throw new Error(AI_DECLINED);
   const res = await fetch(AIV_API_URL + path, {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify(Object.assign({}, body, { key: S.profile && S.profile.proKey || undefined, appKey: AIVX_APP_KEY, train: !(S.profile && S.profile.settings && S.profile.settings.improve === false) }))
@@ -1555,7 +1530,6 @@ async function ask(messages, opts = {}){
   return d.reply || "";
 }
 async function streamChat(messages, { model = "auto", onToken, signal, max_tokens = 2048, onStatus, onMeta } = {}){
-  if(NATIVE && !(await needAIConsent())) throw new Error(AI_DECLINED);
   const res = await fetch(AIV_API_URL + "/chat", {
     method:"POST", headers:{ "Content-Type":"application/json" }, signal,
     body: JSON.stringify({ messages, model, stream:true, max_tokens, key: S.profile.proKey || undefined, appKey: AIVX_APP_KEY, train: S.profile.settings.improve !== false })
@@ -1602,6 +1576,7 @@ Today is ${new Date().toLocaleDateString(undefined,{weekday:"long",year:"numeric
 
 How you respond:
 - Answer directly first, then add detail only if it helps. Match length to the question.
+- Simple questions get simple answers: a greeting, a quick fact, a yes/no, a definition, a conversion, or a one-step how-to gets one to three sentences, no headings, no bullet lists, and no extra background, tips, or follow-up offers. Go longer only when the question really needs it or the user asks for more.
 - Use Markdown: short headings for long answers, bullet points, numbered steps, tables for comparisons, and fenced code blocks with a language tag.
 - Be honest about uncertainty. Never invent facts, quotes, links, or sources. For anything current or that you're not sure of, use your search tool instead of guessing.
 - You can read photos and files the user attaches, and you have tools (listed below) to search the web, read pages, create images, write documents, spreadsheets, and presentations, look back through past chats, and use the user's AI Verse apps. Custom AI apps are built with the Build button.
@@ -1984,7 +1959,7 @@ async function send(textOverride){
   if(!text && !S.pending.length) return;
   if(S.tool === "build" && !canBuildAssistant()) return;
   if(!canUse()) return;
-  if(!aiConsentOk()) return needAIConsent().then(ok => { if(ok) send(textOverride); });
+  if(!aiConsentOk()) return askAIConsent(() => send(textOverride));
   nativeHaptic();
 
   const chat = ensureChat();
@@ -3093,8 +3068,56 @@ function openArtifact(item, view, live){
   $("cvTabs").innerHTML = tabs.map(([k, v]) => `<button data-v="${k}" class="${k === CV.view ? "on" : ""}">${v}</button>`).join("");
   $("cvTabs").classList.toggle("hidden", !tabs.length);
   $("cvTabs").querySelectorAll("button").forEach(b => b.onclick = () => { saveCanvasEdits(); openArtifact(CV.item, b.dataset.v); });
+  $("cvEditApp").classList.toggle("hidden", !isFullApp(item) || !!live);
+  $("cvFull").title = isFullApp(item) && innerWidth < 820 ? "Open full screen" : "Full screen";
+  if($("workspace").classList.contains("cvapp")){ if(isFullApp(item) && CV.view === "preview") $("cvIcon").innerHTML = builtAppLogo(item); else exitAppView(); }
   drawCanvas();
 }
+/* ---------- a built app, full screen on phones: looks like the AI Verse apps (logo, name, close), no Preview/Code ---------- */
+function isFullApp(it){ return !!(it && it.kind === "build" && it.full); }
+function builtAppLogo(it){
+  const g = (it.plan && it.plan.gradient && it.plan.gradient.length ? it.plan.gradient : ["#60a5fa", "#a78bfa"]);
+  const letter = esc(((it.title || "A").trim()[0] || "A").toUpperCase()), id = "bg" + String(it.id).replace(/\W/g, "");
+  return `<svg class="mclogo" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${esc(g[0])}"/><stop offset="1" stop-color="${esc(g[1] || g[0])}"/></linearGradient></defs><rect width="40" height="40" rx="10" fill="#0b0b0d"/><text x="19" y="27.5" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="800" fill="url(#${id})">${letter}</text><path d="M31 6.5l1.1 2.4 2.4 1.1-2.4 1.1-1.1 2.4-1.1-2.4-2.4-1.1 2.4-1.1z" fill="#fff"/></svg>`;
+}
+function enterAppView(){
+  const it = CV.item; if(!isFullApp(it)) return;
+  if(CV.view !== "preview") openArtifact(it, "preview", CV.live);
+  $("workspace").classList.add("cvapp");
+  $("cvIcon").innerHTML = builtAppLogo(it);
+}
+function exitAppView(){ $("workspace").classList.remove("cvapp"); $("cvIcon").textContent = ""; }
+// change the app with AI: goes to the app's own build chat (or a new one tied to this app) and runs the change
+$("cvEditApp").onclick = () => {
+  const it = CV.item; if(!isFullApp(it)) return;
+  const ideas = ["Add a new screen for…", "Add a field to…", "Make it dark", "Add a chart of…", "Rename the app to…", "Make the buttons bigger"];
+  const m = modal(`<div class="mh2"><h3>Change ${esc(it.title)}</h3><button class="iconbtn" data-close><span data-i="x"></span></button></div>
+    <div class="mb tkp"><p class="muted" style="margin:0 0 12px">Tell AIV X what to change. It updates the app and keeps everything you've saved in it.</p>
+      <textarea class="input" id="appEditTxt" rows="3" placeholder="For example: add a screen for invoices, and show total paid on the home screen"></textarea>
+      <div class="tk-h" style="margin-top:16px">Ideas</div>
+      <div class="tkp-ex">${ideas.map(x => `<button class="chip-btn" data-idea="${esc(x)}">${esc(x.replace("…", "").trim())}</button>`).join("")}</div></div>
+    <div class="mf"><button class="btn" data-close>Cancel</button><button class="btn primary" id="appEditGo">Make changes</button></div>`);
+  const ta = m.querySelector("#appEditTxt");
+  m.querySelectorAll("[data-idea]").forEach(b => b.onclick = () => { ta.value = b.dataset.idea.replace("…", " "); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); });
+  m.querySelector("#appEditGo").onclick = async () => {
+    const text = ta.value.trim(); if(!text){ ta.focus(); return; }
+    if(S.busy) return toast("Wait for AIV X to finish first.");
+    closeModal();
+    const wasApp = $("workspace").classList.contains("cvapp");
+    const own = S.chats.find(c => c.id === it.chat && c.assistantId === it.id);
+    if(own){ if(S.chat !== own) openChat(own.id); }
+    else{ newChat(); ensureChat().assistantId = it.id; }
+    S.chat.assistantId = it.id; S.tool = "build"; renderTool();
+    exitAppView(); closeCanvas();
+    if(innerWidth < 820 && typeof closeSide === "function") closeSide();
+    await send(text);
+    // back to the updated app, full screen again if that's where the change started
+    const now = S.libMap[it.id];
+    const last = S.chat && S.chat.messages[S.chat.messages.length - 1];
+    if(now && last && !last.error){ openArtifact(now, "preview"); if(wasApp && innerWidth < 820){ enterAppView(); toast("Updated " + now.title); } }
+  };
+  setTimeout(() => ta.focus(), 60);
+};
 function drawCanvas(){
   const it = CV.item, body = $("cvBody");
   if(CV.view === "video"){
@@ -3173,9 +3196,9 @@ async function saveCanvasEdits(){
   if(changed && !String(it.id).startsWith("tmp_")){ it.at = Date.now(); await addLib(it); }
 }
 $("cvBody").addEventListener("focusout", () => saveCanvasEdits());
-function closeCanvas(){ saveCanvasEdits(); $("canvas").classList.add("hidden"); $("workspace").classList.remove("split", "cvfull"); CV.item = null; }
+function closeCanvas(){ saveCanvasEdits(); $("canvas").classList.add("hidden"); $("workspace").classList.remove("split", "cvfull", "cvapp"); $("cvIcon").textContent = ""; CV.item = null; }
 $("cvClose").onclick = closeCanvas;
-$("cvFull").onclick = () => { $("workspace").classList.toggle("cvfull"); $("cvFull").innerHTML = icon($("workspace").classList.contains("cvfull") ? "sidebar" : "expand"); };
+$("cvFull").onclick = () => { if(innerWidth < 820 && isFullApp(CV.item)) return enterAppView(); $("workspace").classList.toggle("cvfull"); $("cvFull").innerHTML = icon($("workspace").classList.contains("cvfull") ? "sidebar" : "expand"); };
 $("cvMore").onclick = e => {
   const it = CV.item; if(!it) return; saveCanvasEdits();
   const items = [];
@@ -4924,7 +4947,7 @@ async function researchApp(ai, hist){
   const pick = planJSON(await ask([{ role:"system", content:APP_RESEARCH_PICK }, { role:"user", content:want }], { model:"auto", max_tokens:500 }));
   if(!pick || !Array.isArray(pick.queries) || !pick.queries.length) return null;
   const apps = (pick.apps || []).map(String).filter(Boolean).slice(0, 4);
-  ai.steps[ai.steps.length - 1] = { text:"Looking at popular " + (pick.category || "apps") + (apps.length ? ": " + apps.join(", ") : ""), done:false }; updateMsg(ai, true);
+  updateMsg(ai, true);
   const found = [];
   await Promise.all(pick.queries.slice(0, 3).map(q => api("/search", { q:String(q).slice(0, 200) }).then(r => { (r.results || []).slice(0, 5).forEach(x => found.push(x)); }).catch(() => {})));
   const seen = new Set(), res = found.filter(x => x && x.url && !seen.has(x.url) && seen.add(x.url)).slice(0, 12);
@@ -5160,13 +5183,13 @@ async function doFullApp(ai, userMsg){
   if(!editing){
     // look at popular apps in this field first, so the app gets the features people value most
     let research = null;
-    addStep(ai, "Looking at popular apps like this one", false);
+    addStep(ai, "Searching for similar apps", false);
     try{ research = await researchApp(ai, hist); }catch(e){ if(e.name === "AbortError") throw e; }
     stop();
     ai.steps[ai.steps.length - 1] = research
-      ? { text:`Studied ${research.apps.join(", ")}: ${research.features.length} key features to build in`, done:true }
-      : { text:"Couldn't look up similar apps, so planning from your description", done:true };
-    if(research){ ai.sources = research.sources; item.research = { apps:research.apps, category:research.category, features:research.features.filter(f => f.web).map(f => f.name), outside:research.features.filter(f => !f.web).map(f => f.name) }; }
+      ? { text:`Searched similar apps: found ${research.features.length} key features to build in`, done:true }
+      : { text:"Couldn't search similar apps, so planning from your description", done:true };
+    if(research){ item.research = { apps:research.apps, category:research.category, features:research.features.filter(f => f.web).map(f => f.name), outside:research.features.filter(f => !f.web).map(f => f.name) }; }
     addStep(ai, "Planning the app: screens, saved data, and AI features", false);
     const pi = ai.steps.length - 1;
     const planHist = research ? [...hist.slice(0, -1), { role:"user", content:hist[hist.length - 1].content + researchForPlan(research) }] : hist;
@@ -5275,9 +5298,9 @@ async function doFullApp(ai, userMsg){
     ? `Updated **${plan.name}**. ${summary}${todo.length ? "" : " No screens needed rewriting."}${testLine}\n\nIf you don't like the change, say **undo** and I'll put the last version back.`
     : `**${plan.name}** is ready. ${plan.tagline}\n\n` +
       (item.research && item.research.features.length
-        ? `### Built from what works\nI looked at popular ${item.research.category || "apps like this"} (${item.research.apps.join(", ")}) and built in the features people rely on most: ${item.research.features.slice(0, 8).map(x => x.toLowerCase()).join(", ")}.` +
-          (item.research.outside.length ? ` Some of their features need outside services this app can't run on its own (${item.research.outside.slice(0, 3).map(x => x.toLowerCase()).join(", ")}), so it helps you plan and organize around them instead.` : "") +
-          ` It's your own app, not connected to any of them.\n\n`
+        ? `### Built from what works\nI searched similar apps and built in the features people rely on most: ${item.research.features.slice(0, 8).map(x => x.toLowerCase()).join(", ")}.` +
+          (item.research.outside.length ? ` Some features need outside services this app can't run on its own (${item.research.outside.slice(0, 3).map(x => x.toLowerCase()).join(", ")}), so it helps you plan and organize around them instead.` : "") +
+          ` It's your own app and works on its own.\n\n`
         : "") +
       `### How it works\n` +
       (plan.tour && plan.tour.length ? plan.tour : plan.screens.map(s => ({ screen:s.id, text:s.purpose }))).map((t, i) => { const sc = plan.screens.find(x => x.id === t.screen) || {}; return `${i + 1}. **${sc.title || t.screen}**: ${t.text}`; }).join("\n") +
@@ -6539,7 +6562,6 @@ function openApps(){
 /* ---------------- APP ON SCREEN + AIV X COPILOT ---------------- */
 function openFullApp(app, opts = {}){
   if(!app || !app.url) return;
-  if(NATIVE && !aiConsentOk()){ needAIConsent().then(ok => { if(ok) openFullApp(app, opts); }); return; }
   closeMenu(); closeModal(); closeCanvas();
   const switching = S.openApp && S.openApp !== app.id;
   S.openApp = app.id;
@@ -6819,11 +6841,10 @@ function drawSettings(sec){
       if(!confirm("Delete your AIV X account and all of its data permanently? This can't be undone.")) return;
       try{ await Store.wipe(); }catch(e){ return toast("Couldn't delete your data: " + friendlyError(e)); }
       closeModal();
-      let r = true, why = "";
-      try{ r = await Auth.deleteAccount(); }catch(e){ r = false; why = (e && (e.code || e.message)) || ""; }
-      if(r === "cancelled"){ alert("Your data has been deleted. Your sign-in wasn't confirmed, so your account is still there. Open Settings > Account > Delete my account to finish."); return; }
-      if(!r){ alert("Your data has been deleted, but your sign-in account couldn't be removed" + (why ? " (" + why + ")" : "") + ". Try Delete again, or email team@aiverse.it.com and we'll remove it."); return; }
-      try{ sessionStorage.setItem("aivx_deleted", "1"); }catch(e){}
+      let r = true;
+      try{ r = await Auth.deleteAccount(); }catch(e){ r = false; }
+      if(r === "relogin") alert("Your data has been deleted. To also remove your sign-in account, sign in once more and choose Delete again — this is a security step.");
+      else if(!r){ alert("Your data has been deleted, but your sign-in account couldn't be removed. Email team@aiverse.it.com and we'll remove it."); await Auth.signOut(); }
       location.reload();
     };
     $("aOut").onclick = async () => { closeModal(); await Auth.signOut(); };
@@ -6939,7 +6960,6 @@ async function onSignedIn(u){
   $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
   renderMe(); renderUsage(); setMode("aivx", true); newChat();
   try{ agentsBoot(); }catch(e){}
-  aiConsentAfterSignIn();
   if(NATIVE) setTimeout(() => pushSetup(), 4000);
   const hm = location.hash.match(/^#app\/(\w+)/);
   if(hm){ const a = APPS.find(x => x.id === hm[1]); if(a && a.url) setTimeout(() => openFullApp(a), 0); }
@@ -6964,51 +6984,17 @@ if(NO_PAY){
 // App Store rule 5.1.2(i): name the AI services that receive people's messages and ask first.
 // Keep this list matching what aivx-worker.js really calls. Bump the version whenever it changes.
 const AI_PROVIDERS = "Cloudflare Workers AI, Cerebras, Groq, Google (Gemini), Mistral AI, GitHub Models (Microsoft), NVIDIA, OpenRouter, Pollinations and Deepgram";
-const AI_CONSENT_VERSION = "2026-11-25";
-function aiConsentKey(){ return "aivx_ai_consent_" + ((S.user && S.user.uid) || "anon"); }
-function aiConsentOk(){ return !NATIVE || LSX.get(aiConsentKey(), "") === AI_CONSENT_VERSION; }
-function askAIConsent(then, onNo){
-  // Its own layer (not modal()), so it never closes a screen that's already open, like Build
-  const old = $("aicModal"); if(old) old.remove();
-  const m = document.createElement("div"); m.className = "modal"; m.id = "aicModal"; m.style.zIndex = "100000";
-  m.innerHTML = `<div class="box"><div class="mh2"><h3>Before you use AI</h3></div>
-    <div class="mb"><p class="muted" style="margin-bottom:10px">To answer you, AIV X sends what you type, plus any files, photos, or voice you add, to the AI services that run its models: ${esc(AI_PROVIDERS)}. Web searches are sent to search providers. This applies to chat, Build, Agents, voice, and the AI apps.</p>
+const AI_CONSENT_VERSION = "2026-11-22";
+function aiConsentOk(){ return !NATIVE || LSX.get("aivx_ai_consent", "") === AI_CONSENT_VERSION; }
+function askAIConsent(then){
+  const m = modal(`<div class="mh2"><h3>Before you chat with AI</h3></div>
+    <div class="mb"><p class="muted" style="margin-bottom:10px">To answer you, AIV X sends what you type, plus any files, photos, or voice you add, to the AI services that run its models: ${esc(AI_PROVIDERS)}. Web searches are sent to search providers.</p>
     <p class="muted small" style="margin-bottom:6px">They process it only to create your answer. Read more in our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. You can turn off "Improve AIV X for everyone" in Settings, under Memory.</p></div>
-    <div class="mf"><button class="btn" id="aicNo">Not now</button><button class="btn primary" id="aicYes">Allow and continue</button></div></div>`;
-  document.body.appendChild(m);
-  m.querySelector("#aicNo").onclick = () => { m.remove(); if(onNo) onNo(); };
-  m.querySelector("#aicYes").onclick = () => { LSX.set(aiConsentKey(), AI_CONSENT_VERSION); m.remove(); if(then) then(); };
+    <div class="mf"><button class="btn" id="aicNo">Not now</button><button class="btn primary" id="aicYes">Allow and continue</button></div>`);
+  m.onclick = null;
+  $("aicNo").onclick = () => closeModal();
+  $("aicYes").onclick = () => { LSX.set("aivx_ai_consent", AI_CONSENT_VERSION); closeModal(); if(then) then(); };
 }
-// Resolves true once the person allows AI, false if they choose "Not now"
-let aiConsentWait = null;
-function needAIConsent(){
-  if(aiConsentOk()) return Promise.resolve(true);
-  if(aiConsentWait) return aiConsentWait;
-  aiConsentWait = new Promise(res => askAIConsent(() => { aiConsentWait = null; res(true); }, () => { aiConsentWait = null; res(false); }));
-  return aiConsentWait;
-}
-const AI_DECLINED = "AI features need your OK first. Tap Allow on the AI data prompt to use them.";
-// Ask right after sign-in in the iPhone app, once the Terms prompt (if any) is closed
-function aiConsentAfterSignIn(){
-  if(!NATIVE || aiConsentOk()) return;
-  let tries = 0;
-  const go = () => { if($("cAgree") && tries++ < 1200){ setTimeout(go, 500); return; } needAIConsent(); };
-  setTimeout(go, 800);
-}
-
-// After an account is deleted, the page reloads to the sign-in screen and shows this
-function showDeletedNotice(){
-  let flag = null; try{ flag = sessionStorage.getItem("aivx_deleted"); sessionStorage.removeItem("aivx_deleted"); }catch(e){}
-  if(!flag) return;
-  const m = document.createElement("div"); m.className = "modal"; m.id = "delModal"; m.style.zIndex = "100000";
-  m.innerHTML = `<div class="box"><div class="mh2"><h3>Account deleted</h3></div>
-    <div class="mb"><p class="muted" style="margin-bottom:8px">Your AIV X account and all of its data have been permanently deleted. This includes your chats, memories, library, the AI apps you built, agents, and settings.</p>
-    <p class="muted small">Thanks for trying AIV X. You're welcome back anytime. Questions? <a href="mailto:team@aiverse.it.com">team@aiverse.it.com</a></p></div>
-    <div class="mf"><button class="btn primary" id="delOk">OK</button></div></div>`;
-  document.body.appendChild(m);
-  m.querySelector("#delOk").onclick = () => m.remove();
-}
-setTimeout(showDeletedNotice, 300);
 
 function nativeHaptic(){ try{ if(NP.Haptics) NP.Haptics.impact({ style:"LIGHT" }); }catch(e){} }
 
