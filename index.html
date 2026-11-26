@@ -4328,7 +4328,10 @@ function renderLoop(loop){
   const L = loop || {};
   const cell = (n, t, d) => `<div class="loopcell"><b>${n}</b><span>${t}</span><small>${d}</small></div>`;
   box.innerHTML = cell(L.examples ?? 0, "Examples", "Liked answers it learns from") + cell(L.rules ?? 0, "Rules", "From everyone's feedback") + cell(L.pending ?? 0, "Practice", "Waiting for your approval") +
-    `<div class="muted small" style="grid-column:1/-1">${L.at ? "Last run " + new Date(L.at).toLocaleString() + " · " + (L.practiced || 0) + " new practice answers" : "Hasn't run yet. Click Learn from feedback now, or add the daily Cron Trigger."}</div>`;
+    `<div class="muted small" style="grid-column:1/-1">${L.at ? "Last run " + new Date(L.at).toLocaleString() + " · " + (L.practiced || 0) + " new practice answers" +
+      (L.rulesTested ? " · " + L.rulesTested + " new rules tested, " + (L.rulesAdded || 0) + " helped and went live" : "") +
+      (L.examplesChecked ? " · " + L.examplesChecked + " liked answers privacy-checked, " + (L.examplesRefused || 0) + " left out" : "") +
+      (L.examplesByMeaning ? " · " + L.examplesByMeaning + " examples matched by meaning" : "") : "Hasn't run yet. Click Learn from feedback now, or add the daily Cron Trigger."}</div>`;
 }
 async function drawPractice(){
   const box = $("gPractice"); if(!box) return;
@@ -4345,7 +4348,7 @@ async function drawPractice(){
 }
 function renderGlobalRules(list, last){
   const box = $("gRules"); if(!box) return;
-  box.innerHTML = list.length ? list.map(r => `<div class="memrow" data-id="${esc(r.id)}"><span>${esc(r.text)}<br><span class="muted small">${r.source === "admin" ? "Added by you" : "Learned from " + r.users + " people"} · ${new Date(r.created).toLocaleDateString()}</span></span><button title="Remove">✕</button></div>`).join("")
+  box.innerHTML = list.length ? list.map(r => `<div class="memrow" data-id="${esc(r.id)}"><span>${esc(r.text)}<br><span class="muted small">${r.source === "admin" ? "Added by you" : "Learned from " + r.users + " people" + (r.test ? " · tested: better in " + r.test.wins + " of " + (r.test.wins + r.test.losses + (r.test.ties || 0)) : "")} · ${new Date(r.created).toLocaleDateString()}</span></span><button title="Remove">✕</button></div>`).join("")
     : `<div class="muted small" style="padding:8px 0">No rules yet. They'll appear here as people give feedback.</div>`;
   if(last && $("gMsg")) $("gMsg").textContent = "Last checked " + new Date(last.at).toLocaleString() + " · " + last.feedback + " feedback in the last 30 days";
   box.querySelectorAll(".memrow button").forEach(x => x.onclick = async () => {
